@@ -68,6 +68,23 @@ no `squaredDistance(Halfplane)` overload and no rank-based forwarding for
 added, all ten shapes use the uniform `PGL_BIND_ALL_SQUARED_DISTANCE` macro and
 the full squared-distance matrix is exposed.
 
+Line-like helpers and duality (commit pending). Three new macros in
+[src/common.h](src/common.h) — `PGL_BIND_LINE_HELPERS` (`slope`, `isVertical`,
+`isHorizontal`, `isDegenerate`), `PGL_BIND_COLLINEAR` (vs `Point` + the five
+line-like shapes) and `PGL_BIND_PARALLEL` (vs the five line-like shapes) — are
+applied to `Segment`, `OrientedSegment`, `Line`, `OrientedLine`, `Ray`. `Point`
+gained `dual`/`polar` (→ `Line`); `Segment` gained `asLine`; both segment kinds
+and `Point` gained the exact `lengthL1`/`lengthLInf` and `distanceL1`/
+`distanceLInf` (no square root, so exact `Fraction`), alongside the existing
+approximate L2 `length`/`distance`. 11 new tests in
+[tests/test_line_helpers.py](tests/test_line_helpers.py) (55 total).
+
+Required a pgl fix pulled into `.pgl-ref` (commit `48c9614`): `OrientedLine`
+declared `parallel` against `Line`/`OrientedLine`/`Segment`/`OrientedSegment`
+but not `Ray`, while every other line-like shape (and `Ray.parallel(OrientedLine)`)
+had the full matrix; the missing overload was added upstream so the uniform
+`PGL_BIND_PARALLEL` macro compiles for `OrientedLine`.
+
 ## Next
 
 ### Milestone 3 — Notebook UX

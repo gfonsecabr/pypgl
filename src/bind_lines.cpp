@@ -18,15 +18,15 @@ void bind_lines(nb::module_ &m) {
 
         cls.def("min", [](const Line &l) { return l.min(); }, "Lexicographically smaller defining point.");
         cls.def("max", [](const Line &l) { return l.max(); }, "Lexicographically larger defining point.");
-        cls.def("isDegenerate", [](const Line &l) { return l.isDegenerate(); }, "Whether the defining points coincide.");
-        cls.def("isVertical", [](const Line &l) { return l.isVertical(); }, "Whether the line is vertical.");
-        cls.def("isHorizontal", [](const Line &l) { return l.isHorizontal(); }, "Whether the line is horizontal.");
         cls.def("dual", [](const Line &l) { return l.dual(); }, "Dual point (a, b) of the line y = a x - b.");
         cls.def("polar", [](const Line &l) { return l.polar(); }, "Polar point (a, b) of the line a x + b y = 1.");
         cls.def("halfplaneAbove", [](const Line &l) { return l.halfplaneAbove(); }, "Closed half-plane above the line.");
         cls.def("halfplaneBelow", [](const Line &l) { return l.halfplaneBelow(); }, "Closed half-plane below the line.");
 
         bind_value_semantics<Line>(cls);
+        PGL_BIND_LINE_HELPERS(cls, Line);
+        PGL_BIND_COLLINEAR(cls, Line);
+        PGL_BIND_PARALLEL(cls, Line);
         PGL_BIND_ALL_PREDICATES(cls, Line);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Line);
 
@@ -51,9 +51,11 @@ void bind_lines(nb::module_ &m) {
         cls.def("max", [](const OrientedLine &l) { return l.max(); }, "Lexicographically larger defining point.");
         cls.def("opposite", [](const OrientedLine &l) { return l.opposite(); }, "Line with the orientation reversed.");
         cls.def("asLine", [](const OrientedLine &l) { return l.asLine(); }, "Unoriented supporting line.");
-        cls.def("isDegenerate", [](const OrientedLine &l) { return l.isDegenerate(); }, "Whether the defining points coincide.");
 
         bind_value_semantics<OrientedLine>(cls);
+        PGL_BIND_LINE_HELPERS(cls, OrientedLine);
+        PGL_BIND_COLLINEAR(cls, OrientedLine);
+        PGL_BIND_PARALLEL(cls, OrientedLine);
         PGL_BIND_ALL_PREDICATES(cls, OrientedLine);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, OrientedLine);
 
@@ -77,11 +79,11 @@ void bind_lines(nb::module_ &m) {
         cls.def("opposite", [](const Ray &r) { return r.opposite(); }, "Ray with source and target swapped.");
         cls.def("asLine", [](const Ray &r) { return r.asLine(); }, "Unoriented supporting line.");
         cls.def("asOrientedLine", [](const Ray &r) { return r.asOrientedLine(); }, "Oriented supporting line.");
-        cls.def("isDegenerate", [](const Ray &r) { return r.isDegenerate(); }, "Whether the defining points coincide.");
-        cls.def("isVertical", [](const Ray &r) { return r.isVertical(); }, "Whether the ray is vertical.");
-        cls.def("isHorizontal", [](const Ray &r) { return r.isHorizontal(); }, "Whether the ray is horizontal.");
 
         bind_value_semantics<Ray>(cls);
+        PGL_BIND_LINE_HELPERS(cls, Ray);
+        PGL_BIND_COLLINEAR(cls, Ray);
+        PGL_BIND_PARALLEL(cls, Ray);
         PGL_BIND_ALL_PREDICATES(cls, Ray);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Ray);
 

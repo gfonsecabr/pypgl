@@ -13,6 +13,12 @@ void bind_point(nb::module_ &m) {
     cls.def("x", [](const Point &p) { return p.x(); }, "X coordinate.");
     cls.def("y", [](const Point &p) { return p.y(); }, "Y coordinate.");
 
+    // Point<->line duality (exact); returns a Line.
+    cls.def("dual", [](const Point &p) { return p.dual(); },
+            "Dual line of the point: the point (a, b) maps to the line y = a x - b.");
+    cls.def("polar", [](const Point &p) { return p.polar(); },
+            "Polar line of the point: the point (a, b) maps to the line a x + b y = 1.");
+
     bind_value_semantics<Point>(cls);
 
     PGL_BIND_ALL_PREDICATES(cls, Point);
@@ -31,7 +37,12 @@ void bind_point(nb::module_ &m) {
     cls.def("intersection", [](const Point &a, const Convex &b) { return a.intersection(b); }, nb::arg("other"));
 
     cls.def("distance", [](const Point &a, const Point &b) { return a.distance(b); },
-            nb::arg("other"), "Approximate Euclidean distance (float).");
+            nb::arg("other"), "Approximate Euclidean (L2) distance (float).");
+    // L1 / L-infinity distances are exact (no square root), unlike L2.
+    cls.def("distanceL1", [](const Point &a, const Point &b) { return a.distanceL1(b); },
+            nb::arg("other"), "Exact Manhattan (L1) distance.");
+    cls.def("distanceLInf", [](const Point &a, const Point &b) { return a.distanceLInf(b); },
+            nb::arg("other"), "Exact Chebyshev (L-infinity) distance.");
 
     // Exact squared distance against every shape (Fraction result).
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Point);

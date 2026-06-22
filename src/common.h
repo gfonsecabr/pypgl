@@ -67,6 +67,37 @@ void bind_value_semantics(Class &cls) {
             },                                                              \
             nb::arg("other"))
 
+// The four no-argument helpers shared by every line-like shape (Segment,
+// OrientedSegment, Line, OrientedLine, Ray). `slope` is exact (ERational) but
+// undefined for vertical shapes — division by zero.
+#define PGL_BIND_LINE_HELPERS(cls, SelfT)                                          \
+    cls.def("slope", [](const SelfT &s) { return s.slope(); },                    \
+            "Exact signed slope (ERational). Undefined for vertical shapes.");     \
+    cls.def("isVertical", [](const SelfT &s) { return s.isVertical(); },          \
+            "Whether the supporting direction is vertical.");                      \
+    cls.def("isHorizontal", [](const SelfT &s) { return s.isHorizontal(); },      \
+            "Whether the supporting direction is horizontal.");                    \
+    cls.def("isDegenerate", [](const SelfT &s) { return s.isDegenerate(); },       \
+            "Whether the two defining points coincide.")
+
+// collinear: Self against a Point and the five line-like shapes.
+#define PGL_BIND_COLLINEAR(cls, SelfT)                       \
+    PGL_PRED(cls, SelfT, collinear, ::pypgl::Point);            \
+    PGL_PRED(cls, SelfT, collinear, ::pypgl::Segment);          \
+    PGL_PRED(cls, SelfT, collinear, ::pypgl::OrientedSegment);  \
+    PGL_PRED(cls, SelfT, collinear, ::pypgl::Line);             \
+    PGL_PRED(cls, SelfT, collinear, ::pypgl::OrientedLine);     \
+    PGL_PRED(cls, SelfT, collinear, ::pypgl::Ray)
+
+// parallel: Self against the five line-like shapes (no Point — points have no
+// direction).
+#define PGL_BIND_PARALLEL(cls, SelfT)                        \
+    PGL_PRED(cls, SelfT, parallel, ::pypgl::Segment);          \
+    PGL_PRED(cls, SelfT, parallel, ::pypgl::OrientedSegment);  \
+    PGL_PRED(cls, SelfT, parallel, ::pypgl::Line);             \
+    PGL_PRED(cls, SelfT, parallel, ::pypgl::OrientedLine);     \
+    PGL_PRED(cls, SelfT, parallel, ::pypgl::Ray)
+
 // Bind the seven uniform predicates of SelfT against one OtherT.
 #define PGL_BIND_PREDICATES(cls, SelfT, OtherT)        \
     PGL_PRED(cls, SelfT, contains, OtherT);            \

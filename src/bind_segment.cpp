@@ -15,11 +15,17 @@ void bind_segment(nb::module_ &m) {
     cls.def("max", [](const Segment &s) { return s.max(); }, "Lexicographically larger endpoint.");
     cls.def("vertices", [](const Segment &s) { return s.vertices(); }, "The two endpoints.");
     cls.def("midpoint", [](const Segment &s) { return s.midpoint(); }, "Exact midpoint.");
-    cls.def("length", [](const Segment &s) { return s.length(); }, "Approximate length (float).");
+    cls.def("length", [](const Segment &s) { return s.length(); }, "Approximate Euclidean (L2) length (float).");
     cls.def("squaredLength", [](const Segment &s) { return s.squaredLength(); }, "Exact squared length.");
+    cls.def("lengthL1", [](const Segment &s) { return s.lengthL1(); }, "Exact Manhattan (L1) length.");
+    cls.def("lengthLInf", [](const Segment &s) { return s.lengthLInf(); }, "Exact Chebyshev (L-infinity) length.");
+    cls.def("asLine", [](const Segment &s) { return s.asLine(); }, "Supporting unoriented line.");
 
     bind_value_semantics<Segment>(cls);
 
+    PGL_BIND_LINE_HELPERS(cls, Segment);
+    PGL_BIND_COLLINEAR(cls, Segment);
+    PGL_BIND_PARALLEL(cls, Segment);
     PGL_BIND_ALL_PREDICATES(cls, Segment);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Segment);
 
@@ -48,14 +54,18 @@ void bind_oriented_segment(nb::module_ &m) {
     cls.def("opposite", [](const OrientedSegment &s) { return s.opposite(); }, "Segment with source and target swapped.");
     cls.def("vertices", [](const OrientedSegment &s) { return s.vertices(); }, "The two endpoints.");
     cls.def("midpoint", [](const OrientedSegment &s) { return s.midpoint(); }, "Exact midpoint.");
-    cls.def("length", [](const OrientedSegment &s) { return s.length(); }, "Approximate length (float).");
+    cls.def("length", [](const OrientedSegment &s) { return s.length(); }, "Approximate Euclidean (L2) length (float).");
     cls.def("squaredLength", [](const OrientedSegment &s) { return s.squaredLength(); }, "Exact squared length.");
+    cls.def("lengthL1", [](const OrientedSegment &s) { return s.lengthL1(); }, "Exact Manhattan (L1) length.");
+    cls.def("lengthLInf", [](const OrientedSegment &s) { return s.lengthLInf(); }, "Exact Chebyshev (L-infinity) length.");
     cls.def("asSegment", [](const OrientedSegment &s) { return s.asSegment(); }, "Unoriented segment with the same endpoints.");
     cls.def("asLine", [](const OrientedSegment &s) { return s.asLine(); }, "Supporting unoriented line.");
-    cls.def("isDegenerate", [](const OrientedSegment &s) { return s.isDegenerate(); }, "Whether source and target coincide.");
 
     bind_value_semantics<OrientedSegment>(cls);
 
+    PGL_BIND_LINE_HELPERS(cls, OrientedSegment);
+    PGL_BIND_COLLINEAR(cls, OrientedSegment);
+    PGL_BIND_PARALLEL(cls, OrientedSegment);
     PGL_BIND_ALL_PREDICATES(cls, OrientedSegment);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, OrientedSegment);
 
