@@ -361,7 +361,7 @@ It knows how to convert itself with an explicit cast to:
 
 ### Rectangle
 
-The class template `Rectangle` represents an axis-aligned rectangle. While it is stored internally as only two vertices (minimum and maximum x and y coordinates), it behaves as a polygon with four vertices. It can be constructed for any number of points in a container and will construct the bounding box rectangle. If only two points are given, the container is optional. If the two points are respectively the minimum x and y and the maximum x and y, then an optional argument set to true avoids the bounding box calculation.
+The class template `Rectangle` represents an axis-aligned rectangle. While it is stored internally as only two vertices (minimum and maximum x and y coordinates), it behaves as a polygon with four vertices. It can be constructed from two opposite corners (given as two `Point`s or four coordinates), from an iterable of points (it computes their bounding box), or from an iterable of bounded shapes — even of mixed types — in which case it computes the bounding box enclosing them all. Unbounded shapes (`Line`, `OrientedLine`, `Ray`, `Halfplane`) have no bounding box and are rejected.
 
 ```python
 r = pgl.Rectangle([pgl.Point(1,3),pgl.Point(2,4),pgl.Point(3,1),pgl.Point(5,4),pgl.Point(2,3)])

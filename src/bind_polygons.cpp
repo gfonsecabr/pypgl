@@ -50,6 +50,40 @@ void bind_polygons(nb::module_ &m) {
                 "Create the axis-aligned bounding rectangle of two points.");
         cls.def(nb::init<Num, Num, Num, Num>(), nb::arg("x1"), nb::arg("y1"), nb::arg("x2"), nb::arg("y2"),
                 "Create a rectangle from two opposite corners' coordinates.");
+        // Bounding box of a list of points (fast path: the range constructor is a
+        // template, so bind it through a placement-new factory like Convex's).
+        cls.def("__init__",
+                [](Rectangle *self, const std::vector<Point> &points) { new (self) Rectangle(points); },
+                nb::arg("points"),
+                "Create the axis-aligned bounding box of the given points (at least one).");
+        // Bounding box enclosing any iterable of bounded shapes (and/or points),
+        // even of mixed types — unlike pgl's homogeneous range constructor. Each
+        // element's bbox() is unioned; unbounded shapes have no bbox() and so
+        // raise, which correctly excludes lines, rays and half-planes.
+        cls.def("__init__",
+                [](Rectangle *self, nb::iterable shapes) {
+                    bool any = false;
+                    Num minx, miny, maxx, maxy;
+                    for (nb::handle h : shapes) {
+                        Rectangle b = nb::cast<Rectangle>(h.attr("bbox")());
+                        if (!any) {
+                            minx = b.min().x(); miny = b.min().y();
+                            maxx = b.max().x(); maxy = b.max().y();
+                            any = true;
+                        } else {
+                            if (b.min().x() < minx) minx = b.min().x();
+                            if (b.min().y() < miny) miny = b.min().y();
+                            if (maxx < b.max().x()) maxx = b.max().x();
+                            if (maxy < b.max().y()) maxy = b.max().y();
+                        }
+                    }
+                    if (!any)
+                        throw std::invalid_argument("Rectangle bounding box requires at least one shape");
+                    new (self) Rectangle(minx, miny, maxx, maxy);
+                },
+                nb::arg("shapes"),
+                "Create the axis-aligned bounding box enclosing an iterable of bounded "
+                "shapes (each must expose bbox(); may mix shape types).");
 
         cls.def("min", [](const Rectangle &r) { return r.min(); }, "Lower-left corner.");
         cls.def("max", [](const Rectangle &r) { return r.max(); }, "Upper-right corner.");

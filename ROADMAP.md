@@ -136,6 +136,17 @@ points, and `Point` over its two coordinates. `shape[i]` is cyclic (wraps modulo
 terminates because it goes through `__iter__` over `range(size())`. 11 new tests
 in [tests/test_vertex_queries.py](tests/test_vertex_queries.py) (81 total).
 
+Rectangle bounding-box constructors (commit pending). `Rectangle([p0, p1, …])`
+builds the componentwise bounding box of points (placement-new factory like
+`Convex`'s; empty raises `ValueError`). A second factory takes any `nb::iterable`
+of bounded shapes and unions each element's `bbox()`, so `Rectangle([seg, tri,
+convex])` works — and, unlike pgl's homogeneous range constructor, the iterable
+may **mix shape types** (and points). Unbounded shapes expose no `bbox()`, so
+they raise and are correctly excluded. pgl's `minmax`/trusted bool flag is
+deliberately not exposed — it skips the bbox computation and could produce an
+invalid rectangle. 3 new tests in
+[tests/test_core_shapes.py](tests/test_core_shapes.py) (84 total).
+
 ## Next
 
 ### Milestone 3 — Notebook UX

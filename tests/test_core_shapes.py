@@ -66,6 +66,35 @@ def test_rectangle_measures():
     assert len(r.vertices()) == 4
 
 
+def test_rectangle_bounding_box_of_points():
+    r = pypgl.Rectangle([pypgl.Point(1, 3), pypgl.Point(2, 4), pypgl.Point(3, 1),
+                         pypgl.Point(5, 4), pypgl.Point(2, 3)])
+    assert r == pypgl.Rectangle(1, 1, 5, 4)        # componentwise min/max
+    assert pypgl.Rectangle([pypgl.Point(2, 2)]) == pypgl.Rectangle(2, 2, 2, 2)
+    with pytest.raises(ValueError):
+        pypgl.Rectangle([])                        # empty range is rejected
+
+
+def test_rectangle_bounding_box_of_shapes():
+    seg = pypgl.Segment(1, 1, 2, 2)
+    tri = pypgl.Triangle(0, 0, 4, 0, 0, 3)
+    cvx = pypgl.Convex([pypgl.Point(5, 5), pypgl.Point(7, 5), pypgl.Point(6, 8)])
+    # An iterable mixing different bounded shape types (not allowed in C++).
+    assert pypgl.Rectangle([seg, tri, cvx]) == pypgl.Rectangle(0, 0, 7, 8)
+    # Points and shapes may be mixed.
+    assert pypgl.Rectangle([pypgl.Point(-1, -1), tri]) == pypgl.Rectangle(-1, -1, 4, 3)
+    # Any iterable works, e.g. a generator.
+    assert pypgl.Rectangle(s for s in (seg, tri)) == pypgl.Rectangle(0, 0, 4, 3)
+
+
+def test_rectangle_rejects_unbounded_shapes():
+    # Unbounded shapes have no bbox(), so they cannot seed a bounding box.
+    with pytest.raises(AttributeError):
+        pypgl.Rectangle([pypgl.Line(0, 0, 1, 1)])
+    with pytest.raises(ValueError):
+        pypgl.Rectangle(iter([]))                  # empty iterable
+
+
 def test_convex_hull_drops_interior_point():
     pts = [pypgl.Point(0, 0), pypgl.Point(4, 0), pypgl.Point(4, 4),
            pypgl.Point(0, 4), pypgl.Point(2, 2)]
