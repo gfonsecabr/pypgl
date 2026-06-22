@@ -60,19 +60,29 @@ for _cls in (
     _cls.__contains__ = _shape_contains
 
 
-# Shapes with a fixed or enumerable vertex set are iterable / indexable over
-# their vertices (segments expose their two endpoints).
-def _add_vertex_iteration(cls, count=None):
-    cls.__iter__ = lambda self: iter(self.vertices())
-    cls.__getitem__ = lambda self, index: self.vertices()[index]
-    cls.__len__ = (lambda self: count) if count is not None \
-        else (lambda self: len(self.vertices()))
+# Every shape is iterable / indexable over its defining points (or, for Point,
+# its two coordinates), backed by pgl's `size` and cyclic `get`. Indexing is
+# cyclic: `shape[i]` wraps modulo the count (negative indices count from the
+# end) instead of raising. Iteration goes through __iter__ over range(size()),
+# so it terminates even though get() never raises.
+def _add_indexing(cls):
+    cls.__len__ = lambda self: self.size()
+    cls.__getitem__ = lambda self, index: self.get(index)
+    cls.__iter__ = lambda self: (self.get(i) for i in range(self.size()))
 
 
-_add_vertex_iteration(Segment, 2)
-_add_vertex_iteration(OrientedSegment, 2)
-_add_vertex_iteration(Triangle, 3)
-_add_vertex_iteration(Rectangle, 4)
-_add_vertex_iteration(Convex)
+for _cls in (
+    Point,
+    Segment,
+    OrientedSegment,
+    Line,
+    OrientedLine,
+    Ray,
+    Halfplane,
+    Triangle,
+    Rectangle,
+    Convex,
+):
+    _add_indexing(_cls)
 
 del _cls

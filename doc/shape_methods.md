@@ -62,8 +62,8 @@ t1 = p + s              # t1 = (4,6)--(6,8)
 t2 = s - p              # t2 = (0,0)--(2,2)
 ```
 
-In-place translations use `+=` and `-=`.
-Scaling around the origin uses the operator `*` or `*=` with a scalar.
+Scaling around the origin uses `*` (or `/`) with a scalar, and `+=`/`-=`/`*=`/`/=`
+work as expected:
 
 ```python
 s = pgl.Segment(2, 3, 4, 5)   #  s = (2,3)--(4,5)
@@ -78,6 +78,18 @@ s = pgl.Segment(2, 3, 4, 5)   # s = (2,3)--(4,5)
 p = s.midpoint()              # p = (3,4)
 t = 3 * (s - p) + p           # t = (0,1)--(6,7)
 ```
+
+**Mutability.** The fixed-size shapes (`Point`, `Segment`, `OrientedSegment`,
+`Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`, `Rectangle`) are
+immutable and hashable, like `tuple` or `fractions.Fraction`: every operator
+returns a *new* shape, so `s += p` rebinds `s` and leaves any earlier copy — for
+instance one used as a `dict` key — untouched. `Convex` (and, later, `Polygon`)
+is variable-size and is instead **mutable**: it keeps a lazy translation offset
+so `c += p` translates in O(1) regardless of the vertex count. Because it is
+mutable it is **unhashable** (it cannot be a `dict` key or `set` member), exactly
+as Python's own `list`/`set` are — this is what prevents a shape from being
+silently corrupted while stored in a container. For `Convex`, `c + p` still
+returns a new hull (an O(n) copy) when you want one.
 
 ### Intersection
 
@@ -115,30 +127,29 @@ elif isinstance(isec, pgl.Segment):
 
 ### Other Methods for Shapes
 
+The transforms come in two flavours. The value-returning forms below return a
+new shape and are available on **every** shape:
+
 - `rotated90(k=1)`: Returns the shape rotated by `90k` degrees around the
   origin.
 
-- `rotate90(k=1)`: Rotates the shape by `90k` degrees around the origin.
+- `scaledUpX(scalar)`: Returns the shape with its x-coordinates multiplied by
+  `scalar`.
 
-- `scaledUpX(Number)`: Returns the shape with the x-coordinate multiplied by a
-  number.
+- `scaledUpY(scalar)`: Returns the shape with its y-coordinates multiplied by
+  `scalar`.
 
-- `scaleUpX(Number)`: Multiplies the x-coordinate by a number.
+- `scaledDownX(scalar)`: Returns the shape with its x-coordinates divided by
+  `scalar`.
 
-- `scaledUpY(Number)`: Returns the shape with the y-coordinate multiplied by a
-  number.
+- `scaledDownY(scalar)`: Returns the shape with its y-coordinates divided by
+  `scalar`.
 
-- `scaleUpY(Number)`: Multiplies the y-coordinate by a number.
-
-- `scaledDownX(Number)`: Returns the shape with the x-coordinate divided by a
-  number.
-
-- `scaleDownX(Number)`: Divides the x-coordinate by a number.
-
-- `scaledDownY(Number)`: Returns the shape with the y-coordinate divided by a
-  number.
-
-- `scaleDownY(Number)`: Divides the y-coordinate by a number.
+The matching in-place forms — `rotate90(k=1)`, `scaleUpX(scalar)`,
+`scaleUpY(scalar)`, `scaleDownX(scalar)`, `scaleDownY(scalar)` — mutate the shape
+and return `None`. Since only the mutable shapes may be modified in place, these
+are bound on `Convex` (and, later, `Polygon`) only; on the immutable fixed-size
+shapes use the value-returning forms above.
 
 - `squaredDistance(Shape)`: Returns the exact squared Euclidean distance as a
   `Fraction`. Because `pypgl` is exact throughout, the result is always exact —
@@ -161,48 +172,52 @@ elif isinstance(isec, pgl.Segment):
 
 - `diameter()`: Returns a segment that defines the diameter.
 
-- `pointInside()`: Returns a point strictly in the interior of the shape. Uses
-  only division by a power of 2.
+- `pointInside()`: Returns an exact point in the (relative) interior of the
+  shape. Available on every shape except `Point` (a point has no interior).
 
-- `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points.
+- `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points. Available on every shape except `Point`.
 
 ## Iterating
 
-Shapes with a fixed or enumerable vertex set (`Segment`, `OrientedSegment`,
-`Triangle`, `Rectangle`, `Convex`) are directly iterable over their vertices:
+Every shape is iterable over its defining points — for the polygons these are
+the vertices, for the line-like shapes the two points that define them, and for
+a `Point` its two coordinates:
 
 ```python
 tri = pgl.Triangle(0, 0, 4, 0, 0, 3)
 for v in tri:          # iterate vertices
     print(v)
 list(tri)              # [(0,0), (4,0), (0,3)]
+list(pgl.Line(0, 0, 4, 6))   # [(0,0), (4,6)]   the two defining points
+list(pgl.Point(2, 3))        # [Fraction(2), Fraction(3)]   the coordinates
 ```
 
-The accessors below each return a generator, so wrap them in `list(...)` to
-materialize the elements:
+The accessors below each return a list for constant-storage shapes and a generator for shapes of dynamic size.
 
 - `vertices()`: Yields the `Point` vertices.
 
 - `edges()`: Yields the edges as `Segment`.
 
-- `orientedEdges()`: Yields the edges as `OrientedSegment` in counterclockwise
-  order.
+- `orientedEdges()`: Yields the edges as `OrientedSegment` in counterclockwise order.
 
 ### Indexed access
 
-Iterable shapes support standard Python indexing over their defining points:
+Every shape supports standard Python indexing over the same elements it iterates
+(its defining points, or a `Point`'s two coordinates):
 
-- `len(s)`: Returns the number of indexable elements.
+- `len(s)` / `s.size()`: Returns the number of indexable elements.
 
-- `s[i]`: Returns the `i`-th element. Negative indices count from the end, as
-  usual in Python and large indices are taken modulo the length.
+- `s[i]` / `s.get(i)`: Returns the `i`-th element. Indexing is cyclic: `i` is
+  taken modulo the length, so negative indices count from the end and
+  out-of-range indices wrap instead of raising. `s[i]` delegates to `s.get(i)`.
 
-- `s.index(p)`: Returns the smallest index `i` such that `s[i] == p`, or `None` if no such index exists.
+- `s.index(p)`: Returns the smallest non-negative index `i` such that `s[i] == p`, or `None` if no such index exists.
 
 ```python
 c = pgl.Convex([pgl.Point(0, 0), pgl.Point(4, 0), pgl.Point(4, 3), pgl.Point(0, 3)])
 c[2]                      # (4,3)
 c[-1]                     # (0,3), same as c[3]
+c[5]                      # (4,0), same as c[1] (cyclic)
 c.index(pgl.Point(4, 3))  # 2, since c[2] == (4,3)
 ```
 

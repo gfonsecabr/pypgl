@@ -13,6 +13,14 @@ void bind_point(nb::module_ &m) {
     cls.def("x", [](const Point &p) { return p.x(); }, "X coordinate.");
     cls.def("y", [](const Point &p) { return p.y(); }, "Y coordinate.");
 
+    // Unlike the other shapes, a Point's `index` searches its two coordinates:
+    // returns 0 if x == value, 1 if y == value, else -1.
+    cls.def("index", [](const Point &p, const Num &value) -> std::optional<std::ptrdiff_t> {
+                auto i = p.index(value);
+                if (i < 0) return std::nullopt;
+                return i;
+            }, nb::arg("value"), "Index (0 or 1) of the coordinate equal to value, or None if neither.");
+
     // Point<->line duality (exact); returns a Line.
     cls.def("dual", [](const Point &p) { return p.dual(); },
             "Dual line of the point: the point (a, b) maps to the line y = a x - b.");
@@ -21,6 +29,21 @@ void bind_point(nb::module_ &m) {
 
     cls.def("bbox", [](const Point &p) { return p.bbox(); },
             "Exact axis-aligned bounding box (a degenerate Rectangle at the point).");
+
+    // Immutable arithmetic: points add/subtract componentwise, negate, and scale
+    // by an exact scalar. Each returns a new Point (Point is hashable, so it is
+    // never mutated in place).
+    cls.def("__add__", [](const Point &a, const Point &b) { return a + b; }, nb::is_operator());
+    cls.def("__sub__", [](const Point &a, const Point &b) { return a - b; }, nb::is_operator());
+    cls.def("__neg__", [](const Point &a) { return -a; }, nb::is_operator());
+    cls.def("__mul__", [](const Point &a, const Num &k) { return a * k; }, nb::is_operator());
+    cls.def("__rmul__", [](const Point &a, const Num &k) { return k * a; }, nb::is_operator());
+    cls.def("__truediv__", [](const Point &a, const Num &k) { return a / k; }, nb::is_operator());
+    PGL_BIND_TRANSFORMS(cls, Point);
+
+    // A Point indexes over its two coordinates (so get(i) yields a coordinate,
+    // not a Point). size() is 2.
+    PGL_BIND_INDEXING(cls, Point);
 
     bind_value_semantics<Point>(cls);
 

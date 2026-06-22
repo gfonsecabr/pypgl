@@ -24,6 +24,10 @@ void bind_lines(nb::module_ &m) {
         cls.def("halfplaneBelow", [](const Line &l) { return l.halfplaneBelow(); }, "Closed half-plane below the line.");
 
         bind_value_semantics<Line>(cls);
+        PGL_BIND_OPERATORS(cls, Line);
+        PGL_BIND_TRANSFORMS(cls, Line);
+        PGL_BIND_VERTEX_QUERIES(cls, Line);
+        PGL_BIND_INDEXING(cls, Line);
         PGL_BIND_LINE_HELPERS(cls, Line);
         PGL_BIND_COLLINEAR(cls, Line);
         PGL_BIND_PARALLEL(cls, Line);
@@ -53,6 +57,10 @@ void bind_lines(nb::module_ &m) {
         cls.def("asLine", [](const OrientedLine &l) { return l.asLine(); }, "Unoriented supporting line.");
 
         bind_value_semantics<OrientedLine>(cls);
+        PGL_BIND_OPERATORS(cls, OrientedLine);
+        PGL_BIND_TRANSFORMS(cls, OrientedLine);
+        PGL_BIND_VERTEX_QUERIES(cls, OrientedLine);
+        PGL_BIND_INDEXING(cls, OrientedLine);
         PGL_BIND_LINE_HELPERS(cls, OrientedLine);
         PGL_BIND_COLLINEAR(cls, OrientedLine);
         PGL_BIND_PARALLEL(cls, OrientedLine);
@@ -81,6 +89,10 @@ void bind_lines(nb::module_ &m) {
         cls.def("asOrientedLine", [](const Ray &r) { return r.asOrientedLine(); }, "Oriented supporting line.");
 
         bind_value_semantics<Ray>(cls);
+        PGL_BIND_OPERATORS(cls, Ray);
+        PGL_BIND_TRANSFORMS(cls, Ray);
+        PGL_BIND_VERTEX_QUERIES(cls, Ray);
+        PGL_BIND_INDEXING(cls, Ray);
         PGL_BIND_LINE_HELPERS(cls, Ray);
         PGL_BIND_COLLINEAR(cls, Ray);
         PGL_BIND_PARALLEL(cls, Ray);
@@ -113,6 +125,10 @@ void bind_lines(nb::module_ &m) {
         cls.def("isDegenerate", [](const Halfplane &h) { return h.isDegenerate(); }, "Whether the boundary points coincide.");
 
         bind_value_semantics<Halfplane>(cls);
+        PGL_BIND_INDEXING(cls, Halfplane);
+        PGL_BIND_OPERATORS(cls, Halfplane);
+        PGL_BIND_TRANSFORMS(cls, Halfplane);
+        PGL_BIND_VERTEX_QUERIES(cls, Halfplane);
         PGL_BIND_ALL_PREDICATES(cls, Halfplane);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Halfplane);
     }

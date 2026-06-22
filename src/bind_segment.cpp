@@ -24,6 +24,10 @@ void bind_segment(nb::module_ &m) {
 
     bind_value_semantics<Segment>(cls);
 
+    PGL_BIND_OPERATORS(cls, Segment);
+    PGL_BIND_TRANSFORMS(cls, Segment);
+    PGL_BIND_VERTEX_QUERIES(cls, Segment);
+    PGL_BIND_INDEXING(cls, Segment);
     PGL_BIND_LINE_HELPERS(cls, Segment);
     PGL_BIND_COLLINEAR(cls, Segment);
     PGL_BIND_PARALLEL(cls, Segment);
@@ -65,6 +69,10 @@ void bind_oriented_segment(nb::module_ &m) {
 
     bind_value_semantics<OrientedSegment>(cls);
 
+    PGL_BIND_OPERATORS(cls, OrientedSegment);
+    PGL_BIND_TRANSFORMS(cls, OrientedSegment);
+    PGL_BIND_VERTEX_QUERIES(cls, OrientedSegment);
+    PGL_BIND_INDEXING(cls, OrientedSegment);
     PGL_BIND_LINE_HELPERS(cls, OrientedSegment);
     PGL_BIND_COLLINEAR(cls, OrientedSegment);
     PGL_BIND_PARALLEL(cls, OrientedSegment);

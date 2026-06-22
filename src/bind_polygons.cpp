@@ -28,6 +28,10 @@ void bind_polygons(nb::module_ &m) {
         cls.def("bbox", [](const Triangle &t) { return t.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
 
         bind_value_semantics<Triangle>(cls);
+        PGL_BIND_OPERATORS(cls, Triangle);
+        PGL_BIND_TRANSFORMS(cls, Triangle);
+        PGL_BIND_VERTEX_QUERIES(cls, Triangle);
+        PGL_BIND_INDEXING(cls, Triangle);
         PGL_BIND_ALL_PREDICATES(cls, Triangle);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Triangle);
 
@@ -60,6 +64,10 @@ void bind_polygons(nb::module_ &m) {
         cls.def("bbox", [](const Rectangle &r) { return r.bbox(); }, "Exact axis-aligned bounding box (the rectangle itself).");
 
         bind_value_semantics<Rectangle>(cls);
+        PGL_BIND_OPERATORS(cls, Rectangle);
+        PGL_BIND_TRANSFORMS(cls, Rectangle);
+        PGL_BIND_VERTEX_QUERIES(cls, Rectangle);
+        PGL_BIND_INDEXING(cls, Rectangle);
         PGL_BIND_ALL_PREDICATES(cls, Rectangle);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Rectangle);
 
@@ -91,7 +99,44 @@ void bind_polygons(nb::module_ &m) {
         cls.def("isDegenerate", [](const Convex &c) { return c.isDegenerate(); }, "Whether the hull is lower-dimensional.");
         cls.def("bbox", [](const Convex &c) { return c.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
 
-        bind_value_semantics<Convex>(cls);
+        // Convex (and, later, Polygon) is variable-size: pgl stores a lazy
+        // translation offset so in-place translation is O(1) regardless of the
+        // vertex count. To expose that without the mutable-hashable-key hazard,
+        // Convex is mutable and therefore unhashable (Python's list/set rule).
+        bind_value_semantics<Convex>(cls, /*hashable=*/false);
+
+        // In-place operators mutate the object (preserving pgl's O(1) translate)
+        // and return self, so `c += p` keeps the same object.
+        cls.def("__iadd__", [](nb::object self, const Point &p) { nb::cast<Convex &>(self) += p; return self; }, nb::is_operator());
+        cls.def("__isub__", [](nb::object self, const Point &p) { nb::cast<Convex &>(self) -= p; return self; }, nb::is_operator());
+        cls.def("__imul__", [](nb::object self, const Num &k) { nb::cast<Convex &>(self) *= k; return self; }, nb::is_operator());
+        cls.def("__itruediv__", [](nb::object self, const Num &k) { nb::cast<Convex &>(self) /= k; return self; }, nb::is_operator());
+
+        // Value-returning operators copy first (Convex has no free operators, so
+        // synthesize them from the compound-assignment members).
+        cls.def("__add__",  [](const Convex &c, const Point &p) { Convex r = c; r += p; return r; }, nb::is_operator());
+        cls.def("__radd__", [](const Convex &c, const Point &p) { Convex r = c; r += p; return r; }, nb::is_operator());
+        cls.def("__sub__",  [](const Convex &c, const Point &p) { Convex r = c; r -= p; return r; }, nb::is_operator());
+        cls.def("__mul__",  [](const Convex &c, const Num &k) { Convex r = c; r *= k; return r; }, nb::is_operator());
+        cls.def("__rmul__", [](const Convex &c, const Num &k) { Convex r = c; r *= k; return r; }, nb::is_operator());
+        cls.def("__truediv__", [](const Convex &c, const Num &k) { Convex r = c; r /= k; return r; }, nb::is_operator());
+
+        // Value-returning transforms (new hull) plus their in-place counterparts
+        // (mutate, return None), mirroring pgl.
+        PGL_BIND_TRANSFORMS(cls, Convex);
+        cls.def("rotate90", [](Convex &c, int k) { c.rotate90(k); }, nb::arg("k") = 1,
+                "Rotate the hull in place by 90*k degrees about the origin.");
+        cls.def("scaleUpX", [](Convex &c, const Num &k) { c.scaleUpX(k); }, nb::arg("scalar"),
+                "Multiply the hull's x-coordinates by scalar in place.");
+        cls.def("scaleUpY", [](Convex &c, const Num &k) { c.scaleUpY(k); }, nb::arg("scalar"),
+                "Multiply the hull's y-coordinates by scalar in place.");
+        cls.def("scaleDownX", [](Convex &c, const Num &k) { c.scaleDownX(k); }, nb::arg("scalar"),
+                "Divide the hull's x-coordinates by scalar in place.");
+        cls.def("scaleDownY", [](Convex &c, const Num &k) { c.scaleDownY(k); }, nb::arg("scalar"),
+                "Divide the hull's y-coordinates by scalar in place.");
+
+        PGL_BIND_VERTEX_QUERIES(cls, Convex);
+        PGL_BIND_INDEXING(cls, Convex);
         PGL_BIND_ALL_PREDICATES(cls, Convex);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Convex);
 

@@ -94,6 +94,48 @@ pgl's `fbox()` is deliberately **not** bound: it returns a float-coordinate
 / reject-float design contract. 3 new tests in
 [tests/test_core_shapes.py](tests/test_core_shapes.py) (58 total).
 
+Operators and transforms (commit pending). Two new macros in
+[src/common.h](src/common.h) — `PGL_BIND_OPERATORS` (translate by a `Point` via
+`+`/`-`, scale by a scalar via `*`/`/`, both orders) and `PGL_BIND_TRANSFORMS`
+(value-returning `rotated90`, `scaledUpX/Y`, `scaledDownX/Y`). `Point` gets its
+own arithmetic (`+`/`-` of points, unary `-`, scalar `*`//) plus the transforms.
+
+Mutability split, decided here and reflected in
+[src/common.h](src/common.h)'s `bind_value_semantics(cls, hashable)`:
+
+- **Fixed-size shapes** (`Point`…`Rectangle`): immutable + hashable. Only the
+  value-returning operators/transforms are bound; `s += p` rebinds (Python
+  fallback), so a shape used as a dict key is never mutated underneath a live
+  container.
+- **`Convex`** (and, later, `Polygon`): variable-size, so it keeps pgl's lazy
+  translation offset and is bound **mutable** — `__iadd__`/`__isub__`/`__imul__`/
+  `__itruediv__` mutate in place and return self (O(1) translate), and the void
+  `rotate90`/`scaleUpX/Y`/`scaleDownX/Y` mutators are bound too. Following
+  Python's mutable⇒unhashable rule it is bound with `hashable = false`
+  (`__hash__` set to `None`), so it cannot be a dict key / set member and thus
+  can never corrupt a container when mutated. Its value-returning operators are
+  synthesized as copy-then-compound-assign (Convex has no free operators).
+
+12 new tests in [tests/test_transforms.py](tests/test_transforms.py) (70 total).
+
+Vertex/interior queries (commit pending). A `PGL_BIND_VERTEX_QUERIES` macro in
+[src/common.h](src/common.h) binds `pointInside()` (an exact interior point —
+`ResultNumber` defaults to `ERational`, so pgl's `/2` or `/4` stays exact),
+`verticesContain(point)`, and `index(point)` on every shape **except `Point`**,
+which has no interior; `Point` instead gets `index(value)` over its two
+coordinates. `index` returns `None` when not found (mapped from pgl's `-1` via
+`std::optional`), rather than a Python-unsafe `-1`.
+
+Indexing on every shape (commit pending). `PGL_BIND_INDEXING` binds pgl's
+`size()` and cyclic `get(i)` on all ten shapes, and
+[pypgl/__init__.py](pypgl/__init__.py) wires `len`, `shape[i]`, and iteration to
+them uniformly. So every shape is indexable/iterable over its defining points —
+the polygons over their vertices, the line-like shapes over their two defining
+points, and `Point` over its two coordinates. `shape[i]` is cyclic (wraps modulo
+`size()`, negatives count from the end, never raises); iteration still
+terminates because it goes through `__iter__` over `range(size())`. 11 new tests
+in [tests/test_vertex_queries.py](tests/test_vertex_queries.py) (81 total).
+
 ## Next
 
 ### Milestone 3 — Notebook UX
