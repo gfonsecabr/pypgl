@@ -5,12 +5,11 @@
   <img alt="Pangolin: Plane Geometry Library" src="figures/logotext.svg" width="65%"/>
 </picture>
 
-[![Tests](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml/badge.svg)](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml)
-[![Standard](https://img.shields.io/badge/C%2B%2B-20/23/26-rgb(10,66,158).svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
+<!-- [![Tests](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml/badge.svg)](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml)
+[![Standard](https://img.shields.io/badge/C%2B%2B-20/23/26-rgb(10,66,158).svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization) -->
 [![License](https://img.shields.io/badge/license-MIT-rgb(216,134,42).svg)](https://opensource.org/licenses/MIT)
-[![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html)
+<!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
-<br/>
 
 > ⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
 
@@ -46,7 +45,8 @@ The following table illustrates the result of the predicates for a triangle and 
 | `B.separates(A)`          | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | `A.crosses(B)`            | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-All predicates are calculated exactly for integers (except for possible overflows detailed in [types](types.md)).
+All predicates are computed exactly. Coordinates in `pypgl` are arbitrary-precision
+rationals (`fractions.Fraction`), so there are no overflow or rounding concerns.
 
 
 ### Operators
@@ -54,58 +54,71 @@ All predicates are calculated exactly for integers (except for possible overflow
 Shapes are translated by adding or subtracting a point. The point coordinates
 are added to, or subtracted from, every defining point of the shape.
 
-```c++
-pgl::Point p = {2,3}, q = {4,5};
-pgl::Segment s = {p, q},    //  s = (2,3)--(4,5)
-             t1 = p + s,    // t1 = (4,6)--(6,8)
-             t2 = s - p;    // t2 = (0,0)--(2,2)
+```python
+p = pgl.Point(2, 3)
+q = pgl.Point(4, 5)
+s = pgl.Segment(p, q)   #  s = (2,3)--(4,5)
+t1 = p + s              # t1 = (4,6)--(6,8)
+t2 = s - p              # t2 = (0,0)--(2,2)
 ```
 
 In-place translations use `+=` and `-=`.
 Scaling around the origin uses the operator `*` or `*=` with a scalar.
 
-```c++
-pgl::Segment s = {2, 3, 4, 5};    //  s = (2,3)--(4,5)
-s += pgl::Point(1,2);             //  s = (3,5)--(5,7)
-s *= 10;                          //  s = (30,50)--(50,70)
+```python
+s = pgl.Segment(2, 3, 4, 5)   #  s = (2,3)--(4,5)
+s += pgl.Point(1, 2)          #  s = (3,5)--(5,7)
+s *= 10                       #  s = (30,50)--(50,70)
 ```
 
 If we want to scale around a particular point `p`, we can use a combination of the previous operators:
 
-```c++
-pgl::Segment s = {2,3,4,5};   // s = (2,3)--(4,5)
-pgl::Point p = s.midpoint();  // p = (3,4)
-pgl::Segment t = 3*(s-p) + p; // t = (0,1)--(6,7)
+```python
+s = pgl.Segment(2, 3, 4, 5)   # s = (2,3)--(4,5)
+p = s.midpoint()              # p = (3,4)
+t = 3 * (s - p) + p           # t = (0,1)--(6,7)
 ```
 
 ### Intersection
 
-The intersection of any two shapes may be calculated as follows. Note that the intersection of any two shapes is always an [`std::optional`](https://en.cppreference.com/w/cpp/utility/optional.html) since the two shapes may not intersect. Since the intersection may have different types that depend on the two shapes, we sometimes use an
-[`std::variant`](https://en.cppreference.com/w/cpp/utility/variant.html). For example, the intersection of two segments may be a point or a segment. Furthermore, some shapes such as simple polygons may have disconnected intersections. In such cases, an [`std::vector`](https://en.cppreference.com/w/cpp/container/vector.html) with several objects is returned.
+The intersection of two shapes is returned directly as a Python object. The
+result is `None` when the shapes do not meet, and otherwise the concrete shape
+of the intersection — which may depend on the two operands (the intersection of
+two segments, for example, may be a `Point` or a `Segment`). There are no
+sentinels or wrappers: you test for `None` and otherwise use the object directly.
 
-```c++
-pgl::Segment s = {0,0,5,5}, t = {0,3,5,3};
-auto isec(s.intersection(t));
-// The type of isec here is std::optional<std::variant<pgl::Point,pgl::Segment>>
-pgl::Point p = std::get<0>(*isec);
-// p = (3,3)
+```python
+s = pgl.Segment(0, 0, 5, 5)
+t = pgl.Segment(0, 3, 5, 3)
+isec = s.intersection(t)
+# isec is a pgl.Point here; it would be None if the shapes did not meet
+if isec is not None:
+    print(isec)   # (3,3)
 ```
 
-When the intersection can be represented as a `Shape`, you can convert directly:
+Overlapping collinear segments instead yield a `Segment`, so branch on the
+returned type with `isinstance`:
 
-```c++
-pgl::Segment s = {0,0,5,5}, t = {0,3,5,3};
-pgl::Shape isec(s.intersection(t));
-pgl::Point<> p(isec);
-// p = (3,3)
+```python
+a = pgl.Segment(0, 0, 4, 0)
+b = pgl.Segment(2, 0, 6, 0)
+isec = a.intersection(b)
+if isinstance(isec, pgl.Point):
+    ...           # touching at a single point
+elif isinstance(isec, pgl.Segment):
+    print(isec)   # (2,0)--(4,0)
 ```
+
+> `intersection` is currently bound for pairs whose result is a point or a 1D
+> shape. Intersections that can produce a 2D region (two 2D shapes, or anything
+> against a `Halfplane`) are not bound yet; see [the roadmap](../ROADMAP.md).
 
 ### Other Methods for Shapes
 
-- `rotated90(int k = 1)`: Returns the shape rotated by `90k` degrees around the
+- `rotated90(k=1)`: Returns the shape rotated by `90k` degrees around the
   origin.
 
-- `rotate90(int k = 1)`: Rotates the shape by `90k` degrees around the origin.
+- `rotate90(k=1)`: Rotates the shape by `90k` degrees around the origin.
 
 - `scaledUpX(Number)`: Returns the shape with the x-coordinate multiplied by a
   number.
@@ -127,21 +140,20 @@ pgl::Point<> p(isec);
 
 - `scaleDownY(Number)`: Divides the y-coordinate by a number.
 
-- `squaredDistance<ResultNumber = NumberType>(Shape)`: Returns the squared
-  distance, computed in `ResultNumber` (default: the shape's coordinate type),
-  mirroring `intersection`. **Warning:** distances to a line, segment or ray
-  divide by a squared length, so with an integer `ResultNumber` the result is
-  truncated; request a floating-point or `Rational` type, e.g.
-  `a.squaredDistance<double>(b)`, for an accurate value. Distances between
-  points and between axis-aligned rectangles use no division and are exact.
+- `squaredDistance(Shape)`: Returns the exact squared Euclidean distance as a
+  `Fraction`. Because `pypgl` is exact throughout, the result is always exact —
+  there is no result-type parameter and no truncation. The squared distance,
+  rather than the distance itself, is exposed because the distance is generally
+  irrational; `Point.distance` is available when an approximate `float` is
+  wanted.
 
-- `squaredHausdorffDistance<ResultNumber = NumberType>(Shape)`: Returns the
-  squared Hausdorff distance, with the same `ResultNumber` convention and
-  truncation warning as `squaredDistance`.
+- `squaredHausdorffDistance(Shape)`: Returns the exact squared Hausdorff distance
+  as a `Fraction`.
 
-- `bbox()`: Returns the minimum bounding box of the shape.
-
-- `fbox<T>()`: Returns a bounding box of the shape using floating point coordinates of type `T`. The bounding box may not be minimum but must contain the entire shape. The `min` coordinates are rounded down and the `max` are rounded up to the nearest floating point. If `!s1.fbox().intersects(s2.fbox()))` then `!s1.bbox().intersects(s2.bbox()))`. Also, if `s1.fbox().crosses(s2.fbox()))` then `s1.bbox().crosses(s2.bbox()))`.
+- `bbox()`: Returns the minimum axis-aligned bounding box as a `Rectangle`.
+  Defined for the bounded shapes (`Point`, `Segment`, `OrientedSegment`,
+  `Triangle`, `Rectangle`, `Convex`); the unbounded shapes (`Line`,
+  `OrientedLine`, `Ray`, `Halfplane`) have no bounding box.
 
 - `area()`: Returns the area.
 
@@ -152,59 +164,47 @@ pgl::Point<> p(isec);
 - `pointInside()`: Returns a point strictly in the interior of the shape. Uses
   only division by a power of 2.
 
-- `verticesContain(p)`: Returns true if there exists a value `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for verticesContain if they are defined by different points.
+- `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points.
 
 ## Iterating
 
-There are several methods to iterate through vertices, edges, or oriented
-edges. An [`std::array`](https://en.cppreference.com/w/cpp/container/array.html)
-is used for shapes of constant size and an
-[`std::vector`](https://en.cppreference.com/w/cpp/container/vector.html) is
-used otherwise.
+Shapes with a fixed or enumerable vertex set (`Segment`, `OrientedSegment`,
+`Triangle`, `Rectangle`, `Convex`) are directly iterable over their vertices:
 
-- `vertices()`: Returns an `std::array` or an `std::vector` of `Point` that are
-  the vertices. 
+```python
+tri = pgl.Triangle(0, 0, 4, 0, 0, 3)
+for v in tri:          # iterate vertices
+    print(v)
+list(tri)              # [(0,0), (4,0), (0,3)]
+```
 
-- `edges()`: Returns an `std::array` or an `std::vector` of `Segment` that are
-  the edges.
+The accessors below each return a generator, so wrap them in `list(...)` to
+materialize the elements:
 
-- `orientedEdges()`: Returns an `std::array` or an `std::vector` of
-  `OrientedSegment` that are the edges in counterclockwise order. Not defined
-  for `Disk`.
+- `vertices()`: Yields the `Point` vertices.
 
-- `begin()`, `end()`, `edgesBegin()`, `edgesEnd()`, `orientedEdgesBegin()`,
-  `orientedEdgesEnd()`: Same as `vertices()`, `edges()`, and
-  `orientedEdges()` above, but for iterators that take `O(1)` time per element
-  visited.
+- `edges()`: Yields the edges as `Segment`.
+
+- `orientedEdges()`: Yields the edges as `OrientedSegment` in counterclockwise
+  order.
 
 ### Indexed access
 
-Every shape exposes a uniform indexed-access interface over its defining
-points (or, for `Point`, its two coordinates):
+Iterable shapes support standard Python indexing over their defining points:
 
-- `size()`: Returns the number of indexable elements.
+- `len(s)`: Returns the number of indexable elements.
 
-- `s[i]`: Returns the `i`-th element.
+- `s[i]`: Returns the `i`-th element. Negative indices count from the end, as
+  usual in Python and large indices are taken modulo the length.
 
-- `s.get(i)`: Same as `s[i]` but `i` is taken modulo `s.size()`, so negative
-  values wrap from the end.
+- `s.index(p)`: Returns the smallest index `i` such that `s[i] == p`, or `None` if no such index exists.
 
-- `s.index(p)`: Returns the smallest index `i` such that `s[i] == p`, or -1
-  if no such index exists.
-
-```c++
-pgl::Convex c({{0,0},{4,0},{4,3},{0,3}});
-c[2];           // (4,3)
-c.get(-1);      // (0,3) same as c[3]
-c.get(5);       // (4,0) same as c[1]
-c.index({4,3}); // 2 since c[2] == {4,3}
+```python
+c = pgl.Convex([pgl.Point(0, 0), pgl.Point(4, 0), pgl.Point(4, 3), pgl.Point(0, 3)])
+c[2]                      # (4,3)
+c[-1]                     # (0,3), same as c[3]
+c.index(pgl.Point(4, 3))  # 2, since c[2] == (4,3)
 ```
-
-
-The runtime `Shape` wrapper exposes `size()`, `operator[]`, and `get()` that
-dispatch to the wrapped alternative. Because `Point`'s
-indexed access yields a coordinate rather than a `Point`, `Shape::operator[]`
-and `Shape::get` throw `std::logic_error` if the wrapped value is a `Point`.
 
 
 
