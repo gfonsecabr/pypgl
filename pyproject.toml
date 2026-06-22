@@ -1,0 +1,26 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "nanobind>=2.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pypgl"
+version = "0.1.0"
+description = "Python bindings for the Pangolin (pgl) exact geometry library"
+readme = "pypgl.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Guilherme D. da Fonseca" }]
+dependencies = []
+
+[project.urls]
+"pgl (C++ library)" = "https://github.com/gfonsecabr/pgl"
+
+[tool.scikit-build]
+minimum-version = "0.10"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["pypgl"]
+
+# pgl is header-only. By default the build uses an in-tree .pgl-ref/include
+# checkout if present (offline dev), otherwise CMake FetchContents it. Point at a
+# co-developed checkout with:
+#   pip install -e . --no-build-isolation -C cmake.define.PGL_INCLUDE_DIR=/path/to/pgl/include

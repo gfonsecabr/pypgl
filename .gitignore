@@ -1,0 +1,7 @@
+.pgl-ref/
+build/
+*.so
+__pycache__/
+*.egg-info/
+dist/
+.venv/
