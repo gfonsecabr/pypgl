@@ -5,12 +5,11 @@
   <img alt="Pangolin: Plane Geometry Library" src="figures/logotext.svg" width="65%"/>
 </picture>
 
-[![Tests](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml/badge.svg)](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml)
-[![Standard](https://img.shields.io/badge/C%2B%2B-20/23/26-rgb(10,66,158).svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
+<!-- [![Tests](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml/badge.svg)](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml)
+[![Standard](https://img.shields.io/badge/C%2B%2B-20/23/26-rgb(10,66,158).svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization) -->
 [![License](https://img.shields.io/badge/license-MIT-rgb(216,134,42).svg)](https://opensource.org/licenses/MIT)
-[![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html)
+<!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
-<br/>
 
 > ⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
 
@@ -100,7 +99,7 @@ A point has methods:
 - `p.dual()`: Returns the dual line $y = ax - b$ for a point $(a,b)$.
 - `p.polar()`: Returns the polar line $ax + by = 1$ for a point $(a,b)$. Undefined for the origin.
 
-- Other methods:
+- Other methods:  bbox, boundaryContains, contains, crosses, distance, distanceL1, distanceLInf, edges, get, index, interiorContains, interiorsIntersect, intersection, intersects, orientedEdges, rotated90, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, squaredDistance, vertices.
 
 ### Segment
 
@@ -148,7 +147,7 @@ A segment `s` has methods such as:
 It knows how to convert itself with an explicit cast to:
 - `(pgl::Line) s` or `s.asLine()`: Returns the line that contains `s`.
 
-- Other methods:
+- Other methods: bbox, boundaryContains, contains, crosses, diameter, edges, get, index, interiorContains, interiorsIntersect, intersection, intersects, lengthL1, lengthLInf, max, min, orientedEdges, pointInside, rotated90,scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, squaredDistance, squaredHausdorffDistance, twiceArea, vertices, verticesContain.
 
 
 ### Oriented Segment
@@ -198,13 +197,8 @@ It knows how to convert itself with an explicit cast to:
 - `(pgl::OrientedLine) s` or `s.asOrientedLine()`: Returns the line that contains `s` and has the same orientation.
 - `(pgl::Ray) s`  or `s.asRay()`: Returns the half-line that contains `s` and has the same source.
 
-- Other methods:
+- Other methods: area, asLine, asSegment, bbox, boundaryContains, contains, crosses, diameter, edges, get, index, interiorContains, interiorsIntersect, intersection, intersects, lengthL1, lengthLInf, max, min, orientedEdges, pointInside, rotated90, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, squaredDistance, squaredHausdorffDistance, twiceArea, vertices, verticesContain.
 
-### EmptyShape
-
-Represents the empty set. Its `size()` is 0, it intersects nothing, and it is contained in everything.
-
-- Other methods:
 
 ### Line
 
@@ -233,7 +227,7 @@ A line `l` has some additional methods such as:
 - `l.yAtX(x)`: Returns the value of the line y coordinate at the given coordinate `x`.
 - `l.xAtY(y)`: Returns the value of the line x coordinate at the given coordinate `y`.
 
-- Other methods:
+- Other methods: area, asSegmentFor, boundaryContains, collinear, crosses, dualCoordinates, get, index, interiorsIntersect, intersection, intersects, max, min, pointInside, rotated90, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, squaredDistance, twiceArea, verticesContain.
 
 
 ### Oriented Line
@@ -272,7 +266,7 @@ An oriented line `l` has methods such as:
 It knows how to convert itself with an explicit cast to:
 - `(pgl::Line) l` or `l.asLine()`: Returns the line without the orientation.
 
-- Other methods:
+- Other methods: area, asOrientedSegmentFor, boundaryContains, collinear, crosses, crossingOrder, get, index, interiorsIntersect, intersection, intersects,  max, min, pointInside, rotated90, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, source, squaredDistance, target, twiceArea, verticesContain.
 
 
 ### Ray
@@ -312,7 +306,7 @@ It knows how to convert itself with an explicit cast to:
 - `(pgl::Line) l` or `l.asLine()`: Returns the line containing the ray.
 - `(pgl::OrientedLine) l` or `l.asOrientedLine()`: Returns the oriented line containing the ray and the same orientation.
 
-- Other methods:
+- Other methods: area, boundaryContains, collinear, contains, containsCollinear, crosses, get, index, interiorContains, interiorsIntersect, intersection, intersects, max, min, pointInside, rotated90, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, source, squaredDistance, target, twiceArea, verticesContain.
 
 
 ### Half-Plane
@@ -345,7 +339,7 @@ It knows how to convert itself with an explicit cast to:
 - `(pgl::Line) l` or `l.asLine()`: Returns the line bounding the half-plane.
 - `(pgl::OrientedLine) l` or `l.asOrientedLine()`: Returns the oriented line bounding the half-plane.
 
-- Other methods:
+- Other methods: boundaryContains, contains, crosses, get, index, interiorContains, interiorsIntersect, intersects, max, min, pointInside, rotated90,  scaledDownY, scaledUpX, scaledUpY, separates, source, squaredDistance, target, verticesContain.
 
 
 ### Triangle
@@ -379,7 +373,7 @@ It knows how to convert itself with an explicit cast to:
 - `(pgl::Polygon) t` or `t.asPolygon()`: Returns the polygon representation of the triangle.
 - `(pgl::Convex) t` or `t.asConvex()`: Returns the convex polygon representation of the triangle.
 
-- Other methods:
+- Other methods: a, area, b, bbox, boundaryContains, c, contains, crosses, diameter, edges, get, index, interiorContains, interiorsIntersect, intersection, intersects, orientedEdges, pointInside, rotated90, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, squaredDistance, twiceArea, vertices, verticesContain.
 
 
 ### Rectangle
@@ -415,7 +409,7 @@ It knows how to convert itself with an explicit cast to:
 - `(pgl::Polygon) r` or `r.asPolygon()`: Returns the polygon representation of the rectangle.
 - `(pgl::Convex) r` or `r.asConvex()`: Returns the convex polygon representation of the rectangle.
 
-- Other methods:
+- Other methods: area, boundaryAt, boundaryContains, center, contains, crosses, diameter, edges, get, height, index, interiorContains, interiorsIntersect, intersection, intersects, max, midpoint, min, orientedEdges, pointInside, rotated90, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, squaredDistance, squaredHausdorffDistance, twiceArea, vertices, verticesContain, width.
 
 
 ### Disk
@@ -477,5 +471,5 @@ If the convex polygon `c` has $n$ vertices, then:
 - Other predicates take the same time as `intersects`.
 - `c.intersection(c2)` takes $O((n+m) log (n+m))$ time if `c2` is a convex polygon with $m$ vertices.
 
-- Other methods:
+- Other methods: antipodalPairs, area, bbox, boundaryContains, contains, crosses, edges, edgesAtX, get, index, interiorContains, interiorsIntersect, maxIndex, orientedEdges, pointInside, rotate90, rotated90, scaleDownX, scaleDownY, scaleUpX, scaleUpY, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, squaredDistance, twiceArea, vertices, verticesCentroid, verticesContain.
 
