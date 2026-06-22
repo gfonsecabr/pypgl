@@ -4,13 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-**PoC milestone done** (milestone 1 of [pypgl.md](pypgl.md)): `Point` and `Segment`
-are bound with their predicate matrix and `intersection`, the two casters work,
-and the exact round-trip / `optional`→`None` / `variant`→concrete mappings are
-verified by the `tests/` suite. Still to do: the remaining core shapes (`Line`,
-`Ray`, `Triangle`, `Rectangle`, …), `Canvas` + `_repr_svg_`, packaging/stubs, and
-the experimental `Disk`/`Polygon`. [pypgl.md](pypgl.md) remains the authoritative
-design contract — update it in lockstep if a decision changes.
+**Core shapes done** (milestones 1–2 of [pypgl.md](pypgl.md)): all
+non-experimental shapes are bound — `Point`, `Segment`, `OrientedSegment`,
+`Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`, `Rectangle`, `Convex` —
+each with the full 7-predicate × 10-shape matrix (`PGL_BIND_ALL_PREDICATES` in
+[src/common.h](src/common.h)), constructors, accessors/measures, and typed
+`intersection` results for the 0D/1D-result pairs. The two casters work and the
+exact round-trip / `optional`→`None` / `variant`→concrete mappings are verified
+by the 39-test `tests/` suite. Still to do: broaden `intersection` to 2D∩2D /
+`Halfplane` (Convex/Polygon results), `Canvas` + `_repr_svg_` (milestone 3),
+packaging/stubs (milestone 4), and the experimental `Disk`/`Polygon`.
+[pypgl.md](pypgl.md) remains the authoritative design contract — update it in
+lockstep if a decision changes; [ROADMAP.md](ROADMAP.md) tracks progress.
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).

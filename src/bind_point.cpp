@@ -15,16 +15,24 @@ void bind_point(nb::module_ &m) {
 
     bind_value_semantics<Point>(cls);
 
-    PGL_BIND_PREDICATES(cls, Point, Point);
-    PGL_BIND_PREDICATES(cls, Point, Segment);
+    PGL_BIND_ALL_PREDICATES(cls, Point);
 
-    cls.def("intersection", [](const Point &a, const Point &b) { return a.intersection(b); },
-            nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const Segment &b) { return a.intersection(b); },
-            nb::arg("other"));
+    // A point intersected with any shape is either that point or empty, so the
+    // result is always std::optional<Point> — safe to bind against every shape.
+    cls.def("intersection", [](const Point &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const Halfplane &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const Triangle &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const Rectangle &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const Convex &b) { return a.intersection(b); }, nb::arg("other"));
 
     cls.def("distance", [](const Point &a, const Point &b) { return a.distance(b); },
             nb::arg("other"), "Approximate Euclidean distance (float).");
-    cls.def("squaredDistance", [](const Point &a, const Point &b) { return a.squaredDistance(b); },
-            nb::arg("other"), "Exact squared Euclidean distance.");
+
+    // Exact squared distance against every shape (Fraction result).
+    PGL_BIND_ALL_SQUARED_DISTANCE(cls, Point);
 }

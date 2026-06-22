@@ -20,12 +20,49 @@ void bind_segment(nb::module_ &m) {
 
     bind_value_semantics<Segment>(cls);
 
-    PGL_BIND_PREDICATES(cls, Segment, Point);
-    PGL_BIND_PREDICATES(cls, Segment, Segment);
+    PGL_BIND_ALL_PREDICATES(cls, Segment);
+    PGL_BIND_ALL_SQUARED_DISTANCE(cls, Segment);
 
-    cls.def("intersection", [](const Segment &a, const Point &b) { return a.intersection(b); },
-            nb::arg("other"));
-    cls.def("intersection", [](const Segment &a, const Segment &b) { return a.intersection(b); },
-            nb::arg("other"),
+    cls.def("intersection", [](const Segment &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Segment &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"),
             "Intersection of two segments: None, a Point, or a Segment.");
+    cls.def("intersection", [](const Segment &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Segment &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Segment &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Segment &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
+}
+
+void bind_oriented_segment(nb::module_ &m) {
+    nb::class_<OrientedSegment> cls(m, "OrientedSegment");
+
+    cls.def(nb::init<Point, Point>(), nb::arg("source"), nb::arg("target"),
+            "Create an oriented segment from source to target (order preserved).");
+    cls.def(nb::init<Num, Num, Num, Num>(), nb::arg("x1"), nb::arg("y1"),
+            nb::arg("x2"), nb::arg("y2"),
+            "Create an oriented segment from four coordinates.");
+
+    cls.def("source", [](const OrientedSegment &s) { return s.source(); }, "Source endpoint.");
+    cls.def("target", [](const OrientedSegment &s) { return s.target(); }, "Target endpoint.");
+    cls.def("min", [](const OrientedSegment &s) { return s.min(); }, "Lexicographically smaller endpoint.");
+    cls.def("max", [](const OrientedSegment &s) { return s.max(); }, "Lexicographically larger endpoint.");
+    cls.def("opposite", [](const OrientedSegment &s) { return s.opposite(); }, "Segment with source and target swapped.");
+    cls.def("vertices", [](const OrientedSegment &s) { return s.vertices(); }, "The two endpoints.");
+    cls.def("midpoint", [](const OrientedSegment &s) { return s.midpoint(); }, "Exact midpoint.");
+    cls.def("length", [](const OrientedSegment &s) { return s.length(); }, "Approximate length (float).");
+    cls.def("squaredLength", [](const OrientedSegment &s) { return s.squaredLength(); }, "Exact squared length.");
+    cls.def("asSegment", [](const OrientedSegment &s) { return s.asSegment(); }, "Unoriented segment with the same endpoints.");
+    cls.def("asLine", [](const OrientedSegment &s) { return s.asLine(); }, "Supporting unoriented line.");
+    cls.def("isDegenerate", [](const OrientedSegment &s) { return s.isDegenerate(); }, "Whether source and target coincide.");
+
+    bind_value_semantics<OrientedSegment>(cls);
+
+    PGL_BIND_ALL_PREDICATES(cls, OrientedSegment);
+    PGL_BIND_ALL_SQUARED_DISTANCE(cls, OrientedSegment);
+
+    cls.def("intersection", [](const OrientedSegment &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const OrientedSegment &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const OrientedSegment &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const OrientedSegment &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const OrientedSegment &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const OrientedSegment &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
 }

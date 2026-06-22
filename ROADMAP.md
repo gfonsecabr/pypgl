@@ -21,36 +21,54 @@ file tracks concrete progress and the next actionable steps. Read
   segment iteration.
 - 18 passing tests in [tests/](tests/).
 
+### Milestone 2 — Core shapes (commit pending)
+All remaining non-experimental shapes are bound, each in its own translation
+unit, with the full predicate matrix.
+
+- New TUs: [src/bind_lines.cpp](src/bind_lines.cpp) (`Line`, `OrientedLine`,
+  `Ray`, `Halfplane`) and [src/bind_polygons.cpp](src/bind_polygons.cpp)
+  (`Triangle`, `Rectangle`, `Convex`). `OrientedSegment` was added to
+  [src/bind_segment.cpp](src/bind_segment.cpp). All wired into
+  [src/module.cpp](src/module.cpp) and [CMakeLists.txt](CMakeLists.txt).
+- Aliases for every shape (the pgl `E*` aliases over `EPoint`) in
+  [src/common.h](src/common.h), plus a `PGL_BIND_ALL_PREDICATES(cls, Self)`
+  macro that binds the 7 predicates of `Self` against **all ten** bound shapes
+  (full 10×10 matrix). pgl declares every predicate for every pair (explicit
+  overloads + rank-based forwarding), so all pairs compile; not-yet-implemented
+  pairs throw at runtime, as designed.
+- Constructors mirror the C++ ones; accessors/measures bound per shape
+  (`.vertices()`, `.edges()`, `.area()`, `.twiceArea()`, `.centroid()`,
+  `.min()/.max()`, `.midpoint()`, `.diameter()`, `.source()/.target()`,
+  `.opposite()`, `.asLine()/.asSegment()`, `dual`/`polar`, `isVertical` …).
+  Templated measures (area/centroid/dual) are bound via no-arg lambdas to pick
+  the default `ResultNumber = ERational`.
+- Vertex iteration (`__iter__`/`__len__`/`__getitem__`) and `point in shape`
+  extended to all the new shapes in [pypgl/__init__.py](pypgl/__init__.py).
+- Exact `squaredDistance` (`PGL_BIND_ALL_SQUARED_DISTANCE` in
+  [src/common.h](src/common.h)) bound across the full matrix; returns the exact
+  squared Euclidean distance as a `Fraction` (`ResultNumber` defaults to
+  `ERational`). The approximate float `distance` stays Point-only, mirroring pgl.
+- 25 new tests in [tests/test_core_shapes.py](tests/test_core_shapes.py)
+  (43 total): constructors, exact measures, cross-shape predicates, exact
+  squared distances, and the `variant`→concrete-type intersection results
+  (line∩line→Point/Line, ray∩ray→Segment/Ray, triangle∩line→Segment, etc.).
+
+Intersection scope (deliberately partial; expand later): bound for pairs whose
+results are points / 1D shapes (all in the bound set). 2D∩2D and `Halfplane`
+intersections — whose results can be a `Convex`/`Polygon` region — are left to a
+later milestone so no binding returns an unbound type.
+
+Required a pgl fix pulled into `.pgl-ref`: `std::hash` for `Line`-family shapes
+and `Convex::intersection(Point)` were not compatible with `Rational<BigInt>`
+coordinates (commits `de4b7d0` + the `Convex.intersection(Point)` follow-up).
+
+Also required a pgl fix (pulled into `.pgl-ref`, commit `0544ec6`): `Convex` had
+no `squaredDistance(Halfplane)` overload and no rank-based forwarding for
+`squaredDistance`, so the Convex×Halfplane pair would not compile. With that
+added, all ten shapes use the uniform `PGL_BIND_ALL_SQUARED_DISTANCE` macro and
+the full squared-distance matrix is exposed.
+
 ## Next
-
-### Milestone 2 — Core shapes (the current next step)
-Bind the remaining non-experimental shapes, each as its own translation unit, and
-extend the predicate/intersection matrix to cover every pair.
-
-- New TUs (mirror the design doc's grouping):
-  - `src/bind_lines.cpp` → `Line`, `OrientedLine`, `Ray`, `Halfplane`
-    (headers: `.pgl-ref/include/shape/{line,orientedline,ray,halfplane}.hpp`)
-  - `src/bind_polygons.cpp` → `Triangle`, `Rectangle`, `Convex`
-    (headers: `.pgl-ref/include/shape/{triangle,rectangle,convex}.hpp`)
-  - Also bind `OrientedSegment` (likely in `bind_segment.cpp` or a `bind_lines.cpp`).
-- Register each new `bind_*` in [src/module.cpp](src/module.cpp) and add the
-  `.cpp` to `nanobind_add_module` in [CMakeLists.txt](CMakeLists.txt).
-- Add `Num`/`Point` aliases as needed; define each shape alias as
-  `pgl::Shape<EPoint>` analog (e.g. `using Triangle = pgl::Triangle<Point>;`).
-- Extend `PGL_BIND_PREDICATES(cls, Self, Other)` calls so every bound shape lists
-  every other bound shape as an `Other`. Some pairs are not-yet-implemented in pgl
-  and **throw at runtime** but still compile — that's fine; if a pair fails to
-  *compile*, drop that one overload and note it.
-- Constructors mirroring C++ ones; accessors (`.vertices()`, `.area()`,
-  `.centroid()`, `.min()/.max()`, `.length()`, etc.); constructions
-  (`intersection`, `distance`, `bounding`, `dual`/`polar` duality).
-- Tests per shape: constructors, predicate samples, exact measures, and the
-  `variant`→concrete-type results for richer intersections.
-
-Watch for: predicate methods are templated with defaults — always bind via
-lambdas, never by address (see CLAUDE.md gotchas). Verify each shape has a
-`std::hash` specialization (they do, in `core/hash.hpp`) before using
-`bind_value_semantics`.
 
 ### Milestone 3 — Notebook UX
 - Bind `Canvas` (`.pgl-ref/include/visualization/canvas.hpp`): construction,
