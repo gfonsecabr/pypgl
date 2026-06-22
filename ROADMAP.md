@@ -85,6 +85,15 @@ but not `Ray`, while every other line-like shape (and `Ray.parallel(OrientedLine
 had the full matrix; the missing overload was added upstream so the uniform
 `PGL_BIND_PARALLEL` macro compiles for `OrientedLine`.
 
+Exact bounding box (commit pending). `bbox()` (returns the already-bound exact
+`Rectangle`) is bound on the six bounded shapes — `Point`, `Segment`,
+`OrientedSegment`, `Triangle`, `Rectangle`, `Convex`. The unbounded shapes
+(`Line`, `OrientedLine`, `Ray`, `Halfplane`) have no `bbox`, mirroring pgl.
+pgl's `fbox()` is deliberately **not** bound: it returns a float-coordinate
+`Rectangle<Point<double>>`, which conflicts with the one-ERational-instantiation
+/ reject-float design contract. 3 new tests in
+[tests/test_core_shapes.py](tests/test_core_shapes.py) (58 total).
+
 ## Next
 
 ### Milestone 3 — Notebook UX

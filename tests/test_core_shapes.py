@@ -195,6 +195,33 @@ def test_squared_distance_zero_on_contact():
     assert t.squaredDistance(pypgl.Point(1, 1)) == 0
 
 
+# --- exact bounding box --------------------------------------------------
+
+def test_bbox_exact_for_each_bounded_shape():
+    R = pypgl.Rectangle
+    assert isinstance(pypgl.Point(2, 3).bbox(), R)
+    assert pypgl.Point(2, 3).bbox() == R(2, 3, 2, 3)          # degenerate
+    assert pypgl.Segment(0, 0, 3, 5).bbox() == R(0, 0, 3, 5)
+    assert pypgl.OrientedSegment(3, 5, 0, 0).bbox() == R(0, 0, 3, 5)
+    assert pypgl.Triangle(0, 0, 4, 0, 1, 3).bbox() == R(0, 0, 4, 3)
+    assert pypgl.Rectangle(0, 0, 4, 3).bbox() == R(0, 0, 4, 3)  # itself
+    c = pypgl.Convex([pypgl.Point(0, 0), pypgl.Point(4, 0),
+                      pypgl.Point(2, 5), pypgl.Point(1, 1)])
+    assert c.bbox() == R(0, 0, 4, 5)
+
+
+def test_bbox_exact_with_big_coordinates():
+    big = 10 ** 40
+    t = pypgl.Triangle(pypgl.Point(0, 0), pypgl.Point(big, 0),
+                       pypgl.Point(0, big))
+    assert t.bbox() == pypgl.Rectangle(0, 0, big, big)
+
+
+def test_unbounded_shapes_have_no_bbox():
+    for name in ("Line", "OrientedLine", "Ray", "Halfplane"):
+        assert not hasattr(getattr(pypgl, name), "bbox"), name
+
+
 # --- value semantics for the new shapes ---------------------------------
 
 def test_new_shapes_hashable_and_comparable():

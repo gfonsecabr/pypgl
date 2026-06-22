@@ -25,6 +25,7 @@ void bind_polygons(nb::module_ &m) {
         cls.def("centroid", [](const Triangle &t) { return t.centroid(); }, "Exact centroid.");
         cls.def("diameter", [](const Triangle &t) { return t.diameter(); }, "Longest distance as a segment between two vertices.");
         cls.def("isDegenerate", [](const Triangle &t) { return t.isDegenerate(); }, "Whether the vertices are collinear.");
+        cls.def("bbox", [](const Triangle &t) { return t.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
 
         bind_value_semantics<Triangle>(cls);
         PGL_BIND_ALL_PREDICATES(cls, Triangle);
@@ -56,6 +57,7 @@ void bind_polygons(nb::module_ &m) {
         cls.def("midpoint", [](const Rectangle &r) { return r.midpoint(); }, "Exact midpoint of the diagonal.");
         cls.def("diameter", [](const Rectangle &r) { return r.diameter(); }, "Diagonal as a segment.");
         cls.def("isDegenerate", [](const Rectangle &r) { return r.isDegenerate(); }, "Whether the rectangle has zero area.");
+        cls.def("bbox", [](const Rectangle &r) { return r.bbox(); }, "Exact axis-aligned bounding box (the rectangle itself).");
 
         bind_value_semantics<Rectangle>(cls);
         PGL_BIND_ALL_PREDICATES(cls, Rectangle);
@@ -87,6 +89,7 @@ void bind_polygons(nb::module_ &m) {
         cls.def("centroid", [](const Convex &c) { return c.centroid(); }, "Exact centroid.");
         cls.def("diameter", [](const Convex &c) { return c.diameter(); }, "Diameter as a segment between two vertices.");
         cls.def("isDegenerate", [](const Convex &c) { return c.isDegenerate(); }, "Whether the hull is lower-dimensional.");
+        cls.def("bbox", [](const Convex &c) { return c.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
 
         bind_value_semantics<Convex>(cls);
         PGL_BIND_ALL_PREDICATES(cls, Convex);

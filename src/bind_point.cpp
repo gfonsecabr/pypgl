@@ -19,6 +19,9 @@ void bind_point(nb::module_ &m) {
     cls.def("polar", [](const Point &p) { return p.polar(); },
             "Polar line of the point: the point (a, b) maps to the line a x + b y = 1.");
 
+    cls.def("bbox", [](const Point &p) { return p.bbox(); },
+            "Exact axis-aligned bounding box (a degenerate Rectangle at the point).");
+
     bind_value_semantics<Point>(cls);
 
     PGL_BIND_ALL_PREDICATES(cls, Point);

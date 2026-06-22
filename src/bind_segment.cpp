@@ -20,6 +20,7 @@ void bind_segment(nb::module_ &m) {
     cls.def("lengthL1", [](const Segment &s) { return s.lengthL1(); }, "Exact Manhattan (L1) length.");
     cls.def("lengthLInf", [](const Segment &s) { return s.lengthLInf(); }, "Exact Chebyshev (L-infinity) length.");
     cls.def("asLine", [](const Segment &s) { return s.asLine(); }, "Supporting unoriented line.");
+    cls.def("bbox", [](const Segment &s) { return s.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
 
     bind_value_semantics<Segment>(cls);
 
@@ -60,6 +61,7 @@ void bind_oriented_segment(nb::module_ &m) {
     cls.def("lengthLInf", [](const OrientedSegment &s) { return s.lengthLInf(); }, "Exact Chebyshev (L-infinity) length.");
     cls.def("asSegment", [](const OrientedSegment &s) { return s.asSegment(); }, "Unoriented segment with the same endpoints.");
     cls.def("asLine", [](const OrientedSegment &s) { return s.asLine(); }, "Supporting unoriented line.");
+    cls.def("bbox", [](const OrientedSegment &s) { return s.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
 
     bind_value_semantics<OrientedSegment>(cls);
 
