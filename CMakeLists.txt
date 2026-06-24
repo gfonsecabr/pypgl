@@ -52,6 +52,24 @@ nanobind_add_module(_pgl
 
 target_include_directories(_pgl PRIVATE "${PGL_INCLUDE_DIR}" src)
 
+# clang-cl (the Windows toolset — see pyproject's [tool.cibuildwheel.windows])
+# emits calls to compiler-rt's 128-bit-integer builtins (__udivti3, __modti3,
+# __divti3, __floattidf, __fixdfti) for the __int128 path pgl takes, but lld-link
+# does not auto-link the builtins archive the way GCC/Clang do on Unix. Link it
+# explicitly, located relative to the compiler.
+if(MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  get_filename_component(_clang_bin_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+  file(GLOB _clang_rt_builtins
+    "${_clang_bin_dir}/../lib/clang/*/lib/windows/clang_rt.builtins-x86_64.lib")
+  if(_clang_rt_builtins)
+    list(GET _clang_rt_builtins -1 _clang_rt_builtins)  # highest clang version
+    target_link_libraries(_pgl PRIVATE "${_clang_rt_builtins}")
+    message(STATUS "pypgl: linking compiler-rt builtins ${_clang_rt_builtins}")
+  else()
+    message(WARNING "pypgl: clang_rt.builtins-x86_64.lib not found near ${_clang_bin_dir}")
+  endif()
+endif()
+
 install(TARGETS _pgl LIBRARY DESTINATION pypgl)
 
 # Generate a type stub (_pgl.pyi) for the compiled module and ship it next to
