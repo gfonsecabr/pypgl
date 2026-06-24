@@ -49,3 +49,18 @@ nanobind_add_module(_pgl
 target_include_directories(_pgl PRIVATE "${PGL_INCLUDE_DIR}" src)
 
 install(TARGETS _pgl LIBRARY DESTINATION pypgl)
+
+# Generate a type stub (_pgl.pyi) for the compiled module and ship it next to
+# py.typed (PEP 561) so type checkers and IDEs see the full exact-geometry API.
+# The stub is built from the bare `_pgl` module (importing it standalone, before
+# pypgl/__init__.py runs); src/stubgen_patterns.txt re-adds the Python-layer
+# sugar that __init__.py applies at import time (len/indexing/iteration over a
+# shape's defining points and `point in shape`).
+nanobind_add_stub(_pgl_stub
+  MODULE _pgl
+  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/_pgl.pyi"
+  PYTHON_PATH "$<TARGET_FILE_DIR:_pgl>"
+  PATTERN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/stubgen_patterns.txt"
+  DEPENDS _pgl)
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/_pgl.pyi" DESTINATION pypgl)

@@ -26,8 +26,15 @@ use `nb::rv_policy::reference_internal`. `_repr_svg_` is added Python-side in
 every shape it renders a one-shot `Canvas().draw(self)` — so shapes and canvases
 display inline in Jupyter.
 
+**Type stubs done** (milestone 4): `_pgl.pyi` is generated at build time by
+`nanobind_add_stub` in [CMakeLists.txt](CMakeLists.txt) — from the *bare* `_pgl`
+module, with the Python-layer sugar re-added via
+[src/stubgen_patterns.txt](src/stubgen_patterns.txt) — and shipped next to
+`py.typed` (PEP 561).
+
 Still to do: broaden `intersection` to 2D∩2D / `Halfplane` (Convex/Polygon
-results), packaging/stubs (milestone 4), and the experimental `Polygon`.
+results), the rest of milestone 4 (cibuildwheel CI, PyPI publish), and the
+experimental `Polygon`.
 [pypgl.md](pypgl.md) remains the authoritative design contract —
 update it in lockstep if a decision changes; [ROADMAP.md](ROADMAP.md) tracks
 progress.

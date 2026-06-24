@@ -147,6 +147,14 @@ deliberately not exposed — it skips the bbox computation and could produce an
 invalid rectangle. 3 new tests in
 [tests/test_core_shapes.py](tests/test_core_shapes.py) (84 total).
 
+- `Disk` — **done** ([src/bind_disk.cpp](src/bind_disk.cpp)): bound as its own
+  complete class once its pgl C++ predicates settled. Exact
+  `center`/`squaredRadius`/`bbox`/`pointInside`; the irrational `radius`/`area`
+  and disk `squaredDistance` return `float`; float-coordinate
+  `diameter()`/`fbox()` are not bound. Its column is not yet added to the other
+  shapes' matrices (pgl still lacks `Triangle::contains(Disk)` and
+  `Convex::squaredDistance(Disk)`).
+
 ### Milestone 3 — Notebook UX (commit pending)
 `Canvas` is bound in its own TU ([src/bind_canvas.cpp](src/bind_canvas.cpp),
 wired into [src/module.cpp](src/module.cpp) and [CMakeLists.txt](CMakeLists.txt)).
@@ -174,19 +182,30 @@ order, borders, arrowhead markers, `writeSVG`, and the `_repr_svg_` hooks.
 ## Next
 
 ### Milestone 4 — Packaging & distribution
+
+Type stubs (commit pending). `_pgl.pyi` is generated at build time by
+`nanobind_add_stub` in [CMakeLists.txt](CMakeLists.txt) and installed next to the
+extension and the existing `py.typed` (PEP 561). The stub is generated from the
+**bare** `_pgl` module (`MODULE _pgl`, `PYTHON_PATH` = the built `.so`'s dir),
+i.e. before [pypgl/__init__.py](pypgl/__init__.py) runs — which both keeps the
+qualified names clean and dodges a stubgen quirk where the runtime-patched
+lambdas otherwise leak in as an invalid `from pypgl import <lambda>`. The
+Python-layer sugar that `__init__.py` adds at import time (per-shape `__len__`/
+`__getitem__`/`__iter__` over the defining points, and `__contains__` for
+`point in shape`) is re-added via a pattern file,
+[src/stubgen_patterns.txt](src/stubgen_patterns.txt): a `Point.__suffix__` rule
+(coords → `Fraction`), a generic `*.__suffix__` rule for the other shapes
+(→ `Point`), and a `Canvas` shield (no point sugar). 18 new tests in
+[tests/test_stubs.py](tests/test_stubs.py) (163 total): artifacts shipped, stub
+parses, every public class declared, no leaked patches, sugar present on shapes
+but not `Canvas`.
+
+Still to do:
 - `cibuildwheel` GitHub Actions across manylinux/macOS/Windows + CPython versions.
-- Generate `_pgl.pyi` stubs (nanobind stubgen) and ship them next to `py.typed`.
 - Confirm `pypgl` name on PyPI; publish.
 - Consider STABLE_ABI builds (nanobind, Python ≥ 3.12) to cut wheel count.
 
 ### Milestone 5 — Experimental
-- `Disk` — **done** ([src/bind_disk.cpp](src/bind_disk.cpp)): bound as its own
-  complete class once its pgl C++ predicates settled. Exact
-  `center`/`squaredRadius`/`bbox`/`pointInside`; the irrational `radius`/`area`
-  and disk `squaredDistance` return `float`; float-coordinate
-  `diameter()`/`fbox()` are not bound. Its column is not yet added to the other
-  shapes' matrices (pgl still lacks `Triangle::contains(Disk)` and
-  `Convex::squaredDistance(Disk)`).
 - `Polygon` once its pgl C++ predicates settle; keep gated so the stable public
   API does not churn.
 

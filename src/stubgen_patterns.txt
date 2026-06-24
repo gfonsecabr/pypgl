@@ -1,0 +1,31 @@
+# nanobind stubgen pattern file for the compiled `_pgl` module.
+#
+# The stub is generated from the *bare* compiled module, before the Python sugar
+# in pypgl/__init__.py runs, so that layer's additions are missing from the raw
+# stub. That sugar makes every shape iterable/indexable over its defining points
+# (`len(shape)`, `shape[i]`, `for p in shape`) and maps `point in shape` to
+# `shape.contains(point)`. We re-declare it here so the shipped stub matches the
+# runtime API. (Generating from the bare module also avoids a stubgen quirk where
+# the runtime-patched lambdas leak in as an invalid `from pypgl import <lambda>`.)
+
+# Point is indexed/iterated over its two rational coordinates.
+Point\.__suffix__:
+    \from collections.abc import Iterator
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> fractions.Fraction: ...
+    def __iter__(self) -> Iterator[fractions.Fraction]: ...
+    def __contains__(self, point: Point) -> bool: ...
+
+# Canvas has no point sugar; shield it from the generic shape rule below
+# (an empty replacement suppresses any addition).
+Canvas\.__suffix__:
+
+# Every other shape is indexed/iterated over its defining points. The class-name
+# segment in the query keeps this from matching the bare module suffix
+# (`_pgl.__suffix__`), which would inject the methods at module scope.
+\.[A-Z]\w*\.__suffix__:
+    \from collections.abc import Iterator
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> Point: ...
+    def __iter__(self) -> Iterator[Point]: ...
+    def __contains__(self, point: Point) -> bool: ...
