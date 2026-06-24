@@ -188,3 +188,28 @@ def test_canvas_repr_svg_matches_to_svg():
 @pytest.mark.parametrize("shape", ALL_SHAPES, ids=lambda s: type(s).__name__)
 def test_every_shape_has_inline_svg(shape):
     _is_valid_svg(shape._repr_svg_())
+
+
+def test_inline_shape_size_defaults_to_repr_svg_size():
+    # Shapes render on a one-shot canvas half pgl's 1000x1000 default.
+    assert pypgl.REPR_SVG_SIZE == 500
+    root = _is_valid_svg(Point(0, 0)._repr_svg_())
+    assert root.attrib["width"] == "500"
+    assert root.attrib["height"] == "500"
+
+
+def test_repr_svg_size_is_configurable():
+    original = pypgl.REPR_SVG_SIZE
+    try:
+        pypgl.REPR_SVG_SIZE = 250
+        root = _is_valid_svg(Point(0, 0)._repr_svg_())
+        assert root.attrib["width"] == "250"
+    finally:
+        pypgl.REPR_SVG_SIZE = original
+
+
+def test_explicit_canvas_size_is_unaffected_by_repr_svg_size():
+    # A canvas the user sizes honors its own size, not REPR_SVG_SIZE.
+    root = _is_valid_svg(Canvas().size(800, 600).draw(Point(0, 0))._repr_svg_())
+    assert root.attrib["width"] == "800"
+    assert root.attrib["height"] == "600"

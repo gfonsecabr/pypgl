@@ -30,12 +30,6 @@ In Jupyter / IPython every shape and every canvas renders itself inline (through
 a cell displays it — see [Inline display in Jupyter](#inline-display-in-jupyter)
 below.
 
-> **C++ vs Python.** In C++ shapes are pushed with the stream operator
-> (`canvas << pgl::stroke("red") << shape`). Python has no equivalent, so each
-> stream operation is exposed as a method: `canvas.stroke("red")` for the style
-> commands and `canvas.draw(shape)` for the shapes. Every configuration, style,
-> and `draw` method returns the canvas, so calls chain just like the C++ stream.
-
 <table>
   <tr>
     <td valign="top" width="58%">
@@ -170,6 +164,12 @@ a one-shot canvas and shows the SVG inline:
 ```python
 pgl.Triangle(-1, -1, 0, 2, 1, -2)        # displays the triangle
 ```
+
+A shape is drawn on a one-shot canvas whose side length is `pypgl.REPR_SVG_SIZE`
+pixels (500 by default, half pgl's 1000×1000, so a shape does not dominate the
+cell). Reassign it to scale every inline shape — e.g. `pypgl.REPR_SVG_SIZE = 250`
+for half again as small. A canvas you build yourself is unaffected: it honors its
+own `size`.
 
 A canvas displays itself the same way, so you do not need `toSVG()` to preview a
 drawing in a notebook — just put the canvas on the last line of the cell:

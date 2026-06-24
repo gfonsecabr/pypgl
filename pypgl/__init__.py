@@ -100,11 +100,17 @@ del _cls
 # one-shot Canvas gives every shape the same inline rendering, which is the main
 # usability win for a geometry library in a notebook.
 
+#: Side length, in pixels, of the one-shot canvas used to render a single shape
+#: inline in a notebook. Half of pgl's 1000x1000 default so a shape does not
+#: dominate the cell. Reassign ``pypgl.REPR_SVG_SIZE = ...`` to change it; a
+#: Canvas you build yourself is unaffected (it honors its own ``size``).
+REPR_SVG_SIZE = 500
+
 Canvas._repr_svg_ = lambda self: self.toSVG()
 
 
 def _shape_repr_svg_(self):
-    return Canvas().draw(self).toSVG()
+    return Canvas().size(REPR_SVG_SIZE, REPR_SVG_SIZE).draw(self).toSVG()
 
 
 for _cls in (
