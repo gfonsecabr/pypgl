@@ -6,13 +6,34 @@ build-backend = "scikit_build_core.build"
 name = "pypgl"
 version = "0.1.0"
 description = "Python bindings for the Pangolin (pgl) exact geometry library"
-readme = "pypgl.md"
+# README.md is the user-facing front page rendered on PyPI; pypgl.md is the
+# internal design contract and is intentionally not shipped as the description.
+readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
 authors = [{ name = "Guilherme D. da Fonseca" }]
 dependencies = []
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: C++",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Typing :: Typed",
+]
 
 [project.urls]
+Homepage = "https://github.com/gfonsecabr/pypgl"
+Repository = "https://github.com/gfonsecabr/pypgl"
 "pgl (C++ library)" = "https://github.com/gfonsecabr/pgl"
 
 [tool.scikit-build]

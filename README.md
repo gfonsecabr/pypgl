@@ -1,8 +1,8 @@
-<img align="left" src="doc/figures/logo.png" width="23%"/>
+<img align="left" src="https://raw.githubusercontent.com/gfonsecabr/pypgl/main/doc/figures/logo.png" width="23%"/>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="doc/figures/logotextdark.svg"/>
-  <img alt="Pangolin: Plane Geometry Library" src="doc/figures/logotext.svg" width="65%"/>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/gfonsecabr/pypgl/main/doc/figures/logotextdark.svg"/>
+  <img alt="Pangolin: Plane Geometry Library" src="https://raw.githubusercontent.com/gfonsecabr/pypgl/main/doc/figures/logotext.svg" width="65%"/>
 </picture>
 
 <!-- [![Tests](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml/badge.svg)](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml)
@@ -81,7 +81,7 @@ print("The diameter of", c,
 
 A `Canvas` class is provided for [SVG visualization](doc/canvas.md):
 
-<img align="right" src="doc/figures/example2.svg" width="200"/>
+<img align="right" src="https://raw.githubusercontent.com/gfonsecabr/pypgl/main/doc/figures/example2.svg" width="200"/>
 
 ```python
 import pypgl as pgl
@@ -100,7 +100,7 @@ canvas.writeSVG("example2.svg")
 
 ## Algorithms and Data Structures
 
-<img align="right" src="doc/figures/example_triangulation.svg" width="200"/>
+<img align="right" src="https://raw.githubusercontent.com/gfonsecabr/pypgl/main/doc/figures/example_triangulation.svg" width="200"/>
 
 PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](doc/data_structures.md) such as:
 
@@ -113,7 +113,53 @@ PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](d
 
 ## Installation
 
-TODO
+`pypgl` requires **Python 3.9 or newer**.
+
+### From PyPI
+
+```bash
+pip install pypgl
+```
+
+Pre-built wheels are published for CPython 3.9–3.13 on Linux (`manylinux_2_28`,
+x86_64), macOS (Apple Silicon), and Windows, so most users need no compiler.
+
+> ℹ️ The first PyPI release is not out yet. Until then, install from source as
+> shown below.
+
+### From source
+
+Installing from a source tree or directly from GitHub builds the extension
+locally and therefore needs a **C++20 compiler** (GCC 12+, Clang 15+, or, on
+Windows, the LLVM/ClangCL toolset). The header-only `pgl` library is fetched
+automatically by CMake — nothing else to install.
+
+```bash
+pip install git+https://github.com/gfonsecabr/pypgl.git
+```
+
+### Development install
+
+Work on the bindings from a checkout with an editable, in-place build:
+
+```bash
+git clone https://github.com/gfonsecabr/pypgl.git
+cd pypgl
+python3 -m venv .venv
+.venv/bin/pip install scikit-build-core nanobind pytest
+.venv/bin/pip install -e . --no-build-isolation
+.venv/bin/python -m pytest tests/ -q
+```
+
+`--no-build-isolation` lets CMake find the venv's `nanobind`. Re-run the
+`pip install -e .` step after editing any `src/*.cpp`, since the editable
+install is what rebuilds the extension. To build against a local `pgl` checkout
+instead of the pinned upstream commit:
+
+```bash
+.venv/bin/pip install -e . --no-build-isolation \
+  -C cmake.define.PGL_INCLUDE_DIR=/path/to/pgl/include
+```
 
 ## More Information
 
