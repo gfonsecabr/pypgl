@@ -205,12 +205,22 @@ Wheels CI (commit pending). `cibuildwheel` is configured in
 [.github/workflows/wheels.yml](.github/workflows/wheels.yml): it builds wheels for
 CPython 3.9–3.13 on Linux (`manylinux_2_28` — GCC 12 for full C++20; the legacy
 `manylinux2014`/GCC 10 is not enough), macOS arm64 (`macos-14`) + x86_64
-(`macos-13`), and Windows, plus an sdist. PyPy, 32-bit, and musllinux are skipped
-for now. pgl has **no native dependencies** (its `BigInt` is pure C++), so no
-system libraries are installed in the build — CMake `FetchContent`s the pinned pgl
-commit (the sdist omits the gitignored `.pgl-ref/`), so the pin in
+(`macos-13`), and Windows (`windows-2022`), plus an sdist. PyPy, 32-bit, and
+musllinux are skipped for now. CMake `FetchContent`s the pinned pgl commit (the
+sdist omits the gitignored `.pgl-ref/`), so the pin in
 [CMakeLists.txt](CMakeLists.txt) must move in lockstep with `.pgl-ref` for
-reproducible CI wheels. The matrix is **native-arch only (no QEMU/cross)** because
+reproducible CI wheels.
+
+pgl needs **no external libraries on GCC/Clang** — it uses the compiler's
+`__int128`. But on **MSVC** (no `__int128`) its `core/numeric.hpp` falls back to
+`#include <boost/multiprecision/cpp_int.hpp>`, which isn't on the Windows runner.
+So the Windows wheels are built with the **LLVM/ClangCL toolset** (forced VS
+generator + `CMAKE_GENERATOR_TOOLSET=ClangCL` in [pyproject.toml](pyproject.toml)):
+clang defines `__SIZEOF_INT128__` on x64, so pgl takes the native `__int128` path
+and never pulls in Boost, while still emitting an MSVC-ABI extension. (Plain MSVC
+would require provisioning Boost headers — avoided.)
+
+The matrix is **native-arch only (no QEMU/cross)** because
 `nanobind_add_stub` imports the freshly built `_pgl` to emit `_pgl.pyi`, which
 requires the build host to run the target binary; this also means every wheel is
 verified importable during its own build, on top of the `pytest` test step.

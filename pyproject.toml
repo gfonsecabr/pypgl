@@ -50,3 +50,13 @@ archs = ["x86_64"]
 
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }
+
+[tool.cibuildwheel.windows]
+# MSVC lacks __int128, so pgl would fall back to Boost.Multiprecision (not
+# installed). Build with the LLVM/ClangCL toolset instead: clang defines
+# __SIZEOF_INT128__ on x64, so pgl takes the native __int128 path and never
+# pulls in Boost, while clang-cl still emits an MSVC-ABI extension. The VS
+# generator is forced (so CMAKE_GENERATOR_TOOLSET is honored — Ninja ignores it);
+# the runner is pinned to windows-2022 in the workflow so this generator name is
+# stable.
+environment = { CMAKE_GENERATOR = "Visual Studio 17 2022", CMAKE_GENERATOR_TOOLSET = "ClangCL" }
