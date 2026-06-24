@@ -5,6 +5,8 @@ Shapes are exact: coordinates are rationals, accepted as ``int``,
 ``float`` is rejected so the exactness contract is never silently broken.
 """
 
+from importlib.metadata import PackageNotFoundError, version as _version
+
 from ._pgl import (
     Point,
     Segment,
@@ -20,7 +22,13 @@ from ._pgl import (
     Canvas,
 )
 
+try:
+    __version__ = _version("pypgl")
+except PackageNotFoundError:  # not installed (e.g. running from a source tree)
+    __version__ = "0+unknown"
+
 __all__ = [
+    "__version__",
     "Point",
     "Segment",
     "OrientedSegment",
