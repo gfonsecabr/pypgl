@@ -21,10 +21,13 @@ jobs:
       matrix:
         # Native runners only (no emulation/cross): nanobind_add_stub imports the
         # freshly built _pgl to emit _pgl.pyi, so the build host must run the
-        # target binary. macos-14 = arm64, macos-13 = x86_64.
+        # target binary. macos-14 = arm64 (Apple Silicon).
+        # macos-13 (x86_64 Intel) is dropped: GitHub is retiring the Intel
+        # runners, so those jobs sit queued for hours and time out. Apple Silicon
+        # is covered by macos-14; we don't ship Intel-mac wheels.
         # windows-2022 is pinned (not windows-latest) so the "Visual Studio 17
         # 2022" generator name in [tool.cibuildwheel.windows] stays valid.
-        os: [ubuntu-latest, macos-14, macos-13, windows-2022]
+        os: [ubuntu-latest, macos-14, windows-2022]
     steps:
       - uses: actions/checkout@v4
 
