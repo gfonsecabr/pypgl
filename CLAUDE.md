@@ -5,17 +5,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project status
 
 **Core shapes done** (milestones 1–2 of [pypgl.md](pypgl.md)): all
-non-experimental shapes are bound — `Point`, `Segment`, `OrientedSegment`,
-`Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`, `Rectangle`, `Convex` —
-each with the full 7-predicate × 10-shape matrix (`PGL_BIND_ALL_PREDICATES` in
-[src/common.h](src/common.h)), constructors, accessors/measures, and typed
-`intersection` results for the 0D/1D-result pairs. The two casters work and the
-exact round-trip / `optional`→`None` / `variant`→concrete mappings are verified
-by the 39-test `tests/` suite. Still to do: broaden `intersection` to 2D∩2D /
-`Halfplane` (Convex/Polygon results), `Canvas` + `_repr_svg_` (milestone 3),
-packaging/stubs (milestone 4), and the experimental `Disk`/`Polygon`.
-[pypgl.md](pypgl.md) remains the authoritative design contract — update it in
-lockstep if a decision changes; [ROADMAP.md](ROADMAP.md) tracks progress.
+shapes are bound — `Point`, `Segment`, `OrientedSegment`,
+`Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`, `Rectangle`, `Convex`,
+`Disk` — each with the full 7-predicate × 10-shape matrix
+(`PGL_BIND_ALL_PREDICATES` in [src/common.h](src/common.h)), constructors,
+accessors/measures, and typed `intersection` results for the 0D/1D-result pairs.
+The two casters work and the exact round-trip / `optional`→`None` /
+`variant`→concrete mappings are verified by the `tests/` suite. Still to do:
+broaden `intersection` to 2D∩2D / `Halfplane` (Convex/Polygon results), `Canvas`
++ `_repr_svg_` (milestone 3), packaging/stubs (milestone 4), and the experimental
+`Polygon`. [pypgl.md](pypgl.md) remains the authoritative design contract —
+update it in lockstep if a decision changes; [ROADMAP.md](ROADMAP.md) tracks
+progress.
+
+`Disk` ([src/bind_disk.cpp](src/bind_disk.cpp)) is bound as its own complete
+class — its full predicate matrix against every shape (including itself) plus
+exact `center`/`squaredRadius`/`bbox`/`pointInside`. `area` is irrational (π) so
+it always returns Python `float`; `radius` returns an exact `Fraction` when the
+disk was built from a center and radius (delegating the exact/inexact decision to
+pgl's throwing `radius<ERational>()`) and a `float` otherwise (square root);
+`squaredDistance` to a disk is likewise `float`. The float-coordinate `diameter()`/`fbox()` are deliberately
+not bound (their double-coordinate return types are not registered). Disk's
+*column* is not added to the other shapes' matrices yet (e.g. `triangle.contains(disk)`),
+partly because pgl still lacks `Triangle::contains(Disk)` and
+`Convex::squaredDistance(Disk)`; symmetric relations are reachable from the Disk
+side.
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).

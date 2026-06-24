@@ -34,6 +34,7 @@ using Halfplane = pgl::EHalfplane;                 // pgl::Halfplane<EPoint>
 using Triangle = pgl::ETriangle;                   // pgl::Triangle<EPoint>
 using Rectangle = pgl::ERectangle;                 // pgl::Rectangle<EPoint>
 using Convex = pgl::EConvex;                        // pgl::Convex<EPoint>
+using Disk = pgl::EDisk;                            // pgl::Disk<EPoint>
 
 // repr, ordering, equality, and (optionally) hashing — uniform across all
 // value-type shapes. Fixed-size shapes are immutable and hashable. The

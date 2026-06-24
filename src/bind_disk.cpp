@@ -1,0 +1,97 @@
+#include "common.h"
+
+using namespace pypgl;
+
+// Disk: the closed circle and its interior, stored exactly as three boundary
+// points (so an integer-coordinate circle keeps an exact rational center and
+// squared radius). Constructors from three boundary points or from a
+// center+radius, the exact measures (center / squaredRadius / bbox /
+// pointInside), the full predicate matrix, exact intersection against a point,
+// and squared distance against the shapes pgl implements it for.
+//
+// Some disk quantities are irrational by nature (the area carries pi; the radius
+// is a square root unless the disk was built from a center and radius). `area()`
+// is therefore always a Python float; `radius()` is an exact Fraction in the
+// center+radius case and a float otherwise (see its binding). The exact
+// counterpart `squaredRadius()` (and `bbox()`) stay rational. The floating-point
+// `diameter()`/`fbox()` are intentionally not bound — they return
+// double-coordinate shapes, which are not registered Python types.
+
+void bind_disk(nb::module_ &m) {
+    nb::class_<Disk> cls(m, "Disk");
+    cls.def(nb::init<Point, Point, Point>(), nb::arg("a"), nb::arg("b"), nb::arg("c"),
+            "Create the disk through three boundary points (stored canonically: "
+            "lex-sorted, CCW when non-degenerate, so argument order does not matter).");
+    cls.def(nb::init<Point, Num>(), nb::arg("center"), nb::arg("radius"),
+            "Create a disk from its center and radius (the radius is stored exactly; "
+            "a negative radius is treated as its absolute value).");
+    cls.def(nb::init<Num, Num, Num>(), nb::arg("x"), nb::arg("y"), nb::arg("radius"),
+            "Create a disk from center coordinates and a radius.");
+
+    cls.def("a", [](const Disk &d) { return d.a(); }, "First boundary point (lexicographically smallest).");
+    cls.def("b", [](const Disk &d) { return d.b(); }, "Second boundary point in canonical order.");
+    cls.def("c", [](const Disk &d) { return d.c(); }, "Third boundary point (a, b, c wind counterclockwise).");
+
+    cls.def("center", [](const Disk &d) { return d.center(); },
+            "Exact center (circumcenter of the three boundary points) as a Point.");
+    cls.def("squaredRadius", [](const Disk &d) { return d.squaredRadius(); },
+            "Exact squared radius (a Fraction).");
+    cls.def("radius", [](const Disk &d) -> nb::object {
+                // pgl keeps an exact radius only for disks built from a center and
+                // radius (axis-aligned boundary witness); there radius<ERational>()
+                // returns the exact value, and we hand it back as a Fraction.
+                // Otherwise the radius is a square root with no exact form, and
+                // radius<ERational>() throws (ERational has no std::sqrt) — fall
+                // back to the floating-point value. Delegating the exact/inexact
+                // decision to pgl this way keeps it in lockstep with the library.
+                try {
+                    return nb::cast(d.radius<Num>());
+                } catch (const std::runtime_error &) {
+                    return nb::cast(d.radius<double>());
+                }
+            },
+            "Radius as an exact Fraction when the disk was built from a center and "
+            "radius, otherwise a float (the radius is a square root in general). "
+            "squaredRadius() is always exact.");
+    cls.def("area", [](const Disk &d) { return d.area(); },
+            "Area (pi * r^2) as a float. Approximate by nature; squaredRadius() is exact.");
+    cls.def("pointInside", [](const Disk &d) { return d.pointInside(); },
+            "An exact point strictly inside the disk (the midpoint of a chord).");
+    cls.def("isDegenerate", [](const Disk &d) { return d.isDegenerate(); },
+            "Whether the three boundary points are collinear (no finite circle).");
+    cls.def("bbox", [](const Disk &d) { return d.bbox(); },
+            "Exact axis-aligned bounding box (a Rectangle); tight when built from a center and radius.");
+
+    cls.def("index", [](const Disk &d, const Point &p) -> std::optional<std::ptrdiff_t> {
+                auto i = d.index(p);
+                if (i < 0) return std::nullopt;
+                return i;
+            }, nb::arg("point"), "Index of the boundary point equal to point, or None if none.");
+
+    bind_value_semantics<Disk>(cls);
+    PGL_BIND_OPERATORS(cls, Disk);
+    cls.def("rotated90", [](const Disk &d, int k) { return d.rotated90(k); }, nb::arg("k") = 1,
+            "Return the disk rotated by 90*k degrees about the origin.");
+    PGL_BIND_INDEXING(cls, Disk);
+
+    PGL_BIND_ALL_PREDICATES(cls, Disk);
+    PGL_BIND_PREDICATES(cls, Disk, ::pypgl::Disk);
+
+    // squaredDistance returns a float for the disk: the gap between an exterior
+    // shape and the circle is generally irrational, so pgl offers no exact form.
+    // Bound against the shapes pgl implements it for (every shape up to and
+    // including Disk; Convex/Polygon are not yet implemented).
+    PGL_SQDIST(cls, Disk, ::pypgl::Point);
+    PGL_SQDIST(cls, Disk, ::pypgl::Segment);
+    PGL_SQDIST(cls, Disk, ::pypgl::OrientedSegment);
+    PGL_SQDIST(cls, Disk, ::pypgl::Line);
+    PGL_SQDIST(cls, Disk, ::pypgl::OrientedLine);
+    PGL_SQDIST(cls, Disk, ::pypgl::Ray);
+    PGL_SQDIST(cls, Disk, ::pypgl::Halfplane);
+    PGL_SQDIST(cls, Disk, ::pypgl::Rectangle);
+    PGL_SQDIST(cls, Disk, ::pypgl::Triangle);
+    PGL_SQDIST(cls, Disk, ::pypgl::Disk);
+
+    cls.def("intersection", [](const Disk &a, const Point &b) { return a.intersection(b); }, nb::arg("other"),
+            "Exact intersection with a point: the point if contained, else None.");
+}

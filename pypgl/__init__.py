@@ -16,6 +16,7 @@ from ._pgl import (
     Triangle,
     Rectangle,
     Convex,
+    Disk,
 )
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     "Triangle",
     "Rectangle",
     "Convex",
+    "Disk",
 ]
 
 
@@ -56,6 +58,7 @@ for _cls in (
     Triangle,
     Rectangle,
     Convex,
+    Disk,
 ):
     _cls.__contains__ = _shape_contains
 
@@ -82,6 +85,7 @@ for _cls in (
     Triangle,
     Rectangle,
     Convex,
+    Disk,
 ):
     _add_indexing(_cls)
 
