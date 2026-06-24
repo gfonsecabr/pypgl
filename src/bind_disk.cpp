@@ -13,9 +13,10 @@ using namespace pypgl;
 // is a square root unless the disk was built from a center and radius). `area()`
 // is therefore always a Python float; `radius()` is an exact Fraction in the
 // center+radius case and a float otherwise (see its binding). The exact
-// counterpart `squaredRadius()` (and `bbox()`) stay rational. The floating-point
-// `diameter()`/`fbox()` are intentionally not bound — they return
-// double-coordinate shapes, which are not registered Python types.
+// counterpart `squaredRadius()` (and `bbox()`) stay rational. `diameter()` is
+// reconstructed as an exact Segment for center+radius disks (pgl only offers a
+// floating-point one); `fbox()` is intentionally not bound — it returns a
+// double-coordinate shape, which is not a registered Python type.
 
 void bind_disk(nb::module_ &m) {
     nb::class_<Disk> cls(m, "Disk");
@@ -55,6 +56,28 @@ void bind_disk(nb::module_ &m) {
             "squaredRadius() is always exact.");
     cls.def("area", [](const Disk &d) { return d.area(); },
             "Area (pi * r^2) as a float. Approximate by nature; squaredRadius() is exact.");
+    cls.def("diameter", [](const Disk &d) -> Segment {
+                // The horizontal diameter is the chord (cx - r, cy)--(cx + r, cy).
+                // pgl only offers a floating-point diameter() (a double-coordinate
+                // segment we cannot represent), but when the disk was built from a
+                // center and radius the endpoints are exact, so we build the exact
+                // Segment ourselves. radius<ERational>() throws for an irrational
+                // radius (see radius()); there is no exact diameter to return.
+                Num r;
+                try {
+                    r = d.radius<Num>();
+                } catch (const std::runtime_error &) {
+                    throw std::invalid_argument(
+                        "Disk.diameter() is exact only for a disk built from a center "
+                        "and radius; this disk has an irrational radius. Use center() "
+                        "and radius() instead.");
+                }
+                const Point c = d.center();
+                return Segment(Point(c.x() - r, c.y()), Point(c.x() + r, c.y()));
+            },
+            "The horizontal diameter as an exact Segment through the center. Defined "
+            "only for disks built from a center and radius (an arbitrary disk has an "
+            "irrational radius and no exact diameter segment).");
     cls.def("pointInside", [](const Disk &d) { return d.pointInside(); },
             "An exact point strictly inside the disk (the midpoint of a chord).");
     cls.def("isDegenerate", [](const Disk &d) { return d.isDegenerate(); },

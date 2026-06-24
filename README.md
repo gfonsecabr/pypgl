@@ -12,18 +12,18 @@
 
 > ⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
 
-Pangolin (or `pgl`) is a C++ library for computational geometry in the plane and `pypgl` is the official python binding for it. It is designed to be pleasant to use and always exact.
+Pangolin (or `pgl`) is a C++ library for computational geometry in the plane and `pypgl` is the official python binding for it. It is designed to be pleasant to use and always exact. It accepts integer and rational coordinates, but rejects floating point numbers.
 
 ```python
 import pypgl as pgl
 
 p = pgl.Point(1, 0)
-q = pgl.Point(4, 7)
+q = pgl.Point(4, '15/2')
 s = pgl.Segment(p, q)
-t = pgl.Segment(0, 8, 2, 1)
+t = pgl.Segment(0, 8, '7/3', 1)
 if s.intersects(t):
     print(s, "intersects", t)
-# Output: (1,0)--(4,7) intersects (0,8)--(2,1)
+# Output: (1,0)--(4,15/2) intersects (0,8)--(7/3,1)
 ```
 
 ## Shapes and Predicates
@@ -54,6 +54,10 @@ if d.contains(diam):
     print("Disk contains the diameter")
 if not d.interiorContains(diam):
     print("Disk's interior does not contain the diameter")
+# Output:
+# Disk contains  (0,0)
+# Disk contains the diameter
+# Disk's interior does not contain the diameter
 ```
 
 ## Other Methods

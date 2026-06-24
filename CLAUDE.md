@@ -24,8 +24,10 @@ exact `center`/`squaredRadius`/`bbox`/`pointInside`. `area` is irrational (π) s
 it always returns Python `float`; `radius` returns an exact `Fraction` when the
 disk was built from a center and radius (delegating the exact/inexact decision to
 pgl's throwing `radius<ERational>()`) and a `float` otherwise (square root);
-`squaredDistance` to a disk is likewise `float`. The float-coordinate `diameter()`/`fbox()` are deliberately
-not bound (their double-coordinate return types are not registered). Disk's
+`squaredDistance` to a disk is likewise `float`. `diameter()` is reconstructed as
+an exact `Segment` for center+radius disks (pgl ships only a floating-point one)
+and raises for an irrational radius; `fbox()` is not bound (its double-coordinate
+return type is not registered). Disk's
 *column* is not added to the other shapes' matrices yet (e.g. `triangle.contains(disk)`),
 partly because pgl still lacks `Triangle::contains(Disk)` and
 `Convex::squaredDistance(Disk)`; symmetric relations are reachable from the Disk

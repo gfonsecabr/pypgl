@@ -91,6 +91,22 @@ def test_area_is_always_float():
     assert d.area() == pytest.approx(math.pi * 25)
 
 
+def test_diameter_is_an_exact_segment_for_center_radius_disks():
+    d = Disk(0, 0, 10)
+    diam = d.diameter()
+    assert isinstance(diam, pypgl.Segment)
+    assert diam == pypgl.Segment(Point(-10, 0), Point(10, 0))
+    # A diameter is a chord: contained in the closed disk but not its interior.
+    assert d.contains(diam)
+    assert not d.interiorContains(diam)
+
+
+def test_diameter_raises_when_radius_is_irrational():
+    d = Disk(Point(0, 0), Point(4, 0), Point(0, 6))   # squaredRadius 13
+    with pytest.raises(ValueError):
+        d.diameter()
+
+
 # --- predicates ----------------------------------------------------------
 
 def test_point_containment_distinguishes_boundary_and_interior():
