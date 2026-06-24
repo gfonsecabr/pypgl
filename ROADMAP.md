@@ -200,10 +200,29 @@ Python-layer sugar that `__init__.py` adds at import time (per-shape `__len__`/
 parses, every public class declared, no leaked patches, sugar present on shapes
 but not `Canvas`.
 
+Wheels CI (commit pending). `cibuildwheel` is configured in
+[pyproject.toml](pyproject.toml) (`[tool.cibuildwheel]`) and driven by
+[.github/workflows/wheels.yml](.github/workflows/wheels.yml): it builds wheels for
+CPython 3.9–3.13 on Linux (`manylinux_2_28` — GCC 12 for full C++20; the legacy
+`manylinux2014`/GCC 10 is not enough), macOS arm64 (`macos-14`) + x86_64
+(`macos-13`), and Windows, plus an sdist. PyPy, 32-bit, and musllinux are skipped
+for now. pgl has **no native dependencies** (its `BigInt` is pure C++), so no
+system libraries are installed in the build — CMake `FetchContent`s the pinned pgl
+commit (the sdist omits the gitignored `.pgl-ref/`), so the pin in
+[CMakeLists.txt](CMakeLists.txt) must move in lockstep with `.pgl-ref` for
+reproducible CI wheels. The matrix is **native-arch only (no QEMU/cross)** because
+`nanobind_add_stub` imports the freshly built `_pgl` to emit `_pgl.pyi`, which
+requires the build host to run the target binary; this also means every wheel is
+verified importable during its own build, on top of the `pytest` test step.
+Verified locally by building the sdist and a wheel from it (stub + `py.typed`
+present, 163 tests green).
+
 Still to do:
-- `cibuildwheel` GitHub Actions across manylinux/macOS/Windows + CPython versions.
-- Confirm `pypgl` name on PyPI; publish.
+- Confirm `pypgl` name on PyPI and configure Trusted Publishing for the `publish`
+  job (gated on `v*` tags, OIDC — no API token); then tag a release to publish.
 - Consider STABLE_ABI builds (nanobind, Python ≥ 3.12) to cut wheel count.
+- Consider adding aarch64 Linux + musllinux once a non-stub-importing build path
+  (or a separate stub-gen step) removes the native-host requirement.
 
 ### Milestone 5 — Experimental
 - `Polygon` once its pgl C++ predicates settle; keep gated so the stable public

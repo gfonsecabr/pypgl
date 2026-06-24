@@ -19,8 +19,34 @@ dependencies = []
 minimum-version = "0.10"
 build-dir = "build/{wheel_tag}"
 wheel.packages = ["pypgl"]
+# Keep dev cruft out of the sdist (CI builds wheels from it).
+sdist.exclude = [".ipynb_checkpoints", "**/*.ipynb", ".pytest_cache"]
 
 # pgl is header-only. By default the build uses an in-tree .pgl-ref/include
 # checkout if present (offline dev), otherwise CMake FetchContents it. Point at a
 # co-developed checkout with:
 #   pip install -e . --no-build-isolation -C cmake.define.PGL_INCLUDE_DIR=/path/to/pgl/include
+
+[tool.cibuildwheel]
+# pgl is C++20 and header-only with no native deps (its BigInt is pure C++), so a
+# wheel build needs only a modern compiler — no system libraries to install.
+# The sdist does not ship the gitignored .pgl-ref/, so CMake FetchContents the
+# pinned pgl commit (see CMakeLists.txt) during each build.
+build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+# Skip PyPy (nanobind targets CPython), 32-bit, and musl (lean matrix to start).
+skip = "pp* *_i686 *-win32 *-musllinux_*"
+build-frontend = "build"
+# nanobind_add_stub imports the freshly built _pgl to emit _pgl.pyi, so the wheel
+# is verified importable on every target during the build itself; also run tests.
+test-requires = "pytest"
+test-command = "pytest {project}/tests -q"
+
+[tool.cibuildwheel.linux]
+# manylinux_2_28 ships GCC 12 (full C++20); the legacy 2014 image's GCC 10 is not
+# enough. Native x86_64 only — no aarch64 emulation, since stub generation has to
+# import (i.e. run) the built extension on the build host.
+manylinux-x86_64-image = "manylinux_2_28"
+archs = ["x86_64"]
+
+[tool.cibuildwheel.macos]
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.15" }

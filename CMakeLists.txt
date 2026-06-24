@@ -27,9 +27,13 @@ if(NOT PGL_INCLUDE_DIR)
     set(PGL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.pgl-ref/include")
   else()
     include(FetchContent)
+    # Pinned to the exact commit the in-tree .pgl-ref/ dev checkout is at, so CI
+    # wheel builds (which don't ship the gitignored .pgl-ref/) are reproducible
+    # and match local development. Bump in lockstep with .pgl-ref. Switch to a
+    # release tag once pgl publishes them.
     FetchContent_Declare(pgl
       GIT_REPOSITORY https://github.com/gfonsecabr/pgl
-      GIT_TAG        main)
+      GIT_TAG        5a5c053e58bd815c36947e207007865af44d037e)
     FetchContent_MakeAvailable(pgl)
     set(PGL_INCLUDE_DIR "${pgl_SOURCE_DIR}/include")
   endif()
