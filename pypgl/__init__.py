@@ -28,7 +28,6 @@ except PackageNotFoundError:  # not installed (e.g. running from a source tree)
     __version__ = "0+unknown"
 
 __all__ = [
-    "__version__",
     "Point",
     "Segment",
     "OrientedSegment",
