@@ -49,6 +49,26 @@ jobs:
           name: sdist
           path: ./dist/*.tar.gz
 
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    # Dry run: manual "Run workflow" uploads to test.pypi.org for validation.
+    # Uses Trusted Publishing (OIDC) — no API token.
+    if: github.event_name == 'workflow_dispatch'
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
   publish:
     name: Publish to PyPI
     needs: [build_wheels, build_sdist]
