@@ -204,9 +204,10 @@ Wheels CI (commit pending). `cibuildwheel` is configured in
 [pyproject.toml](pyproject.toml) (`[tool.cibuildwheel]`) and driven by
 [.github/workflows/wheels.yml](.github/workflows/wheels.yml): it builds wheels for
 CPython 3.9–3.13 on Linux (`manylinux_2_28` — GCC 12 for full C++20; the legacy
-`manylinux2014`/GCC 10 is not enough), macOS arm64 (`macos-14`) + x86_64
-(`macos-13`), and Windows (`windows-2022`), plus an sdist. PyPy, 32-bit, and
-musllinux are skipped for now. CMake `FetchContent`s the pinned pgl commit (the
+`manylinux2014`/GCC 10 is not enough), macOS arm64 (`macos-14`), and Windows
+(`windows-2022`), plus an sdist. macOS x86_64 (`macos-13`) was dropped: GitHub is
+retiring the Intel runners, so those jobs sat queued for hours and timed out
+rather than build. PyPy, 32-bit, and musllinux are skipped for now. CMake `FetchContent`s the pinned pgl commit (the
 sdist omits the gitignored `.pgl-ref/`), so the pin in
 [CMakeLists.txt](CMakeLists.txt) must move in lockstep with `.pgl-ref` for
 reproducible CI wheels.
@@ -227,10 +228,16 @@ verified importable during its own build, on top of the `pytest` test step.
 Verified locally by building the sdist and a wheel from it (stub + `py.typed`
 present, 163 tests green).
 
+Released to PyPI (commit pending). `pypgl 0.1.0` is published on
+[PyPI](https://pypi.org/project/pypgl/) — `pip install pypgl`. Trusted Publishing
+(OIDC, no API token) is configured on both PyPI and TestPyPI against the `wheels.yml`
+workflow's `pypi`/`testpypi` environments; the `publish` job fires on `v*` tags and
+the `publish-testpypi` dry-run on manual `workflow_dispatch` (validated before the
+real tag). The package exposes `pypgl.__version__` via `importlib.metadata`.
+
 Still to do:
-- Confirm `pypgl` name on PyPI and configure Trusted Publishing for the `publish`
-  job (gated on `v*` tags, OIDC — no API token); then tag a release to publish.
-- Consider STABLE_ABI builds (nanobind, Python ≥ 3.12) to cut wheel count.
+- Consider STABLE_ABI builds (nanobind, Python ≥ 3.12) to cut wheel count before
+  the next release.
 - Consider adding aarch64 Linux + musllinux once a non-stub-importing build path
   (or a separate stub-gen step) removes the native-host requirement.
 

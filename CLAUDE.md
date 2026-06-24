@@ -35,16 +35,25 @@ module, with the Python-layer sugar re-added via
 **Wheels CI done** (milestone 4): `cibuildwheel` is configured in
 [pyproject.toml](pyproject.toml) and run by
 [.github/workflows/wheels.yml](.github/workflows/wheels.yml) — CPython 3.9–3.13 on
-`manylinux_2_28` (GCC 12 for C++20), macOS arm64+x86_64, and Windows, plus sdist.
-pgl has no native deps, so the build only `FetchContent`s the **pinned** pgl commit
-(kept in lockstep with `.pgl-ref`, since the sdist omits the gitignored
-`.pgl-ref/`). Native-arch only (no QEMU/cross) because `nanobind_add_stub` imports
-the just-built `_pgl` to emit `_pgl.pyi`. A `publish` job (PyPI Trusted Publishing,
-gated on `v*` tags) is wired but not yet enabled on PyPI.
+`manylinux_2_28` (GCC 12 for C++20), macOS arm64 (`macos-14`), and Windows, plus
+sdist. macOS x86_64 (`macos-13`) was dropped — GitHub is retiring the Intel
+runners, so the jobs sat queued for hours and timed out. pgl has no native deps,
+so the build only `FetchContent`s the **pinned** pgl commit (kept in lockstep with
+`.pgl-ref`, since the sdist omits the gitignored `.pgl-ref/`). Native-arch only
+(no QEMU/cross) because `nanobind_add_stub` imports the just-built `_pgl` to emit
+`_pgl.pyi`.
+
+**Released done** (milestone 4): `pypgl 0.1.0` is live on
+[PyPI](https://pypi.org/project/pypgl/) (`pip install pypgl`). Trusted Publishing
+(OIDC, no token) is configured on PyPI and TestPyPI against `wheels.yml`'s
+`pypi`/`testpypi` environments; the `publish` job fires on `v*` tags, the
+`publish-testpypi` dry-run on manual `workflow_dispatch`. The package version is
+exposed as `pypgl.__version__` via `importlib.metadata`; keep `version` in
+[pyproject.toml](pyproject.toml) in lockstep with the tag (PyPI never allows
+re-uploading a version).
 
 Still to do: broaden `intersection` to 2D∩2D / `Halfplane` (Convex/Polygon
-results), the rest of milestone 4 (confirm the PyPI name + enable Trusted
-Publishing, then tag a release; consider STABLE_ABI to cut the wheel count), and
+results), consider STABLE_ABI to cut the wheel count before the next release, and
 the experimental `Polygon`.
 [pypgl.md](pypgl.md) remains the authoritative design contract —
 update it in lockstep if a decision changes; [ROADMAP.md](ROADMAP.md) tracks

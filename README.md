@@ -124,9 +124,6 @@ pip install pypgl
 Pre-built wheels are published for CPython 3.9–3.13 on Linux (`manylinux_2_28`,
 x86_64), macOS (Apple Silicon), and Windows, so most users need no compiler.
 
-> ℹ️ The first PyPI release is not out yet. Until then, install from source as
-> shown below.
-
 ### From source
 
 Installing from a source tree or directly from GitHub builds the extension
