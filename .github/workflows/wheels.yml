@@ -4,8 +4,13 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    # Docs-only pushes don't affect the wheels, so skip the full build matrix.
+    # A release commit always bumps the version in pyproject.toml, so a v* tag is
+    # never markdown-only and this never suppresses a publish.
+    paths-ignore: ["**.md"]
   pull_request:
     branches: [main]
+    paths-ignore: ["**.md"]
   workflow_dispatch:
 
 concurrency:
