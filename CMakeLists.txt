@@ -43,7 +43,8 @@ nanobind_add_module(_pgl
   src/bind_segment.cpp
   src/bind_lines.cpp
   src/bind_polygons.cpp
-  src/bind_disk.cpp)
+  src/bind_disk.cpp
+  src/bind_canvas.cpp)
 
 target_include_directories(_pgl PRIVATE "${PGL_INCLUDE_DIR}" src)
 

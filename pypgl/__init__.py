@@ -17,6 +17,7 @@ from ._pgl import (
     Rectangle,
     Convex,
     Disk,
+    Canvas,
 )
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "Rectangle",
     "Convex",
     "Disk",
+    "Canvas",
 ]
 
 
@@ -88,5 +90,36 @@ for _cls in (
     Disk,
 ):
     _add_indexing(_cls)
+
+del _cls
+
+
+# --- Inline SVG rendering in Jupyter / IPython ---
+#
+# `Canvas._repr_svg_` lets a canvas display itself; wrapping a single shape in a
+# one-shot Canvas gives every shape the same inline rendering, which is the main
+# usability win for a geometry library in a notebook.
+
+Canvas._repr_svg_ = lambda self: self.toSVG()
+
+
+def _shape_repr_svg_(self):
+    return Canvas().draw(self).toSVG()
+
+
+for _cls in (
+    Point,
+    Segment,
+    OrientedSegment,
+    Line,
+    OrientedLine,
+    Ray,
+    Halfplane,
+    Triangle,
+    Rectangle,
+    Convex,
+    Disk,
+):
+    _cls._repr_svg_ = _shape_repr_svg_
 
 del _cls

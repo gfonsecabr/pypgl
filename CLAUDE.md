@@ -11,10 +11,24 @@ shapes are bound — `Point`, `Segment`, `OrientedSegment`,
 (`PGL_BIND_ALL_PREDICATES` in [src/common.h](src/common.h)), constructors,
 accessors/measures, and typed `intersection` results for the 0D/1D-result pairs.
 The two casters work and the exact round-trip / `optional`→`None` /
-`variant`→concrete mappings are verified by the `tests/` suite. Still to do:
-broaden `intersection` to 2D∩2D / `Halfplane` (Convex/Polygon results), `Canvas`
-+ `_repr_svg_` (milestone 3), packaging/stubs (milestone 4), and the experimental
-`Polygon`. [pypgl.md](pypgl.md) remains the authoritative design contract —
+`variant`→concrete mappings are verified by the `tests/` suite.
+
+**Notebook UX done** (milestone 3): `Canvas`
+([src/bind_canvas.cpp](src/bind_canvas.cpp)) is bound — pgl's stream API
+(`canvas << pgl::stroke("red") << shape`) does not map to Python, so each stream
+operation is re-exposed as a method: fluent `scale`/`width`/`height`/`size`/
+`margin`/`pointRadius`/`borders` and the numeric `strokeWidth` configuration;
+fluent `stroke`/`fill`/`fillOpacity`/`strokeOpacity` style commands applied to the
+*current* style (so only shapes drawn afterwards capture it); one `draw(shape)`
+overload per bound shape; and `toSVG()`/`writeSVG(path)`. The fluent self-returns
+use `nb::rv_policy::reference_internal`. `_repr_svg_` is added Python-side in
+[pypgl/__init__.py](pypgl/__init__.py) — on the canvas it returns `toSVG()`, on
+every shape it renders a one-shot `Canvas().draw(self)` — so shapes and canvases
+display inline in Jupyter.
+
+Still to do: broaden `intersection` to 2D∩2D / `Halfplane` (Convex/Polygon
+results), packaging/stubs (milestone 4), and the experimental `Polygon`.
+[pypgl.md](pypgl.md) remains the authoritative design contract —
 update it in lockstep if a decision changes; [ROADMAP.md](ROADMAP.md) tracks
 progress.
 

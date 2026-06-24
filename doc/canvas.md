@@ -5,64 +5,68 @@
   <img alt="Pangolin: Plane Geometry Library" src="figures/logotext.svg" width="65%"/>
 </picture>
 
-[![Tests](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml/badge.svg)](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml)
-[![Standard](https://img.shields.io/badge/C%2B%2B-20/23/26-rgb(10,66,158).svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
+<!-- [![Tests](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml/badge.svg)](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml)
+[![Standard](https://img.shields.io/badge/C%2B%2B-20/23/26-rgb(10,66,158).svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization) -->
 [![License](https://img.shields.io/badge/license-MIT-rgb(216,134,42).svg)](https://opensource.org/licenses/MIT)
-[![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html)
+<!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
-<br/>
 
 > ⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
 
 ## Canvas
 
 `Canvas` is a lightweight SVG renderer for Pangolin shapes. It is designed for
-inspection, debugging, examples, and test output: you push shapes into a
-canvas, optionally change the drawing style in between, and then export the
-result as an SVG file or string.
+inspection, debugging, examples, and test output: you draw shapes onto a canvas,
+optionally change the drawing style in between, and then export the result as an
+SVG file or string.
 
-The canvas automatically fits the inserted geometry into the output image,
+The canvas automatically fits the drawn geometry into the output image,
 preserves aspect ratio, clips infinite primitives to the visible viewport, and
-stores an SVG `<title>` for each inserted element so that exported images keep a
+stores an SVG `<title>` for each drawn element so that exported images keep a
 human-readable tooltip.
+
+In Jupyter / IPython every shape and every canvas renders itself inline (through
+`_repr_svg_`), so simply evaluating a shape or a canvas as the last expression in
+a cell displays it — see [Inline display in Jupyter](#inline-display-in-jupyter)
+below.
+
+> **C++ vs Python.** In C++ shapes are pushed with the stream operator
+> (`canvas << pgl::stroke("red") << shape`). Python has no equivalent, so each
+> stream operation is exposed as a method: `canvas.stroke("red")` for the style
+> commands and `canvas.draw(shape)` for the shapes. Every configuration, style,
+> and `draw` method returns the canvas, so calls chain just like the C++ stream.
 
 <table>
   <tr>
     <td valign="top" width="58%">
 
-```c++
-#include "pgl.hpp"
+```python
+import pypgl as pgl
 
-int main() {
-    // Let's set up two segments that cross in a nice visible spot.
-    pgl::Point p = {1, 0}, q = {4, 7};
-    pgl::Segment s = {p, q}, t = {0, 8, 2, 1};
+# Let's set up two segments that cross in a nice visible spot.
+p, q = pgl.Point(1, 0), pgl.Point(4, 7)
+s, t = pgl.Segment(p, q), pgl.Segment(0, 8, 2, 1)
 
-    // Create your canvas
-    pgl::Canvas canvas;
-    canvas.size(900.0, 560.0)
-          .margin(30.0) // you can define the margin you want
-          .pointRadius(5.0)
-          .strokeWidth(4.0)
-          .borders(true); // if you want borders
+# Create your canvas
+canvas = pgl.Canvas()
+canvas.size(900, 560) \
+      .margin(30) \
+      .pointRadius(5) \
+      .strokeWidth(4) \
+      .borders(True)   # if you want borders
 
-    // Draw the two segments with distinct colors.
-    canvas << pgl::stroke("royalblue") << pgl::fill("none") << s;
-    canvas << pgl::stroke("darkorange") << t;
-    // Then you can draw the endpoints on top so they stay easy to spot.
-    canvas << pgl::stroke("black") << pgl::fill("black") << p << q;
+# Draw the two segments with distinct colors.
+canvas.stroke("royalblue").fill("none").draw(s)
+canvas.stroke("darkorange").draw(t)
+# Then draw the endpoints on top so they stay easy to spot.
+canvas.stroke("black").fill("black").draw(p).draw(q)
 
-    if (s.intersects(t)) {
-        // when they cross, we can highlight the exact intersection too!
-        pgl::Shape crossing(s.intersection<pgl::Rational<int>>(t));
-        canvas << pgl::stroke("crimson")
-               << pgl::fill("crimson")
-               << crossing;
-    }
+# When they cross, highlight the exact intersection too! drawing None (an empty
+# intersection) is a harmless no-op, so no guard is needed.
+canvas.stroke("crimson").fill("crimson").draw(s.intersection(t))
 
-    // One call writes the finished SVG.
-    canvas.writeSVG("example1.svg");
-}
+# One call writes the finished SVG.
+canvas.writeSVG("example1.svg")
 ```
 
   </td>
@@ -72,88 +76,129 @@ int main() {
   </tr>
 </table>
 
+The exact intersection point is computed with rational arithmetic and drawn on
+top, so the highlight sits precisely where the two segments meet.
+
 ### Style
 
-The canvas maintains a current style. When you insert a shape, that shape
-captures the style that is active at that exact moment. Changing the style
-afterwards affects only shapes inserted later.
+The canvas maintains a current style. When you draw a shape, that shape captures
+the style that is active at that exact moment. Changing the style afterwards
+affects only shapes drawn later.
 
-This is why the order of streamed commands matters:
+This is why the order of calls matters:
 
-```c++
-pgl::Canvas canvas;
-pgl::Segment firstSegment = {0, 0, 4, 3}, secondSegment = {0, 3, 4, 0};
-// Each shape remembers the style that was active when it was inserted.
-canvas << pgl::stroke("royalblue") << firstSegment;
-// So changing the stroke now only affects what comes next.
-canvas << pgl::stroke("crimson") << secondSegment;
+```python
+canvas = pgl.Canvas()
+first, second = pgl.Segment(0, 0, 4, 3), pgl.Segment(0, 3, 4, 0)
+# Each shape remembers the style that was active when it was drawn.
+canvas.stroke("royalblue").draw(first)
+# So changing the stroke now only affects what comes next.
+canvas.stroke("crimson").draw(second)
 ```
 
-Here `firstSegment` stays blue even though the current canvas stroke later
-becomes crimson.
+Here `first` stays blue even though the current canvas stroke later becomes
+crimson.
 
-| Command | Effect |
+Each style method takes an SVG string and returns the canvas:
+
+| Method | Effect |
 | --- | --- |
-| `pgl::stroke("value")` | Sets the stroke color or stroke paint used for subsequent shapes. Typical values are color names such as `"red"`, hex codes such as `"#3366cc"`, or any SVG paint value. |
-| `pgl::fill("value")` | Sets the interior fill used for subsequent filled shapes and points. Use `"none"` to disable filling. |
-| `pgl::fillOpacity("value")` | Sets the fill opacity for subsequent shapes. Values are forwarded as SVG strings, so `"0.2"` makes the fill translucent. |
-| `pgl::strokeOpacity("value")` | Sets the stroke opacity for subsequent shapes. |
-| `pgl::strokeWidth("value")` | Sets the stroke width for subsequent shapes using a raw SVG length string. This is useful when you want direct SVG-style control. |
+| `canvas.stroke("value")` | Sets the stroke color or stroke paint used for subsequent shapes. Typical values are color names such as `"red"`, hex codes such as `"#3366cc"`, or any SVG paint value. |
+| `canvas.fill("value")` | Sets the interior fill used for subsequent filled shapes and points. Use `"none"` to disable filling. |
+| `canvas.fillOpacity("value")` | Sets the fill opacity for subsequent shapes. Values are forwarded as SVG strings, so `"0.2"` makes the fill translucent. |
+| `canvas.strokeOpacity("value")` | Sets the stroke opacity for subsequent shapes. |
+
+To change the stroke *width* use the numeric `strokeWidth(pixels)` configuration
+method described below.
 
 Example:
 
-```c++
-pgl::Canvas canvas;
-pgl::Halfplane halfplane = {0, 0, 4, 2};
-pgl::Rectangle rectangle = {{1, 1}, {3, 3}};
-// Soft fill for the half-plane so the rest of the drawing still shows through.
-canvas << pgl::stroke("teal")
-       << pgl::fill("teal")
-       << pgl::fillOpacity("0.18")
-       << halfplane
-       // Then switch gears and draw the rectangle
-       << pgl::stroke("sienna")
-       << pgl::fill("gold")
-       << pgl::fillOpacity("0.22")
-       << rectangle;
+```python
+canvas = pgl.Canvas()
+halfplane = pgl.Halfplane(0, 0, 4, 2)
+rectangle = pgl.Rectangle(pgl.Point(1, 1), pgl.Point(3, 3))
+# Soft fill for the half-plane so the rest of the drawing still shows through.
+canvas.stroke("teal").fill("teal").fillOpacity("0.18").draw(halfplane)
+# Then switch gears and draw the rectangle.
+canvas.stroke("sienna").fill("gold").fillOpacity("0.22").draw(rectangle)
+```
+
+### Drawing shapes
+
+`canvas.draw(shape)` adds a shape using the current style and returns the canvas,
+so draws chain. Every bound shape can be drawn: `Point`, `Segment`,
+`OrientedSegment`, `Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`,
+`Rectangle`, `Convex`, and `Disk`. Results of constructions such as
+`intersection` are concrete shapes too, so they can be drawn directly. Drawing
+`None` (which an empty `intersection` returns) is a no-op that still returns the
+canvas, so no `None` guard is needed.
+
+```python
+canvas = pgl.Canvas()
+canvas.draw(pgl.Triangle(-1, -1, 0, 2, 1, -2)) \
+      .draw(pgl.Disk(pgl.Point(0, 0), 2)) \
+      .draw(pgl.Point(0, 0))
 ```
 
 ### Configuration
 
 These methods configure the exported image or update the current drawing
-defaults:
+defaults. Each returns the canvas, so they chain:
 
 | Method | What it changes |
 | --- | --- |
-| `scale(double factor)` | Multiplies the automatically fitted scale by `factor`. Values greater than `1` zoom in; values between `0` and `1` zoom out. The value must be strictly positive. |
-| `width(double widthPixels)` | Sets the SVG width in pixels. The value must be strictly positive. |
-| `height(double heightPixels)` | Sets the SVG height in pixels. The value must be strictly positive. |
-| `size(double widthPixels, double heightPixels)` | Convenience wrapper for setting width and height together. |
-| `margin(double marginPixels)` | Reserves blank space around the fitted drawing. Increasing the margin gives the geometry more breathing room inside the image. The value must be non-negative. |
-| `pointRadius(double radiusPixels)` | Sets the rendered radius of point primitives in pixels. This affects how large `Point` objects appear in the exported SVG. |
-| `strokeWidth(double widthPixels)` | Sets the current stroke width using a numeric pixel value. This updates the current style for subsequently inserted shapes. |
-| `borders(bool enabled = true)` | Enables or disables a thin rectangular frame around the whole SVG. This is especially helpful when debugging clipping and margins. |
-| `writeSVG(const std::string& path)` | Writes the full SVG document to disk. Throws if the output file cannot be opened. |
+| `scale(factor)` | Multiplies the automatically fitted scale by `factor`. Values greater than `1` zoom in; values between `0` and `1` zoom out. Must be strictly positive. |
+| `width(pixels)` | Sets the SVG width in pixels. Must be strictly positive. |
+| `height(pixels)` | Sets the SVG height in pixels. Must be strictly positive. |
+| `size(width, height)` | Convenience wrapper for setting width and height together. |
+| `margin(pixels)` | Reserves blank space around the fitted drawing, giving the geometry more breathing room inside the image. Must be non-negative. |
+| `pointRadius(pixels)` | Sets the rendered radius of point primitives in pixels. Controls how large `Point` objects appear in the exported SVG. |
+| `strokeWidth(pixels)` | Sets the current stroke width as a numeric pixel value. Updates the current style for subsequently drawn shapes. |
+| `borders(enabled=True)` | Enables or disables a thin rectangular frame around the whole SVG. Especially helpful when debugging clipping and margins. |
+| `writeSVG(path)` | Writes the full SVG document to disk. Raises if the output file cannot be opened. |
 | `toSVG()` | Returns the complete SVG document as a string, which is useful for tests, web responses, or custom output pipelines. |
 
-Two related width setters exist on purpose:
+The invalid-argument checks raise a Python exception, so e.g. `canvas.width(0)`
+raises rather than producing a broken image.
 
-- `canvas.strokeWidth(4.0)` is a canvas method taking a numeric width in pixels.
-- `canvas << pgl::strokeWidth("4")` is a streamed style command taking a raw SVG string.
+### Inline display in Jupyter
 
-Both affect the style captured by later shapes; the method form is simply more
-convenient when you want a numeric pixel width.
+Every shape and every canvas defines `_repr_svg_`, the hook Jupyter / IPython use
+for rich display. Evaluating a shape as the last expression in a cell draws it on
+a one-shot canvas and shows the SVG inline:
+
+```python
+pgl.Triangle(-1, -1, 0, 2, 1, -2)        # displays the triangle
+```
+
+A canvas displays itself the same way, so you do not need `toSVG()` to preview a
+drawing in a notebook — just put the canvas on the last line of the cell:
+
+```python
+canvas = pgl.Canvas().size(300, 300)
+canvas.stroke("crimson").draw(pgl.Disk(pgl.Point(0, 0), 2))
+canvas                                    # displays the canvas
+```
+
+You can still call `canvas.toSVG()` to obtain the SVG string explicitly (for
+tests, web responses, or your own output layer):
+
+```python
+canvas = pgl.Canvas()
+canvas.stroke("black").draw(pgl.Segment(0, 0, 4, 3))
+svg = canvas.toSVG()
+```
 
 ### How fitting works
 
 Canvas fitting is automatic:
 
-- the bounds of all inserted elements are collected;
+- the bounds of all drawn elements are collected;
 - the drawing is uniformly scaled to fit inside the chosen width and height;
 - the aspect ratio is preserved;
 - the configured margin and optional border are respected;
-- the y-axis is flipped during export so that mathematical coordinates still
-  feel natural in C++ code while SVG receives screen-space coordinates.
+- the y-axis is flipped during export so that mathematical coordinates still feel
+  natural while SVG receives screen-space coordinates.
 
 Infinite primitives are clipped to the visible viewport:
 
@@ -169,20 +214,11 @@ stay visually constant even when the geometry is scaled to fit the output box.
 
 - `Canvas` is intentionally lightweight. It is a geometry inspection tool, not a
   general plotting framework.
-- Shapes are stored in insertion order, and SVG output preserves that order, so
-  later shapes are drawn on top of earlier ones.
-- Because style is captured on insertion, it is easy to layer highlights on top
-  of a base drawing by switching style right before inserting the highlighted
-  object.
+- Shapes are stored in draw order, and SVG output preserves that order, so later
+  shapes are drawn on top of earlier ones.
+- Because style is captured when a shape is drawn, it is easy to layer highlights
+  on top of a base drawing by switching style right before drawing the
+  highlighted object.
 - `Halfplane` fill and `Rectangle` fill are often easier to read when combined
-  with translucent `fillOpacity(...)`.
+  with a translucent `fillOpacity(...)`.
 - `Triangle` supports both stroke and fill just like `Rectangle`.
-
-If you do not want to write a file immediately, you can generate an SVG string
-and hand it to your own output layer:
-
-```c++
-pgl::Canvas canvas;
-canvas << pgl::stroke("black") << pgl::Segment({0, 0}, {4, 3});
-std::string svg = canvas.toSVG();
-```

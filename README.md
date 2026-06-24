@@ -45,17 +45,19 @@ The following [predicates](doc/shape_methods.md#predicates) are implemented as m
 - `crosses(Shape)` Do both shapes separate each other?
 
 ```python
+import pypgl as pgl
+
 o = pgl.Point()      # Point (0,0)
 d = pgl.Disk(o, 10)  # Disk of radius 10 centered at (0,0)
 if d.contains(o):
-    print("Disk contains ", o)
+    print("Disk contains", o)
 diam = d.diameter()
 if d.contains(diam):
     print("Disk contains the diameter")
 if not d.interiorContains(diam):
     print("Disk's interior does not contain the diameter")
 # Output:
-# Disk contains  (0,0)
+# Disk contains (0,0)
 # Disk contains the diameter
 # Disk's interior does not contain the diameter
 ```
@@ -65,6 +67,8 @@ if not d.interiorContains(diam):
 Several [other methods](doc/shape_methods.md) are supported by the shapes.
 
 ```python
+import pypgl as pgl
+
 c = pgl.Convex([pgl.Point(0, 0), pgl.Point(1, 0), pgl.Point(1, 2), pgl.Point(0, 1)])
 s = c.diameter()
 print("The diameter of", c,
@@ -80,14 +84,16 @@ A `Canvas` class is provided for [SVG visualization](doc/canvas.md):
 <img align="right" src="doc/figures/example2.svg" width="200"/>
 
 ```python
+import pypgl as pgl
+
 canvas = pgl.Canvas()
-canvas.add(pgl.Point(0, 0))
+canvas.draw(pgl.Point(0, 0))
 
 tri = pgl.Triangle(-1, -1, 0, 2, 1, -2)
 canvas.stroke("green")
-canvas.add(tri)
+canvas.draw(tri)
 canvas.stroke("blue")
-canvas.add(2*tri)
+canvas.draw(2*tri)
 canvas.writeSVG("example2.svg")
 ```
 

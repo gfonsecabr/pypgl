@@ -147,15 +147,31 @@ deliberately not exposed — it skips the bbox computation and could produce an
 invalid rectangle. 3 new tests in
 [tests/test_core_shapes.py](tests/test_core_shapes.py) (84 total).
 
-## Next
+### Milestone 3 — Notebook UX (commit pending)
+`Canvas` is bound in its own TU ([src/bind_canvas.cpp](src/bind_canvas.cpp),
+wired into [src/module.cpp](src/module.cpp) and [CMakeLists.txt](CMakeLists.txt)).
+pgl's stream API (`canvas << pgl::stroke("red") << shape`) does not map to Python,
+so each stream operation is exposed as a method:
 
-### Milestone 3 — Notebook UX
-- Bind `Canvas` (`.pgl-ref/include/visualization/canvas.hpp`): construction,
-  `draw(...)`, styling (`stroke`/`fill`/`strokeWidth`/…), `size`/`scale`,
-  `toSVG()`, `writeSVG(path)`.
-- Add `_repr_svg_()` to `Canvas` (returns `toSVG()`).
-- Add `_repr_svg_()` to each shape by wrapping it in a one-shot `Canvas`
-  (Python-side in `__init__.py`, like the existing sugar).
+- **Configuration** (fluent — each returns the same canvas): `scale`, `width`,
+  `height`, `size`, `margin`, `pointRadius`, the numeric `strokeWidth`, `borders`.
+- **Style** (fluent; applied to the *current* style, so only shapes drawn
+  afterwards capture it, exactly like the C++ stream): `stroke`, `fill`,
+  `fillOpacity`, `strokeOpacity`, each taking an SVG string.
+- **`draw(shape)`** — one overload per bound shape (all 11, including `Disk`),
+  equivalent to `<< shape`; returns the canvas so draws chain.
+- **`toSVG()`** → SVG string; **`writeSVG(path)`** → file.
+
+The fluent self-returns use `nb::rv_policy::reference_internal` so the canvas
+stays alive behind the returned handle. `_repr_svg_` is added Python-side in
+[pypgl/__init__.py](pypgl/__init__.py): on `Canvas` it returns `toSVG()`; on every
+shape it wraps the shape in a one-shot `Canvas().draw(self).toSVG()`, so shapes
+render inline in Jupyter. 37 new tests in
+[tests/test_canvas.py](tests/test_canvas.py) (139 total): SVG well-formedness
+(parsed with `xml.etree`), fluent chaining, per-shape rendering, style capture
+order, borders, arrowhead markers, `writeSVG`, and the `_repr_svg_` hooks.
+
+## Next
 
 ### Milestone 4 — Packaging & distribution
 - `cibuildwheel` GitHub Actions across manylinux/macOS/Windows + CPython versions.
