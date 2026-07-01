@@ -18,6 +18,7 @@ from ._pgl import (
     Triangle,
     Rectangle,
     Convex,
+    Polygon,
     Disk,
     Canvas,
 )
@@ -38,6 +39,7 @@ __all__ = [
     "Triangle",
     "Rectangle",
     "Convex",
+    "Polygon",
     "Disk",
     "Canvas",
 ]
@@ -67,6 +69,7 @@ for _cls in (
     Triangle,
     Rectangle,
     Convex,
+    Polygon,
     Disk,
 ):
     _cls.__contains__ = _shape_contains
@@ -94,6 +97,7 @@ for _cls in (
     Triangle,
     Rectangle,
     Convex,
+    Polygon,
     Disk,
 ):
     _add_indexing(_cls)
@@ -131,6 +135,7 @@ for _cls in (
     Triangle,
     Rectangle,
     Convex,
+    Polygon,
     Disk,
 ):
     _cls._repr_svg_ = _shape_repr_svg_

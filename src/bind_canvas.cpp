@@ -95,6 +95,7 @@ void bind_canvas(nb::module_ &m) {
     CANVAS_DRAW(cls, Triangle);
     CANVAS_DRAW(cls, Rectangle);
     CANVAS_DRAW(cls, Convex);
+    CANVAS_DRAW(cls, Polygon);
     CANVAS_DRAW(cls, Disk);
 
     // draw(None) is a no-op that still returns the canvas, so the result of a

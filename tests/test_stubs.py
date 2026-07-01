@@ -55,7 +55,7 @@ def test_stub_has_no_leaked_runtime_patches():
 
 @pytest.mark.parametrize("shape", [
     "Point", "Segment", "OrientedSegment", "Line", "OrientedLine", "Ray",
-    "Halfplane", "Triangle", "Rectangle", "Convex", "Disk",
+    "Halfplane", "Triangle", "Rectangle", "Convex", "Polygon", "Disk",
 ])
 def test_sugar_methods_present_on_shapes(shape):
     cls = _classes(ast.parse(_STUB.read_text()))[shape]

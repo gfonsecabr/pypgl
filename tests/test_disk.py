@@ -126,6 +126,24 @@ def test_predicate_matrix_against_other_shapes():
     assert not d.intersects(Rectangle(100, 100, 101, 101))
 
 
+def test_predicate_matrix_is_symmetric_from_the_other_side():
+    # Disk is now a full 12th member of the shared PGL_BIND_ALL_PREDICATES
+    # matrix (a pgl gap since fixed), so every other shape's own predicate
+    # methods reach Disk too -- not just Disk's own methods reaching them.
+    d = Disk(0, 0, 5)
+    small_tri = Triangle(Point(0, 0), Point(1, 0), Point(0, 1))
+    assert not small_tri.contains(d)
+    assert d.contains(small_tri)              # matches test_predicate_matrix_against_other_shapes
+    big_rect = Rectangle(-10, -10, 10, 10)
+    assert big_rect.contains(d)
+    small_rect = Rectangle(0, 0, 1, 1)
+    assert small_rect.intersects(d)
+    assert d.intersects(small_rect)
+    far_rect = Rectangle(100, 100, 101, 101)
+    assert not far_rect.intersects(d)
+    assert not d.intersects(far_rect)
+
+
 def test_disk_versus_disk_predicates():
     assert Disk(0, 0, 5).contains(Disk(0, 0, 2))
     assert not Disk(0, 0, 5).interiorContains(Disk(0, 0, 5))

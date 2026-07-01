@@ -97,22 +97,12 @@ void bind_disk(nb::module_ &m) {
             "Return the disk rotated by 90*k degrees about the origin.");
     PGL_BIND_INDEXING(cls, Disk);
 
+    // Disk is now a full member of both shared matrix macros (see common.h),
+    // so these two calls also bind Disk's own self-pair.
     PGL_BIND_ALL_PREDICATES(cls, Disk);
-    PGL_BIND_PREDICATES(cls, Disk, ::pypgl::Disk);
-
     // squaredDistance returns a float for the disk: the gap between an exterior
     // shape and the circle is generally irrational, so pgl offers no exact form.
-    // Bound against the shapes pgl implements it for (every shape up to and
-    // including Disk; Convex/Polygon are not yet implemented).
-    PGL_SQDIST(cls, Disk, ::pypgl::Point);
-    PGL_SQDIST(cls, Disk, ::pypgl::Segment);
-    PGL_SQDIST(cls, Disk, ::pypgl::OrientedSegment);
-    PGL_SQDIST(cls, Disk, ::pypgl::Line);
-    PGL_SQDIST(cls, Disk, ::pypgl::OrientedLine);
-    PGL_SQDIST(cls, Disk, ::pypgl::Ray);
-    PGL_SQDIST(cls, Disk, ::pypgl::Halfplane);
-    PGL_SQDIST(cls, Disk, ::pypgl::Rectangle);
-    PGL_SQDIST(cls, Disk, ::pypgl::Triangle);
+    PGL_BIND_ALL_SQUARED_DISTANCE(cls, Disk);
     PGL_SQDIST(cls, Disk, ::pypgl::Disk);
 
     cls.def("intersection", [](const Disk &a, const Point &b) { return a.intersection(b); }, nb::arg("other"),

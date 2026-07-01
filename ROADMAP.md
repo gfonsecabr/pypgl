@@ -56,7 +56,11 @@ unit, with the full predicate matrix.
 Intersection scope (deliberately partial; expand later): bound for pairs whose
 results are points / 1D shapes (all in the bound set). 2D∩2D and `Halfplane`
 intersections — whose results can be a `Convex`/`Polygon` region — are left to a
-later milestone so no binding returns an unbound type.
+later milestone so no binding returns an unbound type. (`Polygon`'s own
+intersection matrix, once it was bound in Milestone 5 below, turned out to
+cover its 2D∩2D/`Halfplane` cases too — its 1D pieces are a plain `list[Point]`
+rather than a new bound type. The gap called out here still stands for
+`Triangle`/`Rectangle`/`Convex` intersecting each other.)
 
 Required a pgl fix pulled into `.pgl-ref`: `std::hash` for `Line`-family shapes
 and `Convex::intersection(Point)` were not compatible with `Rational<BigInt>`
@@ -241,9 +245,115 @@ Still to do:
 - Consider adding aarch64 Linux + musllinux once a non-stub-importing build path
   (or a separate stub-gen step) removes the native-host requirement.
 
-### Milestone 5 — Experimental
-- `Polygon` once its pgl C++ predicates settle; keep gated so the stable public
-  API does not churn.
+### Milestone 5 — Polygon (commit pending)
+
+`Polygon` — an arbitrary (possibly non-convex) simple polygon — is bound in its
+own TU ([src/bind_polygon.cpp](src/bind_polygon.cpp)), pulled in once upstream
+pgl's C++ predicates for it settled (`.pgl-ref` re-pulled to commit `458bbd3`,
+which completed the `Polygon` predicate/intersection matrix; `CMakeLists.txt`'s
+`FetchContent` pin moved in lockstep).
+
+- Storage mirrors `Convex` (vertices plus a lazy translation offset), so
+  `Polygon` is likewise bound **mutable**: `__iadd__`/`__isub__`/`__imul__`/
+  `__itruediv__` mutate in place, and per the mutable-implies-unhashable rule
+  it is bound with `hashable = false`, even though pgl itself has a
+  `std::hash<Polygon>` specialization. Unlike `Convex`, `Polygon` has free
+  operators in pgl, so the value-returning `+`/`-`/`*`/`/` reuse
+  `PGL_BIND_OPERATORS` directly instead of being synthesized.
+- Constructor: `Polygon(points, trusted=False)` (a placement-new factory, like
+  `Convex`'s) normalizes to canonical form (CCW, lexicographically smallest
+  vertex first) unless `trusted` is set — normalization does not check
+  simplicity, so `isSimple()` remains the way to verify.
+- Measures: `vertices`/`edges`/`orientedEdges`, `twiceArea`/`area`,
+  `centroid`/`verticesCentroid`, `isDegenerate`/`isSimple`/`isConvex`,
+  `diameter`, `bbox`. `untangle()` (mutator) makes a self-crossing polygon
+  simple in place by flipping crossing edges / dropping redundant vertices.
+  `index`/`size`/`get` are bound, but — unlike every other indexable shape —
+  `pointInside`/`verticesContain` are not: pgl does not yet implement them for
+  a non-convex shape.
+- **`Polygon` is now an 11th column/row in the shared `PGL_BIND_ALL_PREDICATES`
+  / `PGL_BIND_ALL_SQUARED_DISTANCE` macros** in
+  [src/common.h](src/common.h), so every already-bound shape's matrix picked up
+  a `Polygon` column for free (no changes needed in their own `bind_*.cpp`
+  files), and `bind_polygon.cpp` gets the reverse row plus the self-pair via
+  the same macro call. A few pairs pgl has not implemented yet return a
+  placeholder / throw at runtime, exactly as elsewhere in the matrix. `Disk`
+  sits outside both macros (as before), so `Polygon`↔`Disk` is bound
+  explicitly on the `Polygon` side (`bind_polygon.cpp`), reaching `Disk`'s side
+  automatically since `bind_disk.cpp`'s own call to the (now 11-wide) shared
+  macro picks up the `Polygon` column too.
+- `intersection` is bound against every shape pgl implements it for, closing
+  the `Polygon`-specific slice of the "2D∩2D" gap called out below `Convex`'s
+  intersection scope: `Point` (`Optional[Point]`), the five 1D shapes
+  `Segment`/`OrientedSegment`/`Line`/`OrientedLine`/`Ray` (`list[Point |
+  Segment]` — a non-convex polygon can meet a line in several disjoint places,
+  unlike `Convex`'s single optional piece), and the five 2D shapes
+  `Halfplane`/`Triangle`/`Rectangle`/`Convex`/`Polygon`
+  (`list[Point | Segment | Polygon]`, or `list[Point | list[Point] | Polygon]`
+  for the Convex/Triangle/Rectangle/Polygon pairs — pgl's `Polyline` is only a
+  documented stub (`std::vector<Point>`, no dedicated class), so it surfaces as
+  a plain `list[Point]`). `Point.intersection(Polygon)` was added alongside
+  `Point`'s existing intersection-with-everything bindings (always
+  `Optional[Point]`, safe for any shape). The pre-existing 2D∩2D gap *between*
+  `Triangle`/`Rectangle`/`Convex` themselves (unrelated to `Polygon`) is
+  unchanged and still deferred.
+- `Canvas.draw(Polygon)` and the `_repr_svg_` / iteration / `in` / stub-sugar
+  wiring in [pypgl/__init__.py](pypgl/__init__.py) and
+  [src/stubgen_patterns.txt](src/stubgen_patterns.txt) (the latter needed no
+  change — its generic `*.__suffix__` rule already matches any class name). 32
+  new tests in [tests/test_polygon.py](tests/test_polygon.py), plus one more
+  `test_stubs.py` parametrize case:
+  construction (normalized vs. trusted, exactness), measures, `isSimple`/
+  `isConvex`/`untangle`, indexing/iteration, mutability/hashing, transforms,
+  predicates (including the `Disk` pairing), squared distance, intersection,
+  and `Canvas`/`_repr_svg_`.
+
+`Disk` becomes a full 12th member of the shared matrix (commit pending;
+`.pgl-ref` re-pulled to `576ec5f`). Closes both the squared-distance gap the
+milestone 2 `Disk` writeup called out ("Convex/Polygon are not yet
+implemented") *and* the longer-standing predicate asymmetry noted there too
+("Disk's column is not added to the other shapes' matrices yet ... symmetric
+relations are reachable from the Disk side") — pgl finished every remaining
+`Disk` pair against every other shape. `::pypgl::Disk` was added as a 12th
+entry to both `PGL_BIND_ALL_PREDICATES` and `PGL_BIND_ALL_SQUARED_DISTANCE` in
+[src/common.h](src/common.h), so `triangle.contains(disk)` now works (not just
+`disk.contains(triangle)`/`disk.intersects(triangle)` as before), and every
+shape's own `PGL_BIND_ALL_PREDICATES(cls, SelfT)` / `PGL_BIND_ALL_SQUARED_DISTANCE(cls, SelfT)`
+call picks up the `Disk` column for free — no changes needed in their
+individual `bind_*.cpp` files. On the `Disk` side,
+[src/bind_disk.cpp](src/bind_disk.cpp) collapses to one `PGL_BIND_ALL_PREDICATES(cls,
+Disk)` / `PGL_BIND_ALL_SQUARED_DISTANCE(cls, Disk)` call each (which now also
+cover `Disk`'s own self-pair, since `Disk` is in both lists), replacing the
+previous explicit Convex/Polygon-excluding squared-distance list and the
+separate self-pair predicate call; the explicit `Polygon↔Disk` lines in
+[src/bind_polygon.cpp](src/bind_polygon.cpp) and the explicit
+`Convex↔Disk` squared-distance line in
+[src/bind_polygons.cpp](src/bind_polygons.cpp) were removed as redundant.
+
+Concretely, pgl added `Convex::squaredDistance(Disk)` (explicit, since
+`Convex` outranks `Disk`) plus a generic `shapeRank`-based forwarder on `Disk`
+that reaches both `Convex` and `Polygon` for squared distance
+(`Polygon::squaredDistance(Disk)` already existed from the `Polygon`
+milestone, and `Triangle::contains(Disk)` — despite being called out as
+missing in the milestone 2 note — turned out to already exist upstream by the
+time this was checked; only squared distance and a few other pairs were
+actually still missing). An interim upstream commit (`cb03cf7`) mixed
+`Convex`'s own coordinate type with the query point type inside
+`Convex::squaredDistance(const OtherPoint&)` — harmless for every prior caller
+(always the same type on both sides) but a hard compile error the moment
+`Disk::center<double>()` was passed through with `ResultNumber=double`
+requested; a follow-up commit (`576ec5f`) fixed it by promoting through the
+same common-type mechanism `orientationDeterminant` already used elsewhere in
+that file.
+
+3 new tests (199 total): one in
+[tests/test_core_shapes.py](tests/test_core_shapes.py) confirming
+`Convex.squaredDistance(Disk)`/`Disk.squaredDistance(Convex)` agree and are
+`float`, one in [tests/test_polygon.py](tests/test_polygon.py) for the
+`Polygon`/`Disk` direction, and one in
+[tests/test_disk.py](tests/test_disk.py) confirming the newly-symmetric
+predicates (`triangle.contains(disk)`, `rectangle.intersects(disk)`, and
+friends) reach `Disk` from the other shapes' own methods, not just `Disk`'s.
 
 ## Cross-cutting TODOs
 - Pickling via `__getstate__`/`__setstate__` (serialize coordinates).

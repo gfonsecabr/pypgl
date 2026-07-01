@@ -61,6 +61,7 @@ void bind_point(nb::module_ &m) {
     cls.def("intersection", [](const Point &a, const Triangle &b) { return a.intersection(b); }, nb::arg("other"));
     cls.def("intersection", [](const Point &a, const Rectangle &b) { return a.intersection(b); }, nb::arg("other"));
     cls.def("intersection", [](const Point &a, const Convex &b) { return a.intersection(b); }, nb::arg("other"));
+    cls.def("intersection", [](const Point &a, const Polygon &b) { return a.intersection(b); }, nb::arg("other"));
 
     cls.def("distance", [](const Point &a, const Point &b) { return a.distance(b); },
             nb::arg("other"), "Approximate Euclidean (L2) distance (float).");

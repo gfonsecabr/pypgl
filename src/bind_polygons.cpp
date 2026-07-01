@@ -171,6 +171,10 @@ void bind_polygons(nb::module_ &m) {
 
         PGL_BIND_VERTEX_QUERIES(cls, Convex);
         PGL_BIND_INDEXING(cls, Convex);
+        // Both shared macros now include Disk (see common.h), so these two
+        // calls also cover the Convex<->Disk pairing (a float: the gap to a
+        // disjoint disk is generally irrational, so there is no exact
+        // ResultNumber form to request).
         PGL_BIND_ALL_PREDICATES(cls, Convex);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Convex);
 

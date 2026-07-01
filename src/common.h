@@ -34,6 +34,7 @@ using Halfplane = pgl::EHalfplane;                 // pgl::Halfplane<EPoint>
 using Triangle = pgl::ETriangle;                   // pgl::Triangle<EPoint>
 using Rectangle = pgl::ERectangle;                 // pgl::Rectangle<EPoint>
 using Convex = pgl::EConvex;                        // pgl::Convex<EPoint>
+using Polygon = pgl::EPolygon;                      // pgl::Polygon<EPoint>
 using Disk = pgl::EDisk;                            // pgl::Disk<EPoint>
 
 // repr, ordering, equality, and (optionally) hashing — uniform across all
@@ -183,12 +184,15 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
             },                                                              \
             nb::arg("other"))
 
-// squaredDistance of SelfT against every bound shape. Like the predicate
-// matrix, pgl makes every pair available (explicit overload on the higher-rank
-// shape plus rank-based forwarding). The single exception is Convex×Halfplane,
-// which pgl does not implement in either direction, so Convex and Halfplane bind
-// their squared-distance lists explicitly (omitting each other) instead of using
-// this macro.
+// squaredDistance of SelfT against every bound shape (all eleven, including
+// itself). pgl makes every pair available (an explicit overload on the
+// higher-rank shape plus rank-based forwarding on the lower-rank one), so
+// every shape in this list can safely call the macro on itself and on each
+// other. Disk's pairs against Convex/Polygon were the last gap (pgl fix:
+// Convex::squaredDistance(Disk) plus a generic shapeRank-based forwarder on
+// Disk); all pairs return the shapes' own declared type (a Fraction between
+// two non-Disk shapes, a float whenever Disk is on either side, since the
+// gap to a disjoint disk is generally irrational).
 #define PGL_BIND_ALL_SQUARED_DISTANCE(cls, SelfT)            \
     PGL_SQDIST(cls, SelfT, ::pypgl::Point);                     \
     PGL_SQDIST(cls, SelfT, ::pypgl::Segment);                   \
@@ -199,13 +203,17 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_SQDIST(cls, SelfT, ::pypgl::Halfplane);                 \
     PGL_SQDIST(cls, SelfT, ::pypgl::Triangle);                  \
     PGL_SQDIST(cls, SelfT, ::pypgl::Rectangle);                 \
-    PGL_SQDIST(cls, SelfT, ::pypgl::Convex)
+    PGL_SQDIST(cls, SelfT, ::pypgl::Convex);                    \
+    PGL_SQDIST(cls, SelfT, ::pypgl::Polygon);                    \
+    PGL_SQDIST(cls, SelfT, ::pypgl::Disk)
 
-// Bind the seven predicates of SelfT against every bound shape, so the full
-// pair matrix is exposed. Every pgl shape declares all seven predicates against
-// every other concrete shape (explicit overloads plus a rank-based forwarding
-// template), so each pair compiles; pairs pgl has not implemented yet throw at
-// runtime. Overload resolution on the Python side dispatches by argument type.
+// Bind the seven predicates of SelfT against every bound shape (all eleven,
+// including itself), so the full pair matrix is exposed. Every pgl shape
+// declares all seven predicates against every other concrete shape (explicit
+// overloads plus a rank-based forwarding template), so each pair compiles;
+// pairs pgl has not implemented yet throw at runtime (or return a placeholder
+// value — behavior is whatever pgl itself does). Overload resolution on the
+// Python side dispatches by argument type.
 #define PGL_BIND_ALL_PREDICATES(cls, SelfT)               \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Point);          \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Segment);        \
@@ -216,4 +224,6 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Halfplane);      \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Triangle);       \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Rectangle);      \
-    PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Convex)
+    PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Convex);         \
+    PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Polygon);        \
+    PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Disk)

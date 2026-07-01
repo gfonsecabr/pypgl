@@ -217,6 +217,21 @@ def test_convex_halfplane_squared_distance():
     assert h.squaredDistance(c) == c.squaredDistance(h)
 
 
+def test_convex_disk_squared_distance_is_float_and_symmetric():
+    # Convex x Disk is bound in both directions (another pgl gap since fixed:
+    # Convex::squaredDistance(Disk) plus a generic shapeRank forwarder on Disk).
+    # Always a float: the gap to a disjoint disk is generally irrational.
+    c = pypgl.Convex([pypgl.Point(0, 0), pypgl.Point(4, 0), pypgl.Point(4, 4), pypgl.Point(0, 4)])
+    d = pypgl.Disk(10, 0, 1)
+    assert c.squaredDistance(d) == pytest.approx(25.0)
+    assert isinstance(c.squaredDistance(d), float)
+    assert d.squaredDistance(c) == c.squaredDistance(d)
+
+    overlapping = pypgl.Disk(1, 1, 1)
+    assert c.squaredDistance(overlapping) == 0.0
+    assert overlapping.squaredDistance(c) == 0.0
+
+
 def test_squared_distance_zero_on_contact():
     s = pypgl.Segment(0, 0, 4, 0)
     assert s.squaredDistance(pypgl.Point(2, 0)) == 0
