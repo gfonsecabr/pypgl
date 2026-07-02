@@ -70,6 +70,17 @@ def test_canvas_has_no_point_sugar():
     assert "__contains__" not in methods
 
 
+def test_triangulation_has_no_point_sugar():
+    # Triangulation is not a fixed-extent shape (no contains(Point)/index/get),
+    # so it opts out of the sugar every other bound class gets.
+    cls = _classes(ast.parse(_STUB.read_text()))["Triangulation"]
+    methods = {n.name for n in cls.body if isinstance(n, ast.FunctionDef)}
+    assert "__getitem__" not in methods
+    assert "__contains__" not in methods
+    assert "__len__" not in methods
+    assert "__iter__" not in methods
+
+
 def test_point_indexing_returns_fraction():
     # Point indexes over its two rational coordinates, so __getitem__ -> Fraction;
     # the other shapes index over their defining Points.

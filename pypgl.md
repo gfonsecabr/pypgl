@@ -268,4 +268,4 @@ foundation and cheap to add.
    `Rectangle`, `Convex`; full predicate matrix; constructions and measures.
 3. **Notebook UX:** `Canvas` + `_repr_svg_` on canvas and shapes.
 4. **Packaging:** `cibuildwheel`, stubs, PyPI publish.
-5. **Experimental:** `Disk`, `Polygon` once their C++ contracts settle.
+5. **Experimental:** `Disk`, `Polygon`, `Triangulation` once their C++ contracts settle.

@@ -16,9 +16,12 @@ Point\.__suffix__:
     def __iter__(self) -> Iterator[fractions.Fraction]: ...
     def __contains__(self, point: Point) -> bool: ...
 
-# Canvas has no point sugar; shield it from the generic shape rule below
-# (an empty replacement suppresses any addition).
+# Canvas and Triangulation have no point sugar (Triangulation is not a
+# fixed-extent shape -- see pypgl/__init__.py); shield them from the generic
+# shape rule below (an empty replacement suppresses any addition).
 Canvas\.__suffix__:
+
+Triangulation\.__suffix__:
 
 # Every other shape is indexed/iterated over its defining points. The class-name
 # segment in the query keeps this from matching the bare module suffix

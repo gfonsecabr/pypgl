@@ -20,6 +20,7 @@ from ._pgl import (
     Convex,
     Polygon,
     Disk,
+    Triangulation,
     Canvas,
 )
 
@@ -41,11 +42,17 @@ __all__ = [
     "Convex",
     "Polygon",
     "Disk",
+    "Triangulation",
     "Canvas",
 ]
 
 
 # --- Pythonic sugar added in the thin Python layer (cheap here, not in C++) ---
+#
+# Triangulation is deliberately absent from every loop below: unlike the
+# fixed-extent shapes, it has no contains(Point)/pointInside/index/get to hang
+# `in` or indexing off of. It does get _repr_svg_ further down, since
+# Canvas.draw() accepts it like any other shape.
 
 def _shape_contains(self, item):
     """``point in shape`` maps to ``shape.contains(point)``.
@@ -137,6 +144,10 @@ for _cls in (
     Convex,
     Polygon,
     Disk,
+    # Triangulation is not a "shape" (see the loops above), but Canvas.draw()
+    # accepts it just like every bound shape, so the same one-shot rendering
+    # applies here too.
+    Triangulation,
 ):
     _cls._repr_svg_ = _shape_repr_svg_
 

@@ -7,6 +7,7 @@ void bind_lines(nb::module_ &m);
 void bind_polygons(nb::module_ &m);
 void bind_polygon(nb::module_ &m);
 void bind_disk(nb::module_ &m);
+void bind_triangulation(nb::module_ &m);
 void bind_canvas(nb::module_ &m);
 
 NB_MODULE(_pgl, m) {
@@ -19,5 +20,6 @@ NB_MODULE(_pgl, m) {
     bind_polygons(m);
     bind_polygon(m);
     bind_disk(m);
+    bind_triangulation(m);
     bind_canvas(m);
 }

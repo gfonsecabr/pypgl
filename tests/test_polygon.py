@@ -263,6 +263,25 @@ def test_intersection_with_convex_returns_polygon_piece():
     assert pieces[0] == Polygon([Point(2, 2), Point(4, 2), Point(4, 4), Point(2, 4)])
 
 
+# --- triangulation() shortcut -------------------------------------------------
+# Polygon.triangulation() / triangulation(segments) are equivalent to
+# Triangulation(polygon) / Triangulation(polygon, segments=segments) -- see
+# tests/test_triangulation.py for Triangulation's own surface.
+
+def test_triangulation_matches_direct_constructor():
+    from pypgl import Triangulation
+
+    p = _square()
+    assert p.triangulation().numTriangles() == Triangulation(p).numTriangles()
+
+
+def test_triangulation_with_constraint_segments():
+    p = _square()
+    diagonal = Segment(Point(0, 0), Point(4, 4))
+    t = p.triangulation([diagonal])
+    assert t.isConstrained(diagonal)
+
+
 # --- Canvas / repr ------------------------------------------------------------
 
 def test_repr_and_str():

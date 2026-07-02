@@ -99,8 +99,35 @@ Still to do: broaden `intersection` to 2D∩2D among `Triangle`/`Rectangle`/
 complete), and consider STABLE_ABI to cut the wheel count before the next
 release.
 [pypgl.md](pypgl.md) remains the authoritative design contract —
-update it in lockstep if a decision changes; [ROADMAP.md](ROADMAP.md) tracks
-progress.
+update it in lockstep if a decision changes.
+
+**`Triangulation` bound** (milestone 6): a mutable mesh over a fixed vertex
+set (pgl's `algorithm/triangulation.hpp`) is bound in
+[src/bind_triangulation.cpp](src/bind_triangulation.cpp) over the module's own
+`Triangle`/`Segment` pair (`::pypgl::Triangulation` in
+[src/common.h](src/common.h) — `.pgl-ref` re-pulled to commit `99ac4d2` for
+this). All four C++ construction modes are bound: an explicit triangle set, an
+explicit edge set, the Delaunay triangulation of a point set, and the
+constrained Delaunay triangulation of a simple `Polygon` (optionally with
+extra interior points and/or constraint segments) — `Polygon.triangulation()`/
+`triangulation(segments)` are thin shortcuts for the last one, mirroring pgl's
+own convenience methods. **The polygon constructor must be registered before
+the point-set one**: `pypgl/__init__.py` makes every shape (`Polygon`
+included) iterable for its own `in`/indexing sugar, so a bare `Polygon` also
+satisfies nanobind's generic "sequence of `Point`" conversion — with the
+point-set overload registered first, a positional `Triangulation(polygon)`
+call silently built the *unconstrained* Delaunay triangulation of the
+polygon's vertices instead (same triangle count for a convex polygon, so it
+looked plausible; only `isConstrained()` gave it away). Also bound: sizes,
+membership, navigation (`otherTriangle`, `edgeAdjacentTriangles`,
+`vertexAdjacentTriangles`, `incidentTriangles`), the full directed/region
+traversal matrix (`trianglesIntersecting` and friends, against every shape
+pgl's `TriangulationQuery` concept accepts), point location, constrained
+edges, and single/batch `flip`. `Triangulation` is not a fixed-extent shape
+(no `contains(Point)`/`index`/`get`), so — like `Canvas` — it is shielded from
+the `size()`/`get()`/`__contains__` sugar in `__init__.py` and
+`stubgen_patterns.txt`; it does get `Canvas.draw()`/`_repr_svg_` support like
+every other shape.
 
 `Disk` ([src/bind_disk.cpp](src/bind_disk.cpp)) is bound as its own class:
 exact `center`/`squaredRadius`/`bbox`/`pointInside`; `area` is irrational (π) so

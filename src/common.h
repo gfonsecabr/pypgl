@@ -37,6 +37,13 @@ using Convex = pgl::EConvex;                        // pgl::Convex<EPoint>
 using Polygon = pgl::EPolygon;                      // pgl::Polygon<EPoint>
 using Disk = pgl::EDisk;                            // pgl::Disk<EPoint>
 
+// A mutable mesh over a fixed vertex set (algorithm/triangulation.hpp,
+// pulled in transitively by pgl.hpp). Its edge type defaults to
+// TriangleType::BoundaryType<false>, which for our Triangle already is
+// Segment -- spelled out here rather than left to the default so both
+// bind_triangulation.cpp and bind_canvas.cpp share one alias.
+using Triangulation = pgl::Triangulation<Triangle, Segment>;
+
 // repr, ordering, equality, and (optionally) hashing — uniform across all
 // value-type shapes. Fixed-size shapes are immutable and hashable. The
 // variable-size shapes (Convex, later Polygon) are mutable so they support

@@ -122,8 +122,8 @@ elif isinstance(isec, pgl.Segment):
 ```
 
 > `intersection` is currently bound for pairs whose result is a point or a 1D
-> shape. Intersections that can produce a 2D region (two 2D shapes, or anything
-> against a `Halfplane`) are not bound yet; see [the roadmap](../ROADMAP.md).
+> shape, plus `Polygon`'s own matrix (see [../CLAUDE.md](../CLAUDE.md)'s
+> Project status section for what's covered and what's still deferred).
 
 ### Other Methods for Shapes
 

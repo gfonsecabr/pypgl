@@ -104,6 +104,18 @@ void bind_polygon(nb::module_ &m) {
     cls.def("scaleDownY", [](Polygon &p, const Num &k) { p.scaleDownY(k); }, nb::arg("scalar"),
             "Divide the polygon's y-coordinates by scalar in place.");
 
+    // Shortcuts for Triangulation(polygon) / Triangulation(polygon, segments)
+    // -- see src/bind_triangulation.cpp, which binds the general constructor.
+    cls.def("triangulation", [](const Polygon &p) { return p.triangulation(); },
+            "Constrained Delaunay triangulation of this polygon (must be simple "
+            "and non-degenerate). Equivalent to Triangulation(self).");
+    cls.def("triangulation",
+            [](const Polygon &p, const std::vector<Segment> &segments) { return p.triangulation(segments); },
+            nb::arg("segments"),
+            "Constrained Delaunay triangulation of this polygon with the given "
+            "interior constraint segments (assumed, not checked, to lie inside "
+            "self). Equivalent to Triangulation(self, segments=segments).");
+
     cls.def("untangle", [](Polygon &p) { p.untangle(); },
             "Make the polygon simple in place by flipping crossing edges and "
             "removing redundant vertices. Relies on exact orientation "
