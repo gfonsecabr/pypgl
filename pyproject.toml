@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pypgl"
-version = "0.1.1"
+version = "0.2.0"
 description = "Python bindings for the Pangolin (pgl) exact geometry library"
 # README.md is the user-facing front page rendered on PyPI; pypgl.md is the
 # internal design contract and is intentionally not shipped as the description.
