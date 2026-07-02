@@ -98,6 +98,7 @@ void bind_canvas(nb::module_ &m) {
     CANVAS_DRAW(cls, Polygon);
     CANVAS_DRAW(cls, Disk);
     CANVAS_DRAW(cls, Triangulation);
+    CANVAS_DRAW(cls, ShapeTree);
 
     // draw(None) is a no-op that still returns the canvas, so the result of a
     // construction (e.g. an `intersection` that may be empty -> None) can be

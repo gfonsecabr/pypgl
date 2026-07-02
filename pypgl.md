@@ -27,10 +27,10 @@ Use [**nanobind**](https://github.com/wjakob/nanobind).
 - First-class `scikit-build-core` integration and `.pyi` stub generation.
 
 
-## The two custom type casters (the only real plumbing)
+## The custom type casters (the only real plumbing)
 
-Everything else is `.def(...)` calls. Only two conversions need hand-written
-casters; both live in a single `casters.h` shared by all translation units.
+Everything else is `.def(...)` calls. Three conversions need hand-written
+casters; all three live in a single `casters.h` shared by all translation units.
 
 ### 1. `pgl::BigInt` ↔ Python `int`
 
@@ -53,8 +53,20 @@ casters; both live in a single `casters.h` shared by all translation units.
   `float` loudly (a `float` cannot represent an exact rational — forcing the user
   to be explicit preserves the exactness contract).
 
-With these two casters in place, coordinates flow naturally and the rest of the
-binding is mechanical.
+### 3. `pgl::Shape<EPoint>` ↔ a concrete pypgl shape object
+
+`ShapeTree` is the one bound type that needs a mix of shape types in a single
+container, which the "bind concrete shapes, not the variant wrapper" rule
+below can't express on its own. This caster is what keeps `pgl::Shape` itself
+unbound and invisible from Python:
+
+- **Py→C++:** try each of the twelve bound classes with an exact,
+  non-converting cast; the first match wins.
+- **C++→Py:** dispatch on the stored alternative and hand it to the already-
+  registered caster for that concrete class.
+
+With these three casters in place, coordinates (and, for `ShapeTree`, mixed
+shapes) flow naturally and the rest of the binding is mechanical.
 
 ## What maps for free
 

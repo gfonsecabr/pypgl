@@ -5,12 +5,10 @@
   <img alt="Pangolin: Plane Geometry Library" src="figures/logotext.svg" width="65%"/>
 </picture>
 
-[![Tests](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml/badge.svg)](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml)
-[![Standard](https://img.shields.io/badge/C%2B%2B-20/23/26-rgb(10,66,158).svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
+<!-- [![Tests](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml/badge.svg)](https://github.com/gfonsecabr/pgl/actions/workflows/tests.yml)
+[![Standard](https://img.shields.io/badge/C%2B%2B-20/23/26-rgb(10,66,158).svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization) -->
 [![License](https://img.shields.io/badge/license-MIT-rgb(216,134,42).svg)](https://opensource.org/licenses/MIT)
-[![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html)
-
-<br/>
+<!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
 > ⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
 
@@ -19,25 +17,27 @@
 
 ### Shape Tree
 
-`ShapeTree<Shape>` is a container for bounded shapes. The tree is built once and answers range queries against an arbitrary query shape `q`. If the tree stores $n$ points, then it is a kd-tree, with $O(\sqrt{n})$ query time for orthogonal range counting and $O(\log n)$ height. For large intersecting shapes, the tree will be similar to storing the shapes in a vector and examining all of them, but with a much larger construction time.
+`ShapeTree` is a container for bounded shapes. The tree is built once and answers range queries against an arbitrary query shape. Unlike every other pypgl class, a single tree can mix shape types — a `Triangle` and a `Disk` can be stored side by side. If the tree stores $n$ points, then it behaves like a kd-tree, with $O(\sqrt{n})$ query time for orthogonal range counting and $O(\log n)$ height. For large intersecting shapes, the tree performs similarly to storing the shapes in a list and examining all of them, but with a much larger construction time.
 
-- `ShapeTree<Shape>(V)` builds the tree over the shapes in container `V`. An optional second argument sets the leaf size (default 8): the maximum number of shapes kept at a leaf.
+- `ShapeTree(shapes, leaf_size=6)` builds the tree over `shapes` (any iterable of shapes, which may mix types). `leaf_size` is the maximum number of shapes kept at a leaf before it is split.
 
-The query methods come in two families. The *intersecting* family matches stored shapes `s` with `s.intersects(q)`; the *contained* family matches stored shapes `s` with `q.contains(s)`. Each family offers the same five operations:
+The query methods come in two families. The *intersecting* family matches stored shapes `s` with `s.intersects(query)`; the *contained* family matches stored shapes `s` with `query.contains(s)`. Each family offers three operations:
 
-- `countIntersecting(q)` / `countContainedIn(q)` return the number of matching stored shapes.
+- `countIntersecting(query)` / `countContainedIn(query)` return the number of matching stored shapes.
 
-- `reportIntersecting(q)` / `reportContainedIn(q)` return a vector with a copy of each matching stored shape.
+- `reportIntersecting(query)` / `reportContainedIn(query)` return a list with a copy of each matching stored shape.
 
-- `visitIntersecting(q, f)` / `visitContainedIn(q, f)` call `f(s)` on each matching stored shape `s` as it is found. If `f` returns `true` the visit stops.
+- `emptyIntersecting(query)` / `emptyContainedIn(query)` return `True` if no stored shape matches.
 
-- `emptyIntersecting(q)` / `emptyContainedIn(q)` return true if no stored shape matches.
+The query shape may be any shape pypgl binds, including one that cannot itself be stored in a tree (e.g. a `Line`).
 
-- `sumIntersecting(q)` / `sumContainedIn(q)` return the sum of a weight over the matching stored shapes. The weight is given by an optional `WeightFn` template parameter mapping a shape to any type with `operator+` (`ShapeTree<Shape, WeightFn>`); the weight function is passed to the constructor and ignored by default.
+Other methods: `size()` and `empty()` report the tree's size; `shapes()` returns all stored shapes, in internal order; `contains(shape)` reports whether a shape equal to `shape` is stored (exact membership, not a geometric test); `insert(shape)` adds a shape without rebalancing the tree (raises if `shape` cannot be stored — see below); `erase(shape)` removes one matching shape and reports whether one was found; `rebuild(leaf_size=0)` restores tree quality after many `insert`/`erase` calls (`0` keeps the current leaf size); `nearestNeighbor(query)` returns the stored shape nearest to `query`, or `None` if the tree is empty; `boundingBoxes()` returns every node's bounding box, in pre-order.
 
-- Other methods:
+A tree also behaves like a Python container: `len(tree)`, `for shape in tree`, and `shape in tree` (exact membership, same as `contains`).
 
-Sending a tree to a [Canvas](canvas.md) with `canvas << tree` draws all node bounding boxes. Is is possible to insert a new element with `insert`, but no rebalancing is performed.
+Only bounded shapes can be stored — `Point`, `Segment`, `OrientedSegment`, `Triangle`, `Rectangle`, `Convex`, `Polygon`, `Disk`. An unbounded shape (`Line`, `OrientedLine`, `Ray`, `Halfplane`) raises if passed to the constructor or to `insert`, but remains valid as a query shape.
+
+Drawing a tree with `canvas.draw(tree)` (or its inline rendering in a notebook) renders every node's bounding box.
 
 <p align="center">
   <img src="figures/example_shapetree_triangles.svg" alt="Shape tree range query over random triangles" width="50%"/>
@@ -48,19 +48,35 @@ Sending a tree to a [Canvas](canvas.md) with `canvas << tree` draws all node bou
 
 ### Triangulation
 
-`Triangulation` stores a mutable triangulation of either a fixed polygon or a fixed point set: the vertex coordinates are fixed at construction, only the connectivity changes. It may be constructed from a Polygon (constrained Delaunay triangulation), a container of points (Delaunay triangulation), segments, or triangles, always keeping labels. The polygon constructor optionally takes a container of extra interior points (added as vertices) and/or a container of interior segments (added as vertices and constrained edges); either may be omitted, and both are assumed to lie inside the polygon (not checked). Attention, the segments or triangles must define a valid triangulation (of the convex hull or any polygon), otherwise the behavior is undefined.
+`Triangulation` stores a mutable triangulation of either a fixed polygon or a fixed point set: the vertex coordinates are fixed at construction, only the connectivity changes.
 
-Construction and predicates are exact. For a polygon, the triangles between it and its convex hull are marked out-of-domain, so the public view — sizes, `triangles`, `edges`, `locate`, … — describes exactly the polygon, including non-convex ones. The interface speaks only in value types (`Point`, `Segment`, `Triangle`).
+- `Triangulation()` creates an empty triangulation.
+- `Triangulation(points)` builds the Delaunay triangulation of a list of points.
+- `Triangulation(triangles)` builds a triangulation from an explicit set of triangles tiling a region without overlaps.
+- `Triangulation(edges)` builds a triangulation from an explicit set of edges (every bounded face must be a triangle).
+- `Triangulation(polygon, points=[], segments=[])` builds the constrained Delaunay triangulation of a simple polygon (convex or not), optionally adding interior points as extra vertices and/or interior segments as constrained edges — both are assumed, not checked, to lie inside `polygon`. `polygon.triangulation()` and `polygon.triangulation(segments)` are shortcuts for this.
 
-- `locate(p)` returns a triangle containing point `p`, or none if `p` is outside, via a randomized visibility walk.
+Construction and predicates are exact. For a polygon, the triangles between it and its convex hull are excluded, so the public view — sizes, `triangles()`, `edges()`, `locate`, … — describes exactly the polygon, including non-convex ones.
 
-- Navigation: `otherTriangle`, `adjacentTriangles`, `incidentTriangles`, the `visitTriangles`/`visitEdges` visitors, and the sorted `triangles()`/`edges()`.
+- `numVertices()`, `numTriangles()`, `numEdges()`, `empty()` report the triangulation's size.
 
-- Range searching: `trianglesIntersecting(s)` return the triangles that satisfy `triangle.intersects(s)`. The function has several variantions `visitTrianglesIntersecting(s,f)` calls the function `f` on these triangles and stops early if `f` returns `true`. If `s` is an oriented segment, oriented line, or ray, the triangles are visited in order. The edge variations `edgesIntersecting` and `visitEdgesIntersecting` list the edges instead of the triangles. The `…InteriorIntersecting` variantions filter with `interiorIntersects(s)`.
+- `contains(triangle)` / `contains(edge)` report whether a `Triangle`/`Segment` belongs to the triangulation.
 
-- `flip(e)` replaces the diagonal shared by two triangles. It returns the new edge obtained or none if the flip cannot be performed (non-convex quadrilateral or the edge is constrained). `flippable(e)` simply returns if the flip can be performed without changing the triangulation. If we pass a container with edges in interior-disjoint quadrilaterals, the functions use parallel flips. `flip` is the only function that modifies the triangulation.
+- `triangles()` / `edges()` return all triangles / edges, sorted.
 
-- Other methods:
+- `locate(point)` returns the triangle containing `point`, or `None` if `point` lies outside the triangulated region (or the triangulation is empty).
+
+- Navigation: `otherTriangle(triangle, shared)` returns the triangle on the other side of the shared edge, or `None` on a boundary edge; `edgeAdjacentTriangles(triangle)` returns the (up to three) triangles sharing an edge with `triangle`; `vertexAdjacentTriangles(triangle)` returns the triangles sharing at least one vertex with `triangle` (excluding it); `incidentTriangles(edge)` returns the (up to two) triangles incident to `edge`, and `incidentTriangles(vertex)` returns every triangle around a vertex, in rotational order.
+
+- Range searching: `trianglesIntersecting(query)` returns the triangles `t` with `t.intersects(query)`; `trianglesInteriorIntersecting(query)` filters with `t.interiorsIntersect(query)` instead. `edgesIntersecting(query)` / `edgesInteriorIntersecting(query)` return matching edges instead of triangles. `query` may be a `Segment`, `OrientedSegment`, `Line`, `OrientedLine`, `Ray`, `Point`, `Triangle`, `Rectangle`, `Convex`, `Disk`, or `Halfplane`. If `query` is a `Segment`, `OrientedSegment`, `Line`, `OrientedLine`, or `Ray`, the result is ordered along the query; otherwise the order is unspecified.
+
+- `isConstrained(edge)` reports whether an edge is flagged as constrained; `setConstrained(edge, value=True)` sets or clears that flag.
+
+- `flip(edge)` replaces `edge` by the opposite diagonal, returning the new edge, or `None` if the flip cannot be performed (non-convex quadrilateral or a constrained edge). `flippable(edge)` reports whether the flip is possible, without performing it. Both also accept a list of edges, flipping them all at once if the whole set is simultaneously flippable (all-or-nothing), or returning `None`/`False` otherwise. `flip` is the only method that mutates the triangulation.
+
+- `checkInvariants()` checks the structural invariants (orientation and neighbor symmetry); intended for debugging.
+
+Drawing a triangulation with `canvas.draw(triangulation)` (or its inline rendering in a notebook) renders every triangle.
 
 <p align="center">
   <img src="figures/example_triangulation2.svg" alt="Triangulation with a segment traversal highlighted" width="50%"/>

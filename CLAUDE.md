@@ -141,6 +141,60 @@ return type is not registered). Its predicate/squared-distance matrix is now
 fully symmetric with every other shape — see the milestone 5 `Disk` follow-up
 above.
 
+**`ShapeTree` bound** (milestone 7): a static spatial index over a *mix* of
+shapes (pgl's `algorithm/shapetree.hpp`) is bound as a single class in
+[src/bind_shapetree.cpp](src/bind_shapetree.cpp) — the one deliberate
+exception to "bind concrete shapes, not the `Shape` variant wrapper" (see
+Load-bearing design decisions below), since a spatial index that can hold,
+say, a `Triangle` and a `Disk` side by side needs a type-erased element, and
+`pgl::Shape<PointType>` is exactly that (`::pypgl::AnyShape`/`::pypgl::ShapeTree`
+in [src/common.h](src/common.h)). This needed two small upstream pgl fixes,
+made in this same session and pulled by re-pinning `.pgl-ref` to `dcea2a3`:
+`Shape::bbox()` didn't exist at all (added, throwing for the four unbounded
+alternatives `Line`/`OrientedLine`/`Ray`/`Halfplane`); and `Shape::squaredDistance`
+threw for any pair involving a `Disk`, since `Disk`'s `squaredDistance` (and the
+`Disk` overloads on `Convex`/`Polygon`) return a plain `double` rather than
+being templated on `ResultNumber` — fixed by falling back to that overload and
+`static_cast`ing the result, which is what `ShapeTree::nearestNeighbor` needed
+to work when the nearest stored element is a `Disk`. A third bug surfaced by
+cross-testing was fixed upstream too: `ShapeTree::insert` computed the new
+element's `bbox()` *after* already `push_back`ing it into storage, so a
+throwing `bbox()` left a phantom element counted by `size()`/`shapes()`/
+iteration but never linked into the tree; the fix reordered the two lines to
+restore strong exception safety, so pypgl's `insert()` needed no defensive
+workaround of its own.
+
+The casters.h caster for `pgl::Shape<EPoint>` (the third hand-written caster —
+see Architecture below) is what keeps `pgl::Shape` itself invisible from
+Python: on the way in it probes each of the twelve bound classes with an
+exact, non-converting `try_cast` (first match wins, no overload-order
+ambiguity since there's no implicit conversion involved, unlike the
+`Triangulation`/`Polygon` pitfall above); on the way out it dispatches on the
+stored alternative and hands it to `nb::cast`, reaching that class's own
+already-registered caster. Only the eight bounded shapes (`Point`, `Segment`,
+`OrientedSegment`, `Triangle`, `Rectangle`, `Convex`, `Polygon`, `Disk`) can
+actually be *stored* — inserting an unbounded shape raises, since pgl's own
+`Shape::bbox()` throws for it — but all twelve remain valid *query* shapes
+(e.g. `tree.reportIntersecting(a_line)`), since a query never needs its own
+`bbox()`, only pruning against a stored subtree's box. Bound: construction
+from a mixed list (with a `leaf_size`), `size`/`empty`/`shapes`, container
+sugar (`__len__`/`__iter__`/`__contains__`, the last being exact membership —
+distinct from the point-in-shape `in` sugar every fixed-extent shape gets),
+`insert`/`rebuild`/`erase`/`contains`, the six spatial queries
+(`count`/`report`/`empty` × `Intersecting`/`ContainedIn`), `nearestNeighbor`
+(returning `None` on an empty tree, since `AnyShape`'s default/empty state has
+no corresponding Python object), and `boundingBoxes`. Not bound: weighted
+`sumIntersecting`/`sumContainedIn` (`ShapeTree`'s `WeightFn` template
+parameter is left at its default no-op) and the `visitIntersecting`/
+`visitContainedIn` early-stop callback overloads — for the same reason
+`bind_triangulation.cpp` skips `visitTriangles`/`visitEdges`, every other
+pypgl traversal already returns a materialized list rather than taking a
+Python callback. Like `Triangulation`, `ShapeTree` is not a fixed-extent shape
+(no `contains(Point)`/`pointInside`/`index`/`get`), so it is shielded from the
+generic `size()`/`get()`/`__contains__` sugar in `__init__.py` and
+`stubgen_patterns.txt`; it does get `Canvas.draw()`/`_repr_svg_` support like
+every other shape.
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 
@@ -165,11 +219,14 @@ point of the project:
 - **nanobind, not pybind11.** Chosen for small binaries / fast compile because
   binding a templated header-only library is instantiation-heavy.
 - **Bind concrete shapes, not the `Shape` variant wrapper.** Each shape is its own
-  Python class.
+  Python class. `ShapeTree` (milestone 7 above) is the one deliberate exception —
+  a spatial index that mixes shape types needs a type-erased element, so it stores
+  `pgl::Shape<PointType>` internally, kept invisible from Python by a dedicated
+  caster (see Architecture below).
 
 ## Architecture
 
-The only hand-written plumbing is two type casters in `src/casters.h`; everything
+The hand-written plumbing is three type casters in `src/casters.h`; everything
 else is mechanical `.def(...)`:
 
 1. `pgl::BigInt` ↔ Python `int` — via decimal string round-trip (lossless; uses
@@ -178,6 +235,9 @@ else is mechanical `.def(...)`:
 2. `pgl::ERational` ↔ Python `fractions.Fraction` — built from `numerator()` /
    `denominator()` (stored in lowest terms), each term flowing through the BigInt
    caster so arbitrarily large coordinates round-trip.
+3. `pgl::Shape<EPoint>` ↔ a concrete pypgl shape object — `ShapeTree`-only (see
+   milestone 7 above); probes the twelve bound classes with an exact `try_cast`
+   going in, dispatches on the stored alternative via `nb::cast` coming out.
 
 What falls out for free from pgl's typed API (built-in nanobind casters):
 `std::optional<T>` → `T`/`None`; `std::variant<Point, Segment, …>` → the concrete

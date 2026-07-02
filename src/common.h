@@ -37,12 +37,27 @@ using Convex = pgl::EConvex;                        // pgl::Convex<EPoint>
 using Polygon = pgl::EPolygon;                      // pgl::Polygon<EPoint>
 using Disk = pgl::EDisk;                            // pgl::Disk<EPoint>
 
+// Type-erased wrapper over one of the twelve shapes above (shape/shape.hpp).
+// Only used as ShapeTree's element/query type (bind_shapetree.cpp) -- see the
+// casters.h caster for pgl::Shape<EPoint>, which is what keeps this wrapper
+// itself unbound and invisible from Python.
+using AnyShape = pgl::Shape<Point>;
+
 // A mutable mesh over a fixed vertex set (algorithm/triangulation.hpp,
 // pulled in transitively by pgl.hpp). Its edge type defaults to
 // TriangleType::BoundaryType<false>, which for our Triangle already is
 // Segment -- spelled out here rather than left to the default so both
 // bind_triangulation.cpp and bind_canvas.cpp share one alias.
 using Triangulation = pgl::Triangulation<Triangle, Segment>;
+
+// A static spatial index (algorithm/shapetree.hpp) storing a mix of AnyShape
+// elements, queryable by any AnyShape-convertible shape. Bound as a single
+// Python class ("ShapeTree") in bind_shapetree.cpp -- the WeightFn template
+// parameter is left at its default (no weight function), so pgl's weighted
+// sumIntersecting/sumContainedIn are not exposed: every other pypgl traversal
+// already returns a materialized list rather than taking a Python callback
+// (see bind_triangulation.cpp), and a weight function would be exactly that.
+using ShapeTree = pgl::ShapeTree<AnyShape>;
 
 // repr, ordering, equality, and (optionally) hashing — uniform across all
 // value-type shapes. Fixed-size shapes are immutable and hashable. The

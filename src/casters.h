@@ -1,13 +1,14 @@
 #pragma once
 
-// The only hand-written plumbing in the binding: two nanobind type casters that
-// move exact numbers across the C++/Python boundary losslessly.
+// Hand-written plumbing in the binding: nanobind type casters that move values
+// across the C++/Python boundary where a mechanical `.def(...)` isn't enough.
 //
-//   pgl::BigInt      <-> Python int
-//   pgl::ERational   <-> fractions.Fraction   (also accepts int and "a/b" str)
+//   pgl::BigInt          <-> Python int
+//   pgl::ERational        <-> fractions.Fraction   (also accepts int and "a/b" str)
+//   pgl::Shape<EPoint>   <-> a concrete pypgl shape object   (ShapeTree only)
 //
-// Everything else in pypgl is mechanical `.def(...)`. Both casters live here so
-// every translation unit shares one definition.
+// Everything else in pypgl is mechanical `.def(...)`. All three casters live
+// here so every translation unit shares one definition.
 
 #include <nanobind/nanobind.h>
 
@@ -138,6 +139,81 @@ struct type_caster<pgl::ERational> {
         } catch (...) {
             return handle();
         }
+    }
+};
+
+// --- pgl::Shape<EPoint> <-> a concrete pypgl shape object -------------------
+//
+// ShapeTree (bind_shapetree.cpp) is the one place pypgl breaks its own "bind
+// concrete shapes, not the Shape variant wrapper" rule (see CLAUDE.md): a
+// spatial index that holds a mix of shape types needs a type-erased element,
+// and pgl::Shape<PointType> is exactly that. This caster type-erases on the
+// way in and re-wraps on the way out, so Python code never sees pgl::Shape
+// itself -- only whichever of the twelve concrete classes was actually stored
+// or passed as a query.
+//
+// Py->C++: probes each of the twelve bound classes in turn with an exact,
+// non-converting try_cast; the first match wins. try_cast checks the actual
+// Python type rather than attempting any implicit conversion, so unlike the
+// Triangulation Polygon/point-list overload-order pitfall (see
+// bind_triangulation.cpp), there is no ambiguity for the probing order to get
+// wrong.
+//
+// C++->Py: dispatches on the stored alternative and hands it to nb::cast,
+// which reaches that alternative's own already-registered class caster
+// regardless of which translation unit registered it (nanobind's class
+// casters are looked up through a global type table, not per-TU). The leading
+// EmptyShape alternative -- the state of a default-constructed Shape -- is
+// never produced by this caster's from_python, and every path that could
+// otherwise yield one (e.g. ShapeTree::nearestNeighbor on an empty tree) is
+// guarded in bind_shapetree.cpp before reaching here, so it is treated as a
+// cast failure rather than silently returned as something meaningless.
+template <>
+struct type_caster<pgl::Shape<pgl::EPoint>> {
+    using Shape = pgl::Shape<pgl::EPoint>;
+    NB_TYPE_CASTER(Shape,
+                    const_name("Point | Segment | OrientedSegment | Line | OrientedLine | "
+                                "Ray | Halfplane | Triangle | Rectangle | Convex | Polygon | Disk"))
+
+    template <class T>
+    bool try_alternative(handle src) noexcept {
+        T v{};
+        if (!nb::try_cast<T>(src, v, /*convert=*/false))
+            return false;
+        value = Shape(std::move(v));
+        return true;
+    }
+
+    bool from_python(handle src, uint8_t, cleanup_list *) noexcept {
+        return try_alternative<pgl::EPoint>(src) ||
+               try_alternative<pgl::ESegment>(src) ||
+               try_alternative<pgl::EOrientedSegment>(src) ||
+               try_alternative<pgl::ELine>(src) ||
+               try_alternative<pgl::EOrientedLine>(src) ||
+               try_alternative<pgl::ERay>(src) ||
+               try_alternative<pgl::EHalfplane>(src) ||
+               try_alternative<pgl::ETriangle>(src) ||
+               try_alternative<pgl::ERectangle>(src) ||
+               try_alternative<pgl::EConvex>(src) ||
+               try_alternative<pgl::EPolygon>(src) ||
+               try_alternative<pgl::EDisk>(src);
+    }
+
+    static handle from_cpp(const Shape &s, rv_policy pol, cleanup_list *) noexcept {
+        return std::visit(
+            [pol](const auto &alt) -> handle {
+                using T = std::decay_t<decltype(alt)>;
+                if constexpr (std::is_same_v<T, pgl::EmptyShape<pgl::EPoint>>) {
+                    return handle();
+                } else {
+                    try {
+                        return nb::cast(alt, pol).release();
+                    } catch (...) {
+                        return handle();
+                    }
+                }
+            },
+            s.variant());
     }
 };
 
