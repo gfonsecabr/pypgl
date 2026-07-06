@@ -12,7 +12,7 @@
 
 ⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
 
-[Pangolin](https://github.com/gfonsecabr/pgl) (or `pgl`) is a C++ library for computational geometry in the plane and `pypgl` is the official python binding for it. It is designed to be pleasant to use and always exact. It accepts integer and rational coordinates, but rejects floating point numbers.
+[Pangolin](https://github.com/gfonsecabr/pgl) (or `pgl`) is a C++ library for computational geometry in the plane and `pypgl` is the **official python binding** for it. It is designed to be pleasant to use and always exact. Calculations are **exact using rational numbers** (floating point is not accepted).
 
 ```python
 import pypgl as pgl
