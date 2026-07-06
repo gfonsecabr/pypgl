@@ -27,6 +27,22 @@ using namespace pypgl;
 // that must actually belong to this triangulation -- pgl returns an empty
 // result (or None) rather than throwing when they don't, and that is left
 // as-is here.
+//
+// insert()/insertDelaunay() add a single vertex incrementally. For a
+// triangulation built from a polygon, pgl documents inserting a point outside
+// the closed polygon (the carved-away region, or beyond the hull) as
+// undefined behavior rather than a checked rejection -- pypgl does not add
+// its own guard, matching the C++ contract exactly.
+//
+// The Triangulation(points, segments) constructor below needs no ordering
+// workaround unlike the Polygon/point-list pitfall further down: nanobind
+// tries every overload without implicit conversions before it tries any with
+// them, and points/segments already have the exact vector<Point>/
+// vector<Segment> types the C++ overload wants, so it wins outright over the
+// polygon constructor's (polygon, points, segments) overload, which would
+// need an implicit list->Polygon conversion for the first argument -- even
+// when segments is passed empty (verified: Triangulation(points, []) builds
+// the plain unconstrained Delaunay triangulation, not a polygon boundary).
 
 namespace {
 
@@ -118,6 +134,25 @@ void bind_triangulation(nb::module_ &m) {
             "collinear with all others, or duplicated, simply carry no "
             "incident triangle).");
 
+    // Registered after the plain points-only constructor above so a 1-arg
+    // Triangulation(points) call keeps matching that one exactly (this ctor
+    // has no default for segments, so it only matches 2-arg calls and
+    // introduces no ambiguity).
+    cls.def("__init__",
+            [](Triangulation *self, const std::vector<Point> &points,
+               const std::vector<Segment> &segments) {
+                new (self) Triangulation(points, segments);
+            },
+            nb::arg("points"), nb::arg("segments"),
+            "Build the conforming constrained Delaunay triangulation of a "
+            "point set with constraint segments: every vertex is the union "
+            "of points and the segments' endpoints, every segment is present "
+            "as a constrained edge, and (unlike the polygon constructors) "
+            "nothing is carved away -- the domain is the whole convex hull. "
+            "The segments must be non-degenerate and pairwise non-crossing "
+            "(sharing endpoints is fine), with no vertex in a segment's "
+            "relative interior (assumed, not checked).");
+
     // ---- sizes -------------------------------------------------------
     cls.def("numVertices", [](const Triangulation &t) { return t.numVertices(); },
             "Number of real vertices.");
@@ -181,6 +216,23 @@ void bind_triangulation(nb::module_ &m) {
             [](Triangulation &t, const Segment &edge, bool value) { t.setConstrained(edge, value); },
             nb::arg("edge"), nb::arg("value") = true,
             "Flag (or clear) edge as constrained on both incident sides.");
+
+    // ---- incremental vertex insertion --------------------------------------
+    cls.def("insert", [](Triangulation &t, const Point &p) { return t.insert(p); }, nb::arg("point"),
+            "Insert point as a new vertex, subdividing the containing triangle "
+            "or edge (or growing the hull, if point lies outside it); returns "
+            "False only if point is already a vertex or the triangulation is "
+            "empty. Split faces inherit their parent's constrained/domain "
+            "flags. For a triangulation built from a polygon, point must lie "
+            "in the closed polygon -- inserting one outside it (in the carved-"
+            "away region between polygon and hull, or beyond the hull) is "
+            "undefined behavior (not checked). Does not restore the Delaunay "
+            "property; see insertDelaunay for that.");
+    cls.def("insertDelaunay", [](Triangulation &t, const Point &p) { return t.insertDelaunay(p); }, nb::arg("point"),
+            "Like insert, but also legalizes outward from the new vertex via "
+            "Lawson flips (never flipping a constrained edge), preserving the "
+            "constrained-Delaunay property. Same return convention and "
+            "preconditions as insert.");
 
     // ---- mutation ---------------------------------------------------------
     cls.def("flippable", [](const Triangulation &t, const Segment &edge) { return t.flippable(edge); },

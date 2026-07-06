@@ -33,6 +33,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_PARALLEL(cls, Line);
         PGL_BIND_ALL_PREDICATES(cls, Line);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Line);
+        PGL_BIND_ALL_L1LINF_DISTANCE(cls, Line);
 
         cls.def("intersection", [](const Line &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
         cls.def("intersection", [](const Line &a, const Line &b) { return a.intersection(b); }, nb::arg("other"),
@@ -66,6 +67,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_PARALLEL(cls, OrientedLine);
         PGL_BIND_ALL_PREDICATES(cls, OrientedLine);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, OrientedLine);
+        PGL_BIND_ALL_L1LINF_DISTANCE(cls, OrientedLine);
 
         cls.def("intersection", [](const OrientedLine &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
         cls.def("intersection", [](const OrientedLine &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
@@ -98,6 +100,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_PARALLEL(cls, Ray);
         PGL_BIND_ALL_PREDICATES(cls, Ray);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Ray);
+        PGL_BIND_ALL_L1LINF_DISTANCE(cls, Ray);
 
         cls.def("intersection", [](const Ray &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
         cls.def("intersection", [](const Ray &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
@@ -131,5 +134,6 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_VERTEX_QUERIES(cls, Halfplane);
         PGL_BIND_ALL_PREDICATES(cls, Halfplane);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Halfplane);
+        PGL_BIND_ALL_L1LINF_DISTANCE(cls, Halfplane);
     }
 }

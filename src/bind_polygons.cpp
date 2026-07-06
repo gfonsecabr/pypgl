@@ -34,6 +34,8 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_INDEXING(cls, Triangle);
         PGL_BIND_ALL_PREDICATES(cls, Triangle);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Triangle);
+        PGL_BIND_ALL_L1LINF_DISTANCE(cls, Triangle);
+        PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Triangle);
 
         cls.def("intersection", [](const Triangle &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
         cls.def("intersection", [](const Triangle &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
@@ -104,6 +106,8 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_INDEXING(cls, Rectangle);
         PGL_BIND_ALL_PREDICATES(cls, Rectangle);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Rectangle);
+        PGL_BIND_ALL_L1LINF_DISTANCE(cls, Rectangle);
+        PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Rectangle);
 
         cls.def("intersection", [](const Rectangle &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
         cls.def("intersection", [](const Rectangle &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
@@ -177,6 +181,8 @@ void bind_polygons(nb::module_ &m) {
         // ResultNumber form to request).
         PGL_BIND_ALL_PREDICATES(cls, Convex);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Convex);
+        PGL_BIND_ALL_L1LINF_DISTANCE(cls, Convex);
+        PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Convex);
 
         cls.def("intersection", [](const Convex &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
         cls.def("intersection", [](const Convex &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));

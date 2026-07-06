@@ -33,6 +33,8 @@ void bind_segment(nb::module_ &m) {
     PGL_BIND_PARALLEL(cls, Segment);
     PGL_BIND_ALL_PREDICATES(cls, Segment);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Segment);
+    PGL_BIND_ALL_L1LINF_DISTANCE(cls, Segment);
+    PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Segment);
 
     cls.def("intersection", [](const Segment &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
     cls.def("intersection", [](const Segment &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"),
@@ -78,6 +80,8 @@ void bind_oriented_segment(nb::module_ &m) {
     PGL_BIND_PARALLEL(cls, OrientedSegment);
     PGL_BIND_ALL_PREDICATES(cls, OrientedSegment);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, OrientedSegment);
+    PGL_BIND_ALL_L1LINF_DISTANCE(cls, OrientedSegment);
+    PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, OrientedSegment);
 
     cls.def("intersection", [](const OrientedSegment &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
     cls.def("intersection", [](const OrientedSegment &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));

@@ -105,6 +105,15 @@ void bind_disk(nb::module_ &m) {
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Disk);
     PGL_SQDIST(cls, Disk, ::pypgl::Disk);
 
+    // Point<->Disk is the only L1/LInf distance pair Disk supports yet (see
+    // PGL_BIND_ALL_L1LINF_DISTANCE's comment in common.h -- every other pair
+    // needs a closed form pgl does not implement, tracked in its doc/todo.md).
+    // Computed via an angular scan refined by golden-section search, so it is
+    // always a float, never templated on ResultNumber. Disk has no
+    // squaredHausdorffDistance/hausdorffDistanceL1/LInf at all.
+    cls.def("distanceL1", [](const Disk &d, const Point &p) { return d.distanceL1(p); }, nb::arg("other"));
+    cls.def("distanceLInf", [](const Disk &d, const Point &p) { return d.distanceLInf(p); }, nb::arg("other"));
+
     cls.def("intersection", [](const Disk &a, const Point &b) { return a.intersection(b); }, nb::arg("other"),
             "Exact intersection with a point: the point if contained, else None.");
 }

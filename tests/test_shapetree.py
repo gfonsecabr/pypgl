@@ -192,6 +192,32 @@ def test_nearest_neighbor_can_be_a_disk():
     assert isinstance(nearest, Disk)
 
 
+def test_nearest_neighbor_l1_and_linf():
+    t = ShapeTree([Point(0, 0), Point(10, 0), Point(0, 10)])
+    # (1, 1) is closer to the origin under every one of the three metrics here.
+    assert t.nearestNeighborL1(Point(1, 1)) == Point(0, 0)
+    assert t.nearestNeighborLInf(Point(1, 1)) == Point(0, 0)
+
+
+def test_nearest_neighbor_l1_and_linf_can_differ_from_squared():
+    # Under L1, (10, 0) and (0, 10) are equidistant (10) from (5, 5), both
+    # farther than under a metric that favors axis-aligned proximity; pick
+    # points where L1 and Euclidean nearest-neighbor actually disagree.
+    t = ShapeTree([Point(9, 9), Point(0, 12)])
+    q = Point(0, 0)
+    # squaredDistance: 9²+9²=162 vs 0²+12²=144 -> (0,12) wins.
+    assert t.nearestNeighbor(q) == Point(0, 12)
+    # L1: 9+9=18 vs 0+12=12 -> (0,12) wins too here, so use LInf instead.
+    # LInf: max(9,9)=9 vs max(0,12)=12 -> (9,9) wins under LInf.
+    assert t.nearestNeighborLInf(q) == Point(9, 9)
+
+
+def test_nearest_neighbor_l1_linf_on_empty_tree_is_none():
+    t = ShapeTree()
+    assert t.nearestNeighborL1(Point(0, 0)) is None
+    assert t.nearestNeighborLInf(Point(0, 0)) is None
+
+
 def test_bounding_boxes_nonempty_for_nonempty_tree():
     t = ShapeTree(_mixed_shapes(), leaf_size=1)
     boxes = t.boundingBoxes()

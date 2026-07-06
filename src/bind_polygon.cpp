@@ -127,6 +127,12 @@ void bind_polygon(nb::module_ &m) {
     // also cover the Polygon<->Disk pairing.
     PGL_BIND_ALL_PREDICATES(cls, Polygon);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Polygon);
+    // Polygon has no squaredHausdorffDistance/hausdorffDistanceL1/LInf (pgl
+    // excludes it from that family -- a non-convex polygon would need a
+    // Voronoi-based approach; see PGL_BIND_ALL_HAUSDORFF_DISTANCE in
+    // common.h), but it does get the full distanceL1/distanceLInf cross
+    // product like every other non-Disk shape.
+    PGL_BIND_ALL_L1LINF_DISTANCE(cls, Polygon);
 
     cls.def("intersection", [](const Polygon &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
     cls.def("intersection", [](const Polygon &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));

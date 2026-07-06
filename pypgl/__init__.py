@@ -23,6 +23,7 @@ from ._pgl import (
     Triangulation,
     ShapeTree,
     Canvas,
+    Transformation,
 )
 
 try:
@@ -46,6 +47,7 @@ __all__ = [
     "Triangulation",
     "ShapeTree",
     "Canvas",
+    "Transformation",
 ]
 
 

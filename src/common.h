@@ -59,6 +59,12 @@ using Triangulation = pgl::Triangulation<Triangle, Segment>;
 // (see bind_triangulation.cpp), and a weight function would be exactly that.
 using ShapeTree = pgl::ShapeTree<AnyShape>;
 
+// An affine transformation of the plane (core/transformation.hpp), templated
+// only on the matrix-entry type -- unlike every shape above it carries no
+// point/label type of its own. Bound over the same single numeric
+// instantiation as everything else (Num = ERational) in bind_transformation.cpp.
+using Transformation = pgl::Transformation<Num>;
+
 // repr, ordering, equality, and (optionally) hashing — uniform across all
 // value-type shapes. Fixed-size shapes are immutable and hashable. The
 // variable-size shapes (Convex, later Polygon) are mutable so they support
@@ -249,3 +255,67 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Convex);         \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Polygon);        \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Disk)
+
+// distanceL1/distanceLInf of SelfT against every *non-Disk* bound shape (all
+// eleven, including itself). Unlike squaredDistance, pgl does not (yet) give
+// Disk a closed form against anything but Point (doc/todo.md: "L1 / LInf
+// distance to and from Disk") -- so Disk is deliberately left out of this
+// macro. The Point<->Disk pair is bound by hand in bind_point.cpp/
+// bind_disk.cpp instead, the only L1/LInf pair Disk currently supports.
+#define PGL_BIND_ALL_L1LINF_DISTANCE(cls, SelfT)                \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Point);             \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Segment);           \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::OrientedSegment);   \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Line);              \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::OrientedLine);      \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Ray);               \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Halfplane);         \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Triangle);          \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Rectangle);         \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Convex);            \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Polygon);           \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Point);           \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Segment);         \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::OrientedSegment); \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Line);            \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::OrientedLine);    \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Ray);             \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Halfplane);       \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Triangle);        \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Rectangle);       \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Convex);          \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Polygon)
+
+// squaredHausdorffDistance / hausdorffDistanceL1 / hausdorffDistanceLInf of
+// SelfT against the six shapes pgl currently implements it for: Point,
+// Segment, OrientedSegment, Rectangle, Triangle, Convex -- all convex, so
+// each one-sided (directed) Hausdorff distance between any two of them is
+// attained at a vertex of the "from" shape. pgl returns the standard
+// *symmetric* Hausdorff distance, max(h(A, B), h(B, A)) where h is the
+// one-sided sup-inf distance -- so a.squaredHausdorffDistance(b) always
+// equals b.squaredHausdorffDistance(a); there is no separate one-sided form
+// bound (compute that yourself from vertices and squaredDistance/
+// distanceL1/distanceLInf if needed). Disk (no closed form: would need a
+// farthest-point-on-a-circle search) and Polygon (may be non-convex; would
+// need a Voronoi-based approach) are excluded -- pgl does not define these
+// methods for them at all. Only call this macro for SelfT in that same
+// six-shape set.
+#define PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, SelfT)                          \
+    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Point);            \
+    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Segment);          \
+    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::OrientedSegment);  \
+    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Rectangle);        \
+    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Triangle);         \
+    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Convex);           \
+    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Point);                \
+    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Segment);              \
+    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::OrientedSegment);      \
+    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Rectangle);            \
+    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Triangle);             \
+    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Convex);              \
+    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Point);              \
+    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Segment);            \
+    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::OrientedSegment);    \
+    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Rectangle);          \
+    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Triangle);           \
+    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Convex)

@@ -195,6 +195,86 @@ generic `size()`/`get()`/`__contains__` sugar in `__init__.py` and
 `stubgen_patterns.txt`; it does get `Canvas.draw()`/`_repr_svg_` support like
 every other shape.
 
+**L1/LInf/Hausdorff distance, `Transformation`, and incremental `Triangulation`
+insertion bound** (milestone 8): `.pgl-ref` re-pinned to `3b0729b` pulled in a
+batch of upstream additions, all now bound.
+
+`distanceL1`/`distanceLInf` (exact Manhattan/Chebyshev distance) are bound for
+the full cross product of all eleven non-`Disk` shapes via
+`PGL_BIND_ALL_L1LINF_DISTANCE` in [src/common.h](src/common.h), mirroring
+`PGL_BIND_ALL_SQUARED_DISTANCE`'s coverage exactly. `Disk` is the one asymmetry:
+pgl only implements this pair against `Point` so far (an angular scan refined by
+golden-section search, always a `float` — no `ResultNumber` template, same as
+`Disk.squaredDistance`), tracked upstream in `doc/todo.md` for every other pair.
+That one pair is bound by hand in `bind_point.cpp`/`bind_disk.cpp` instead of
+through the macro.
+
+`squaredHausdorffDistance`/`hausdorffDistanceL1`/`hausdorffDistanceLInf` are
+bound via `PGL_BIND_ALL_HAUSDORFF_DISTANCE`, but only for the six shapes pgl
+implements them for — `Point`, `Segment`, `OrientedSegment`, `Rectangle`,
+`Triangle`, `Convex` (all convex, so the distance is always attained at a
+vertex); `Disk` (no closed form) and `Polygon` (may be non-convex) get neither
+method at all. **Important semantic gotcha**: pgl returns the standard
+*symmetric* Hausdorff distance `max(h(A, B), h(B, A))`, not a one-sided
+directed measure — `a.squaredHausdorffDistance(b)` always equals
+`b.squaredHausdorffDistance(a)`, which is easy to miss since the method reads
+like a directed `self`-to-`other` call (see the long comment on the macro).
+
+`ShapeTree` gained `nearestNeighborL1`/`nearestNeighborLInf`
+([src/bind_shapetree.cpp](src/bind_shapetree.cpp)), same branch-and-bound
+traversal as `nearestNeighbor` and the same `None`-on-empty-tree convention,
+just minimizing a different metric.
+
+`Triangulation` gained incremental single-vertex insertion
+([src/bind_triangulation.cpp](src/bind_triangulation.cpp)): `insert(point)`
+subdivides the containing triangle/edge or grows the hull, returning `False`
+only if `point` is already a vertex or the triangulation is empty;
+`insertDelaunay(point)` does the same and then restores the constrained-Delaunay
+property via Lawson flips. For a triangulation built from a polygon, pgl now
+documents inserting a point outside the closed polygon as **undefined
+behavior** rather than a checked rejection (a behavior change from the point
+release this milestone pulled in) — pypgl adds no guard of its own, matching
+the C++ contract exactly. A new `Triangulation(points, segments)` constructor
+(conforming constrained Delaunay over the *whole* convex hull, nothing carved
+away, unlike the polygon constructors) is also bound; unlike the
+`Polygon`/point-list overload-order pitfall above, it needs no registration-order
+workaround — nanobind tries every overload without implicit conversions first,
+and `points`/`segments` already have the exact `vector<Point>`/`vector<Segment>`
+types the C++ overload wants, so it always wins over the polygon constructor's
+same-arity overload even when `segments` is passed empty (verified empirically,
+since nanobind's own resolution order isn't documented in detail).
+
+`Transformation` ([src/bind_transformation.cpp](src/bind_transformation.cpp))
+is a new, twelfth bound class: an affine map of the plane (`pgl::Transformation`
+in `core/transformation.hpp`), applied to a shape via `t * shape` (transformation
+always on the left, matching pgl's own `operator*`) and composed via `t1 * t2`
+(applies `t2` first). Unlike every shape it carries no point/label type of its
+own — just the matrix-entry type — so it is bound over the module's single
+numeric instantiation directly (`::pypgl::Transformation` in
+[src/common.h](src/common.h)) with no per-shape variation. It gets its own
+hand-written `__repr__`/`__eq__` (pgl's `Transformation` has no `operator<<` or
+`operator<`) and is shielded from the indexing/point-in-shape sugar in
+`__init__.py` and `stubgen_patterns.txt`, same as `Canvas`/`Triangulation`/
+`ShapeTree` — it isn't a shape with vertices either. Applying a transformation
+to a `Rectangle` or `Disk` is not bound (pgl itself has no overload for either:
+a general affine map turns a rectangle into a parallelogram and a disk into an
+ellipse, neither representable by those classes), so it raises a Python
+`TypeError` — the runtime equivalent of pgl's compile error. `rotation(radians)`
+(an arbitrary-angle rotation) is also deliberately not bound: it's only defined
+for a floating-point `ResultNumber` and would return a second, un-bound
+`Transformation<double>` instantiation — the same reason `Disk.fbox()` is
+skipped. **A real bug surfaced and was fixed while binding `inverse()`**: pgl's
+own zero-determinant guard in `Rational::reciprocal()` is only an `assert()`,
+which is compiled out under `NDEBUG` — the release build pypgl ships — so
+calling `inverse()` on a singular transformation silently corrupted an internal
+`Rational` (denominator `0`, marked as already normalized) instead of throwing,
+and that corruption later crashed the whole process with an uncaught
+`std::domain_error` once something (e.g. printing the result) forced a real
+`BigInt` division. `bind_transformation.cpp` now checks `isInvertible()`
+explicitly before calling pgl's `inverse()` and raises a clean Python
+`ValueError` instead of ever reaching that path — this is a pypgl-side guard,
+not an upstream fix.
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 

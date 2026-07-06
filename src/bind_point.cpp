@@ -73,4 +73,20 @@ void bind_point(nb::module_ &m) {
 
     // Exact squared distance against every shape (Fraction result).
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Point);
+
+    // distanceL1/distanceLInf against every other non-Disk shape (Point's own
+    // Point-Point pair above is exact/untemplated; every other pair here goes
+    // through the templated ResultNumber overload, still exact).
+    PGL_BIND_ALL_L1LINF_DISTANCE(cls, Point);
+    // Point<->Disk is the one L1/LInf pair Disk supports at all (see
+    // PGL_BIND_ALL_L1LINF_DISTANCE's comment in common.h); it always returns a
+    // float, since Disk::distanceL1/distanceLInf are not templated on
+    // ResultNumber.
+    cls.def("distanceL1", [](const Point &a, const Disk &b) { return a.distanceL1(b); }, nb::arg("other"));
+    cls.def("distanceLInf", [](const Point &a, const Disk &b) { return a.distanceLInf(b); }, nb::arg("other"));
+
+    // Hausdorff (squared, L1, L-infinity) distance against the five other
+    // shapes pgl implements it for (Segment, OrientedSegment, Rectangle,
+    // Triangle, Convex), plus Point's own Point-Point pair.
+    PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Point);
 }

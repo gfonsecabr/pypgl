@@ -105,6 +105,77 @@ def test_from_polygon_with_points_and_segments():
     assert t.numVertices() == 5
 
 
+def test_from_points_and_segments_constructor():
+    # Unlike the polygon constructors, nothing is carved away: the domain is
+    # the whole convex hull of points, with segments' endpoints folded in and
+    # every segment forced in as a constrained edge.
+    t = Triangulation(_square_points(), [Segment(Point(0, 0), Point(4, 4))])
+    assert t.numVertices() == 4
+    assert t.isConstrained(Segment(Point(0, 0), Point(4, 4)))
+    # Unlike the polygon constructor, the hull boundary itself is NOT
+    # constrained -- there is no polygon boundary here, only a convex hull.
+    assert not t.isConstrained(Segment(Point(0, 0), Point(4, 0)))
+
+
+def test_from_points_and_segments_with_extra_endpoint():
+    # A segment endpoint not already in points becomes an extra vertex.
+    t = Triangulation(_square_points(), [Segment(Point(0, 0), Point(2, 2))])
+    assert t.numVertices() == 5
+    assert t.isConstrained(Segment(Point(0, 0), Point(2, 2)))
+
+
+def test_from_points_and_segments_resolves_ambiguity_with_polygon_ctor():
+    # A 1-arg call must still resolve to the plain Delaunay-of-points
+    # constructor (registered first), not silently pick up this one via a
+    # default -- see the ordering note in bind_triangulation.cpp.
+    t = Triangulation(_square_points())
+    assert t.numVertices() == 4
+    assert not t.isConstrained(Segment(Point(0, 0), Point(4, 0)))
+
+
+# --- incremental insertion -----------------------------------------------------
+
+def test_insert_subdivides_containing_triangle():
+    t = Triangulation(_square_points())
+    before = t.numTriangles()
+    assert t.insert(Point(2, 2)) is True
+    assert t.numTriangles() == before + 2  # one triangle -> three
+    assert t.checkInvariants()
+
+
+def test_insert_existing_vertex_returns_false():
+    t = Triangulation(_square_points())
+    assert t.insert(Point(0, 0)) is False
+
+
+def test_insert_on_empty_triangulation_returns_false():
+    t = Triangulation()
+    assert t.insert(Point(0, 0)) is False
+
+
+def test_insert_grows_hull_for_outside_point():
+    t = Triangulation(_square_points())
+    before = t.numVertices()
+    assert t.insert(Point(10, 10)) is True
+    assert t.numVertices() == before + 1
+    assert t.checkInvariants()
+
+
+def test_insert_delaunay_restores_delaunay_property():
+    # A point inserted exactly at the shared circumcenter-ish spot should
+    # leave a valid (Delaunay) mesh behind; checkInvariants at least confirms
+    # structural validity after the Lawson flips.
+    t = Triangulation(_square_points())
+    assert t.insertDelaunay(Point(2, 2)) is True
+    assert t.checkInvariants()
+    assert t.numVertices() == 5
+
+
+def test_insert_delaunay_existing_vertex_returns_false():
+    t = Triangulation(_square_points())
+    assert t.insertDelaunay(Point(4, 4)) is False
+
+
 def test_coordinates_accept_fraction_and_string():
     t = Triangulation([Point(Fraction(1, 2), 0), Point("3/2", 0), Point(1, 1)])
     assert t.numTriangles() == 1

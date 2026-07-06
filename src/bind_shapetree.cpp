@@ -107,6 +107,26 @@ void bind_shapetree(nb::module_ &m) {
             nb::arg("query"),
             "The stored shape nearest to query (exact squared distance), or None "
             "if the tree is empty.");
+    cls.def("nearestNeighborL1",
+            [](const ShapeTree &t, const AnyShape &query) -> std::optional<AnyShape> {
+                if (t.empty())
+                    return std::nullopt;
+                return t.nearestNeighborL1<Num>(query);
+            },
+            nb::arg("query"),
+            "The stored shape nearest to query under Manhattan (L1) distance, or "
+            "None if the tree is empty. Same branch-and-bound traversal as "
+            "nearestNeighbor, minimizing a different metric.");
+    cls.def("nearestNeighborLInf",
+            [](const ShapeTree &t, const AnyShape &query) -> std::optional<AnyShape> {
+                if (t.empty())
+                    return std::nullopt;
+                return t.nearestNeighborLInf<Num>(query);
+            },
+            nb::arg("query"),
+            "The stored shape nearest to query under Chebyshev (L-infinity) "
+            "distance, or None if the tree is empty. Same branch-and-bound "
+            "traversal as nearestNeighbor, minimizing a different metric.");
 
     // ---- structure ----------------------------------------------------------
     cls.def("boundingBoxes", [](const ShapeTree &t) { return t.boundingBoxes(); },
