@@ -11,6 +11,7 @@
 #include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
 
+#include <compare>
 #include <functional>
 #include <sstream>
 
@@ -67,6 +68,17 @@ using ShapeTree = pgl::ShapeTree<AnyShape>;
 // instantiation as everything else (Num = ERational) in bind_transformation.cpp.
 using Transformation = pgl::Transformation<Num>;
 
+// pgl's orientation() returns a std::partial_ordering, which nanobind has no
+// caster for (and which would be a strange thing to hand a Python caller
+// anyway); expose the sign it stands for instead: -1 to the right of the
+// direction, +1 to the left, 0 collinear. The `unordered` case cannot arise —
+// the comparison is an exact rational determinant, never a NaN.
+inline int orientationSign(std::partial_ordering o) {
+    if (o == std::partial_ordering::less) return -1;
+    if (o == std::partial_ordering::greater) return 1;
+    return 0;
+}
+
 // repr, ordering, equality, and (optionally) hashing — uniform across all
 // value-type shapes. Fixed-size shapes are immutable and hashable. The
 // variable-size shapes (Convex, later Polygon) are mutable so they support
@@ -120,6 +132,49 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
             "Whether the supporting direction is horizontal.");                    \
     cls.def("isDegenerate", [](const SelfT &s) { return s.isDegenerate(); },       \
             "Whether the two defining points coincide.")
+
+// The two vertical/horizontal ray-shooting queries of the line-like shapes
+// (Segment, OrientedSegment, Line, OrientedLine, Ray): the coordinate at which
+// the shape meets the vertical line x = given (resp. the horizontal line
+// y = given), or None when it does not meet it at all — a segment or ray that
+// stops short. Exact: ResultNumber defaults to the number type (ERational), so
+// the division stays a Fraction. A shape that is *itself* vertical meets x at
+// all of its points; pgl resolves that by returning the smaller coordinate
+// (likewise for a horizontal shape and xAtY). MonotoneChain has its own yAtX
+// with a different contract (see bind_chains.cpp) and is not bound here.
+#define PGL_BIND_XY_AT(cls, SelfT)                                                      \
+    cls.def("yAtX", [](const SelfT &s, const ::pypgl::Num &x) { return s.yAtX(x); },     \
+            nb::arg("x"),                                                                \
+            "Exact y coordinate where the shape meets the vertical line at x, or None.");\
+    cls.def("xAtY", [](const SelfT &s, const ::pypgl::Num &y) { return s.xAtY(y); },     \
+            nb::arg("y"),                                                                \
+            "Exact x coordinate where the shape meets the horizontal line at y, or None.")
+
+// The direction-dependent helpers of the *oriented* shapes (OrientedSegment,
+// OrientedLine, Ray): which side of the directed line a point falls on, and the
+// two closed half-planes that side splits the plane into. `orientation` returns
+// a plain sign — see orientationSign above.
+#define PGL_BIND_ORIENTED_HELPERS(cls, SelfT)                                                        \
+    cls.def("orientation",                                                                           \
+            [](const SelfT &s, const ::pypgl::Point &p) {                                            \
+                return ::pypgl::orientationSign(s.orientation(p));                                   \
+            },                                                                                       \
+            nb::arg("point"),                                                                        \
+            "Sign of (source, target, point): -1 if the point is to the right of the direction, "    \
+            "+1 to the left, 0 if collinear.");                                                      \
+    cls.def("rightHalfplane", [](const SelfT &s) { return s.rightHalfplane(); },                     \
+            "Closed half-plane to the right of the direction (orientation(p) <= 0).");               \
+    cls.def("leftHalfplane", [](const SelfT &s) { return s.leftHalfplane(); },                       \
+            "Closed half-plane to the left of the direction (orientation(p) >= 0).")
+
+// The two closed half-planes bounded by the supporting line of a shape that has
+// one (Line, OrientedLine, Ray) — split by y, so unlike right/leftHalfplane
+// these do not depend on the shape's orientation.
+#define PGL_BIND_HALFPLANES(cls, SelfT)                                             \
+    cls.def("halfplaneAbove", [](const SelfT &s) { return s.halfplaneAbove(); },     \
+            "Closed half-plane above the supporting line.");                         \
+    cls.def("halfplaneBelow", [](const SelfT &s) { return s.halfplaneBelow(); },     \
+            "Closed half-plane below the supporting line.")
 
 // collinear: Self against a Point and the five line-like shapes.
 #define PGL_BIND_COLLINEAR(cls, SelfT)                       \

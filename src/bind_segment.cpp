@@ -21,6 +21,8 @@ void bind_segment(nb::module_ &m) {
     cls.def("lengthLInf", [](const Segment &s) { return s.lengthLInf(); }, "Exact Chebyshev (L-infinity) length.");
     cls.def("asLine", [](const Segment &s) { return s.asLine(); }, "Supporting unoriented line.");
     cls.def("bbox", [](const Segment &s) { return s.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
+    cls.def("containsEndpoint", [](const Segment &s, const Point &p) { return s.containsEndpoint(p); },
+            nb::arg("point"), "Whether the point is one of the two endpoints.");
 
     bind_value_semantics<Segment>(cls);
 
@@ -29,6 +31,7 @@ void bind_segment(nb::module_ &m) {
     PGL_BIND_VERTEX_QUERIES(cls, Segment);
     PGL_BIND_INDEXING(cls, Segment);
     PGL_BIND_LINE_HELPERS(cls, Segment);
+    PGL_BIND_XY_AT(cls, Segment);
     PGL_BIND_COLLINEAR(cls, Segment);
     PGL_BIND_PARALLEL(cls, Segment);
     PGL_BIND_ALL_PREDICATES(cls, Segment);
@@ -67,7 +70,13 @@ void bind_oriented_segment(nb::module_ &m) {
     cls.def("lengthLInf", [](const OrientedSegment &s) { return s.lengthLInf(); }, "Exact Chebyshev (L-infinity) length.");
     cls.def("asSegment", [](const OrientedSegment &s) { return s.asSegment(); }, "Unoriented segment with the same endpoints.");
     cls.def("asLine", [](const OrientedSegment &s) { return s.asLine(); }, "Supporting unoriented line.");
+    cls.def("asOrientedLine", [](const OrientedSegment &s) { return s.asOrientedLine(); },
+            "Supporting line, with the same orientation.");
+    cls.def("asRay", [](const OrientedSegment &s) { return s.asRay(); },
+            "Ray from the same source, through the target.");
     cls.def("bbox", [](const OrientedSegment &s) { return s.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
+    cls.def("containsEndpoint", [](const OrientedSegment &s, const Point &p) { return s.containsEndpoint(p); },
+            nb::arg("point"), "Whether the point is one of the two endpoints.");
 
     bind_value_semantics<OrientedSegment>(cls);
 
@@ -76,6 +85,8 @@ void bind_oriented_segment(nb::module_ &m) {
     PGL_BIND_VERTEX_QUERIES(cls, OrientedSegment);
     PGL_BIND_INDEXING(cls, OrientedSegment);
     PGL_BIND_LINE_HELPERS(cls, OrientedSegment);
+    PGL_BIND_XY_AT(cls, OrientedSegment);
+    PGL_BIND_ORIENTED_HELPERS(cls, OrientedSegment);
     PGL_BIND_COLLINEAR(cls, OrientedSegment);
     PGL_BIND_PARALLEL(cls, OrientedSegment);
     PGL_BIND_ALL_PREDICATES(cls, OrientedSegment);

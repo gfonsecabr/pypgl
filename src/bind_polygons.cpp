@@ -25,7 +25,14 @@ void bind_polygons(nb::module_ &m) {
         cls.def("centroid", [](const Triangle &t) { return t.centroid(); }, "Exact centroid.");
         cls.def("diameter", [](const Triangle &t) { return t.diameter(); }, "Longest distance as a segment between two vertices.");
         cls.def("isDegenerate", [](const Triangle &t) { return t.isDegenerate(); }, "Whether the vertices are collinear.");
+        cls.def("isRectangle", [](const Triangle &t) { return t.isRectangle(); }, "Whether the triangle has a right angle.");
+        cls.def("isObtuse", [](const Triangle &t) { return t.isObtuse(); }, "Whether the triangle has an obtuse angle.");
+        cls.def("isIsosceles", [](const Triangle &t) { return t.isIsosceles(); }, "Whether two sides have equal length.");
         cls.def("bbox", [](const Triangle &t) { return t.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
+        cls.def("circumcircle", [](const Triangle &t) { return t.circumcircle(); },
+                "The Disk through the three vertices.");
+        cls.def("asConvex", [](const Triangle &t) { return t.asConvex(); }, "The same triangle as a Convex.");
+        cls.def("asPolygon", [](const Triangle &t) { return t.asPolygon(); }, "The same triangle as a Polygon.");
 
         bind_value_semantics<Triangle>(cls);
         PGL_BIND_OPERATORS(cls, Triangle);
@@ -98,6 +105,10 @@ void bind_polygons(nb::module_ &m) {
         cls.def("diameter", [](const Rectangle &r) { return r.diameter(); }, "Diagonal as a segment.");
         cls.def("isDegenerate", [](const Rectangle &r) { return r.isDegenerate(); }, "Whether the rectangle has zero area.");
         cls.def("bbox", [](const Rectangle &r) { return r.bbox(); }, "Exact axis-aligned bounding box (the rectangle itself).");
+        cls.def("circumcircle", [](const Rectangle &r) { return r.circumcircle(); },
+                "The Disk through the four corners.");
+        cls.def("asConvex", [](const Rectangle &r) { return r.asConvex(); }, "The same rectangle as a Convex.");
+        cls.def("asPolygon", [](const Rectangle &r) { return r.asPolygon(); }, "The same rectangle as a Polygon.");
 
         bind_value_semantics<Rectangle>(cls);
         PGL_BIND_OPERATORS(cls, Rectangle);
@@ -136,6 +147,7 @@ void bind_polygons(nb::module_ &m) {
         cls.def("diameter", [](const Convex &c) { return c.diameter(); }, "Diameter as a segment between two vertices.");
         cls.def("isDegenerate", [](const Convex &c) { return c.isDegenerate(); }, "Whether the hull is lower-dimensional.");
         cls.def("bbox", [](const Convex &c) { return c.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
+        cls.def("asPolygon", [](const Convex &c) { return c.asPolygon(); }, "The same hull as a Polygon.");
 
         // Convex (and, later, Polygon) is variable-size: pgl stores a lazy
         // translation offset so in-place translation is O(1) regardless of the

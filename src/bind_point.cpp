@@ -21,6 +21,9 @@ void bind_point(nb::module_ &m) {
                 return i;
             }, nb::arg("value"), "Index (0 or 1) of the coordinate equal to value, or None if neither.");
 
+    cls.def("swapped", [](const Point &p) { return p.swapped(); },
+            "The point with its x and y coordinates swapped.");
+
     // Point<->line duality (exact); returns a Line.
     cls.def("dual", [](const Point &p) { return p.dual(); },
             "Dual line of the point: the point (a, b) maps to the line y = a x - b.");

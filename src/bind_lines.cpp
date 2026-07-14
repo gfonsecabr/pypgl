@@ -20,8 +20,6 @@ void bind_lines(nb::module_ &m) {
         cls.def("max", [](const Line &l) { return l.max(); }, "Lexicographically larger defining point.");
         cls.def("dual", [](const Line &l) { return l.dual(); }, "Dual point (a, b) of the line y = a x - b.");
         cls.def("polar", [](const Line &l) { return l.polar(); }, "Polar point (a, b) of the line a x + b y = 1.");
-        cls.def("halfplaneAbove", [](const Line &l) { return l.halfplaneAbove(); }, "Closed half-plane above the line.");
-        cls.def("halfplaneBelow", [](const Line &l) { return l.halfplaneBelow(); }, "Closed half-plane below the line.");
 
         bind_value_semantics<Line>(cls);
         PGL_BIND_OPERATORS(cls, Line);
@@ -29,6 +27,8 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_VERTEX_QUERIES(cls, Line);
         PGL_BIND_INDEXING(cls, Line);
         PGL_BIND_LINE_HELPERS(cls, Line);
+        PGL_BIND_XY_AT(cls, Line);
+        PGL_BIND_HALFPLANES(cls, Line);
         PGL_BIND_COLLINEAR(cls, Line);
         PGL_BIND_PARALLEL(cls, Line);
         PGL_BIND_ALL_PREDICATES(cls, Line);
@@ -63,6 +63,9 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_VERTEX_QUERIES(cls, OrientedLine);
         PGL_BIND_INDEXING(cls, OrientedLine);
         PGL_BIND_LINE_HELPERS(cls, OrientedLine);
+        PGL_BIND_XY_AT(cls, OrientedLine);
+        PGL_BIND_HALFPLANES(cls, OrientedLine);
+        PGL_BIND_ORIENTED_HELPERS(cls, OrientedLine);
         PGL_BIND_COLLINEAR(cls, OrientedLine);
         PGL_BIND_PARALLEL(cls, OrientedLine);
         PGL_BIND_ALL_PREDICATES(cls, OrientedLine);
@@ -96,6 +99,9 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_VERTEX_QUERIES(cls, Ray);
         PGL_BIND_INDEXING(cls, Ray);
         PGL_BIND_LINE_HELPERS(cls, Ray);
+        PGL_BIND_XY_AT(cls, Ray);
+        PGL_BIND_HALFPLANES(cls, Ray);
+        PGL_BIND_ORIENTED_HELPERS(cls, Ray);
         PGL_BIND_COLLINEAR(cls, Ray);
         PGL_BIND_PARALLEL(cls, Ray);
         PGL_BIND_ALL_PREDICATES(cls, Ray);
@@ -125,13 +131,16 @@ void bind_lines(nb::module_ &m) {
         cls.def("max", [](const Halfplane &h) { return h.max(); }, "Lexicographically larger boundary point.");
         cls.def("opposite", [](const Halfplane &h) { return h.opposite(); }, "The complementary half-plane.");
         cls.def("asLine", [](const Halfplane &h) { return h.asLine(); }, "Boundary line.");
-        cls.def("isDegenerate", [](const Halfplane &h) { return h.isDegenerate(); }, "Whether the boundary points coincide.");
+        cls.def("asOrientedLine", [](const Halfplane &h) { return h.asOrientedLine(); },
+                "Boundary line, directed so the half-plane lies to its left.");
 
         bind_value_semantics<Halfplane>(cls);
         PGL_BIND_INDEXING(cls, Halfplane);
         PGL_BIND_OPERATORS(cls, Halfplane);
         PGL_BIND_TRANSFORMS(cls, Halfplane);
         PGL_BIND_VERTEX_QUERIES(cls, Halfplane);
+        // slope/isVertical/isHorizontal/isDegenerate all describe the boundary line.
+        PGL_BIND_LINE_HELPERS(cls, Halfplane);
         PGL_BIND_ALL_PREDICATES(cls, Halfplane);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Halfplane);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Halfplane);
