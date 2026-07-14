@@ -41,8 +41,24 @@ def _classes(tree):
 
 def test_stub_declares_every_public_class():
     classes = _classes(ast.parse(_STUB.read_text()))
-    for name in pypgl.__all__:
+    for name in (
+        "Point", "Segment", "OrientedSegment", "Line", "OrientedLine", "Ray",
+        "Halfplane", "Triangle", "Rectangle", "Convex", "MonotoneChain",
+        "Polyline", "Polygon", "Disk", "Triangulation", "ShapeTree", "Canvas",
+        "Transformation",
+    ):
         assert name in classes, f"{name} missing from stub"
+
+
+def test_stub_declares_every_public_function():
+    functions = {n.name for n in ast.parse(_STUB.read_text()).body if isinstance(n, ast.FunctionDef)}
+    for name in (
+        "findIntersections", "findCrossings", "bruteForceIntersections",
+        "bruteForceCrossings", "detectIntersections", "detectCrossings",
+        "convexHull", "convexHullExtended", "sortAround", "hilbertSort",
+        "polyominoes", "polyominoesUpTo",
+    ):
+        assert name in functions, f"{name} missing from stub"
 
 
 def test_stub_has_no_leaked_runtime_patches():

@@ -12,6 +12,7 @@ void bind_triangulation(nb::module_ &m);
 void bind_shapetree(nb::module_ &m);
 void bind_canvas(nb::module_ &m);
 void bind_transformation(nb::module_ &m);
+void bind_algorithms(nb::module_ &m);
 
 NB_MODULE(_pgl, m) {
     m.doc() = "Compiled core of pypgl: Python bindings for the Pangolin (pgl) "
@@ -28,4 +29,5 @@ NB_MODULE(_pgl, m) {
     bind_shapetree(m);
     bind_canvas(m);
     bind_transformation(m);
+    bind_algorithms(m);
 }

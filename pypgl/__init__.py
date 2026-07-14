@@ -26,6 +26,18 @@ from ._pgl import (
     ShapeTree,
     Canvas,
     Transformation,
+    findIntersections,
+    findCrossings,
+    bruteForceIntersections,
+    bruteForceCrossings,
+    detectIntersections,
+    detectCrossings,
+    convexHull,
+    convexHullExtended,
+    sortAround,
+    hilbertSort,
+    polyominoes,
+    polyominoesUpTo,
 )
 
 try:
@@ -52,6 +64,18 @@ __all__ = [
     "ShapeTree",
     "Canvas",
     "Transformation",
+    "findIntersections",
+    "findCrossings",
+    "bruteForceIntersections",
+    "bruteForceCrossings",
+    "detectIntersections",
+    "detectCrossings",
+    "convexHull",
+    "convexHullExtended",
+    "sortAround",
+    "hilbertSort",
+    "polyominoes",
+    "polyominoesUpTo",
 ]
 
 

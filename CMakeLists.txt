@@ -33,7 +33,7 @@ if(NOT PGL_INCLUDE_DIR)
     # release tag once pgl publishes them.
     FetchContent_Declare(pgl
       GIT_REPOSITORY https://github.com/gfonsecabr/pgl
-      GIT_TAG        91b671403277353af72fa7ca4607436e7fc8b79c)
+      GIT_TAG        37286eeee986fd5c9bbd37cbd503de0ae4abb1d2)
     FetchContent_MakeAvailable(pgl)
     set(PGL_INCLUDE_DIR "${pgl_SOURCE_DIR}/include")
   endif()
@@ -53,7 +53,8 @@ nanobind_add_module(_pgl
   src/bind_triangulation.cpp
   src/bind_shapetree.cpp
   src/bind_canvas.cpp
-  src/bind_transformation.cpp)
+  src/bind_transformation.cpp
+  src/bind_algorithms.cpp)
 
 target_include_directories(_pgl PRIVATE "${PGL_INCLUDE_DIR}" src)
 
@@ -63,6 +64,10 @@ target_include_directories(_pgl PRIVATE "${PGL_INCLUDE_DIR}" src)
 # does not auto-link the builtins archive the way GCC/Clang do on Unix. Link it
 # explicitly, located relative to the compiler.
 if(MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # clang-cl uses the MSVC standard library, whose `inplace_merge` needs this
+  # explicit opt-in when pgl's exact Point exceeds max_align_t alignment.
+  target_compile_definitions(_pgl PRIVATE _ENABLE_EXTENDED_ALIGNED_STORAGE)
+
   get_filename_component(_clang_bin_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
   file(GLOB _clang_rt_builtins
     "${_clang_bin_dir}/../lib/clang/*/lib/windows/clang_rt.builtins-x86_64.lib")

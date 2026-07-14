@@ -179,8 +179,7 @@ canvas.writeIPE("figure.ipe")
 ```
 
 `writePDF` and `writeIPE` return the canvas (so they chain), but `writeSVG`
-returns `None` — an inconsistency inherited from pgl, where `writeSVG` returns
-`void` and the other two return `Canvas&`.
+returns `None`.
 
 ### Inline display in Jupyter
 

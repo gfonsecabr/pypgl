@@ -104,9 +104,11 @@ canvas.writeSVG("example2.svg")
 
 PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](doc/data_structures.md) such as:
 
-- Convex hull: computed with Graham scan.
-- Line segment intersection: Bentley-Ottmann sweep line using rational numbers.
-- Sort points: by angle or Hilbert order.
+- Convex hull: `convexHull` / `convexHullExtended`, computed with Graham scan.
+- Line segment intersection: sweep-line and brute-force pair enumeration plus
+  detection predicates, all using rational numbers.
+- Sort points: in place by angle (`sortAround`) or Hilbert order (`hilbertSort`).
+- Polyomino enumeration: hole-free free polyominoes as `Polygon` objects.
 - Kd-tree: for points and a generalization for other bounded shapes.
 - Triangulation: including Delaunay and constrained Delaunay triangulations for points and polygons.
 
@@ -163,4 +165,3 @@ instead of the pinned upstream commit:
 - For a brief description, check the documents at the [doc folder](doc/).
 - For some simple examples, check the files at the [examples folder](examples/).
 - Check the [C++ version](https://github.com/gfonsecabr/pgl).
-
