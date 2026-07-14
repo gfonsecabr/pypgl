@@ -31,7 +31,7 @@ if s.intersects(t):
 | Family | Shapes |
 | --- | --- |
 | 0-dimensional | [`Point`](doc/shapes.md#point) |
-| 1-dimensional | [`Segment`](doc/shapes.md#segment), [`OrientedSegment`](doc/shapes.md#oriented-segment), [`Line`](doc/shapes.md#line), [`OrientedLine`](doc/shapes.md#oriented-line), [`Ray`](doc/shapes.md#ray), ~~[`Polyline`](doc/shapes.md#polyline), [`PolyFunction`](doc/shapes.md#monotone-polyline)~~ |
+| 1-dimensional | [`Segment`](doc/shapes.md#segment), [`OrientedSegment`](doc/shapes.md#oriented-segment), [`Line`](doc/shapes.md#line), [`OrientedLine`](doc/shapes.md#oriented-line), [`Ray`](doc/shapes.md#ray), [`Polyline`](doc/shapes.md#polyline), [`MonotoneChain`](doc/shapes.md#monotonechain) |
 | 2-dimensional | [`Halfplane`](doc/shapes.md#half-plane), [`Triangle`](doc/shapes.md#triangle), [`Rectangle`](doc/shapes.md#rectangle), [`Disk`](doc/shapes.md#disk), [`Convex`](doc/shapes.md#convex), [`Polygon`](doc/shapes.md#polygon) |
 
 The following [predicates](doc/shape_methods.md#predicates) are implemented as methods of all shapes.
@@ -79,7 +79,7 @@ print("The diameter of", c,
 
 ## Visualization
 
-A `Canvas` class is provided for [SVG visualization](doc/canvas.md):
+A `Canvas` class is provided for [visualization](doc/canvas.md), exporting to SVG, PDF, or [Ipe](https://ipe.otfried.org/):
 
 <img align="right" src="https://raw.githubusercontent.com/gfonsecabr/pypgl/main/doc/figures/example2.svg" width="200"/>
 

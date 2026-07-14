@@ -10,10 +10,12 @@ using namespace pypgl;
 // hashable = false (__hash__ is None) and can never be a dict key / set
 // member, even though pgl itself has a std::hash<Polygon> specialization.
 //
-// Unlike the other indexable shapes, pgl does not (yet) implement
-// Polygon::pointInside()/verticesContain() — a non-convex interior point is
-// not as trivial to construct as for a convex shape — so only index()/size()/
-// get() are bound here, not the full PGL_BIND_VERTEX_QUERIES trio.
+// Unlike the other indexable shapes, pgl does not implement
+// Polygon::verticesContain(), so the PGL_BIND_VERTEX_QUERIES trio is not used
+// here; pointInside() and index() are bound by hand instead. (pgl gained a
+// non-convex pointInside() upstream: it cuts a diagonal or an ear at a convex
+// vertex and takes an interior point of that, rather than the vertex average a
+// convex shape can get away with.)
 //
 // The predicate and squared-distance matrices reuse the shared
 // PGL_BIND_ALL_PREDICATES / PGL_BIND_ALL_SQUARED_DISTANCE macros in
@@ -67,9 +69,12 @@ void bind_polygon(nb::module_ &m) {
     cls.def("diameter", [](const Polygon &p) { return p.diameter(); }, "Longest distance as a segment between two vertices.");
     cls.def("bbox", [](const Polygon &p) { return p.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
 
-    // Polygon has index() (an O(n) vertex scan) but not pointInside()/
-    // verticesContain() (see file comment), so index is bound by hand instead
+    // Polygon has pointInside() and index() (an O(n) vertex scan) but not
+    // verticesContain() (see file comment), so these are bound by hand instead
     // of via PGL_BIND_VERTEX_QUERIES, the same way bind_disk.cpp does it.
+    cls.def("pointInside", [](const Polygon &p) { return p.pointInside(); },
+            "An exact point strictly inside the polygon (the polygon must be "
+            "simple and non-degenerate).");
     cls.def("index", [](const Polygon &p, const Point &pt) -> std::optional<std::ptrdiff_t> {
                 auto i = p.index(pt);
                 if (i < 0) return std::nullopt;

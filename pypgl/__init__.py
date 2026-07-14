@@ -18,6 +18,8 @@ from ._pgl import (
     Triangle,
     Rectangle,
     Convex,
+    MonotoneChain,
+    Polyline,
     Polygon,
     Disk,
     Triangulation,
@@ -42,6 +44,8 @@ __all__ = [
     "Triangle",
     "Rectangle",
     "Convex",
+    "MonotoneChain",
+    "Polyline",
     "Polygon",
     "Disk",
     "Triangulation",
@@ -55,7 +59,7 @@ __all__ = [
 #
 # Triangulation and ShapeTree are deliberately absent from every loop below:
 # unlike the fixed-extent shapes, neither has contains(Point)/pointInside/
-# index/get to hang `in` or indexing off of -- ShapeTree's own contains()/
+# index/get to hang `in` or indexing off of -- ShapeTree's own has()/
 # __contains__/__len__/__iter__ (bound directly in bind_shapetree.cpp) already
 # give it container semantics (membership, not point-in-shape). Both do get
 # _repr_svg_ further down, since Canvas.draw() accepts them like any other
@@ -83,6 +87,8 @@ for _cls in (
     Triangle,
     Rectangle,
     Convex,
+    MonotoneChain,
+    Polyline,
     Polygon,
     Disk,
 ):
@@ -111,6 +117,8 @@ for _cls in (
     Triangle,
     Rectangle,
     Convex,
+    MonotoneChain,
+    Polyline,
     Polygon,
     Disk,
 ):
@@ -149,6 +157,8 @@ for _cls in (
     Triangle,
     Rectangle,
     Convex,
+    MonotoneChain,
+    Polyline,
     Polygon,
     Disk,
     # Triangulation and ShapeTree are not "shapes" (see the loops above), but

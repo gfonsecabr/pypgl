@@ -27,6 +27,8 @@ The following shapes are supported by Pangolin:
 - [`Line`](#line) Infinite straight line.
 - [`OrientedLine`](#oriented-line) Infinite oriented straight line.
 - [`Ray`](#ray) Half-line.
+- [`Polyline`](#polyline) Open polygonal chain, possibly self-intersecting.
+- [`MonotoneChain`](#monotonechain) Weakly x-monotone polygonal chain.
 
 ##### 2-dimensional shapes:
 - [`Halfplane`](#half-plane) A straight line and all points on one side of it.
@@ -287,6 +289,63 @@ It knows how to convert itself with an explicit cast to:
 - Other methods: area, boundaryContains, collinear, contains, containsCollinear, crosses, get, index, interiorContains, interiorsIntersect, intersection, intersects, max, min, pointInside, rotated90, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, source, squaredDistance, target, twiceArea, verticesContain.
 
 
+### Polyline
+
+The class `Polyline` represents an open polygonal chain: a sequence of vertices joined in traversal order, with $n - 1$ edges for $n$ vertices and no closing edge back to the first vertex. Unlike a `Polygon`, it may cross itself.
+
+The constructor keeps the vertex order you give it, canonicalizing only the *direction* (the sequence is reversed when the reversal compares lexicographically smaller), so a polyline equals its own reverse but not a different traversal of the same vertices:
+
+```python
+p = pgl.Polyline([pgl.Point(0, 0), pgl.Point(2, 2), pgl.Point(2, 0)])
+print(p)
+# Output: Polyline[(0,0),(2,2),(2,0)]
+print(p == pgl.Polyline([pgl.Point(2, 0), pgl.Point(2, 2), pgl.Point(0, 0)]))
+# Output: True  (the same chain, traversed backwards)
+```
+
+Like `Polygon` and `Convex`, a polyline stores a lazy translation, so translating it is $O(1)$; it is mutable and therefore unhashable.
+
+A polyline `p` has methods such as:
+
+- `p.isSimple()`: Returns true if the chain does not touch or cross itself. A *closed* polyline (last vertex equal to the first) is not simple.
+- `p.isDegenerate()`: Returns true if every vertex coincides.
+- `p.length()`: Returns the Euclidean length (a `float`: a sum of square roots is irrational in general).
+- `p.lengthL1()` / `p.lengthLInf()`: Return the exact Manhattan / Chebyshev length.
+- `p.pointInside()`: Returns an exact point in the relative interior (the midpoint of the first edge).
+
+As a 1-dimensional shape, its boundary is its two extreme vertices and its relative interior is everything else — the same convention as `Segment`. `p.intersection(s)` returns a *list* of `Point` and `Segment` pieces, since a chain can meet even a line in arbitrarily many disjoint places. It is not defined against `Disk` or `Polygon`.
+
+- Other methods: bbox, boundaryContains, contains, crosses, diameter, distanceL1, distanceLInf, edges, empty, get, index, interiorContains, interiorsIntersect, intersects, orientedEdges, rotate90, rotated90, scaleDownX, scaleDownY, scaleUpX, scaleUpY, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, size, squaredDistance, vertices.
+
+
+### MonotoneChain
+
+The class `MonotoneChain` represents a weakly x-monotone polygonal chain. Its vertices are stored sorted lexicographically (smaller x first, ties broken by smaller y), which means the constructor treats its input as a **point set**, not as a pre-linked chain: the points are sorted and deduplicated, so any input order yields the same chain, and the chain is automatically simple.
+
+Consecutive vertices may share an x-coordinate, producing a vertical edge — that is what makes it only *weakly* monotone.
+
+```python
+c = pgl.MonotoneChain([pgl.Point(2, 2), pgl.Point(0, 0), pgl.Point(1, 3)])
+print(c)
+# Output: MonotoneChain[(0,0),(1,3),(2,2)]  # sorted, whatever the input order
+print(c.isStrictlyMonotone())
+# Output: True  # no two vertices share an x, so the chain is the graph of a function
+```
+
+The sorted order buys $O(\log n)$ vertical queries, which no other shape has. Each returns `None` when the query x lies outside the chain's x-extent:
+
+- `c.indexAtX(x)`: The index of the vertex at `x`, or of the vertex starting the edge spanning `x`.
+- `c.yAtX(x)`: The exact y-coordinate of the chain at `x`.
+- `c.isBelow(p)` / `c.isAbove(p)`: Engaged when a ray shot straight down / up from `p` hits the chain. A point *on* the chain satisfies both.
+- `c.isStrictlyBelow(p)` / `c.isStrictlyAbove(p)`: The strict variants. A point on the chain satisfies neither.
+
+It is also the only chain that can grow: `c.insert(point)` or `c.insert(points)` splices new vertices into the sorted sequence (a duplicate is ignored).
+
+Otherwise it behaves exactly like a [`Polyline`](#polyline): $n - 1$ edges, `Segment`'s boundary convention, a lazy $O(1)$ translation, mutable and therefore unhashable, `length`/`lengthL1`/`lengthLInf`/`pointInside`, and a list-valued `intersection` that is not defined against `Disk` or `Polygon`.
+
+- Other methods: bbox, boundaryContains, contains, crosses, diameter, distanceL1, distanceLInf, edges, empty, get, index, interiorContains, interiorsIntersect, intersects, isDegenerate, orientedEdges, rotate90, rotated90, scaleDownX, scaleDownY, scaleUpX, scaleUpY, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, size, squaredDistance, vertices.
+
+
 ### Half-Plane
 
 The class template `Halfplane` is stored as an oriented line, but represents a completely different geometric object that contains all points on its left half-plane. The boundary of the half-plane is the line that defines it. Two half-planes are equal if the corresponding oriented lines are equal:
@@ -427,6 +486,7 @@ A polygon `P` has methods such as:
 
 - `P.isDegenerate()`: Returns true if the polygon has null area.
 - `P.isSimple()`: Returns true if the edges only intersect at the endpoints of consecutive edges. Takes $O(n \log n)$ time for $n$ edges.
+- `P.pointInside()`: Returns an exact point strictly inside the polygon, even a non-convex one (the vertex average would not do: it can fall in a notch, outside the polygon).
 
 - Other methods:
 

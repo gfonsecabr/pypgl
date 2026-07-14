@@ -57,17 +57,21 @@ namespace {
             nb::arg("query"))
 
 // METHOD bound against every query type pgl's Triangulation traversal
-// accepts: the five directed shapes (traced in order along the query) and
-// the six region shapes (a connected convex query, reported in an
-// unspecified order) -- see detail::TriangulationQuery in
-// algorithm/triangulation.hpp. Polygon is deliberately not in this set: pgl
-// does not (yet) support a non-convex polygon as a region query here.
+// accepts: the five directed shapes (traced in order along the query), the
+// two chains (traced edge by edge, in chain order -- a chain is neither
+// straight nor convex, so it gets its own walk), and the six region shapes (a
+// connected convex query, reported in an unspecified order) -- see
+// detail::TriangulationQuery in algorithm/triangulation.hpp. Polygon is
+// deliberately not in this set: pgl does not (yet) support a non-convex
+// polygon as a region query here.
 #define PGL_BIND_TRIANGULATION_QUERY(cls, METHOD)      \
     PGL_TRI_QUERY(cls, METHOD, ::pypgl::Segment);       \
     PGL_TRI_QUERY(cls, METHOD, ::pypgl::OrientedSegment); \
     PGL_TRI_QUERY(cls, METHOD, ::pypgl::Line);          \
     PGL_TRI_QUERY(cls, METHOD, ::pypgl::OrientedLine);  \
     PGL_TRI_QUERY(cls, METHOD, ::pypgl::Ray);           \
+    PGL_TRI_QUERY(cls, METHOD, ::pypgl::MonotoneChain); \
+    PGL_TRI_QUERY(cls, METHOD, ::pypgl::Polyline);      \
     PGL_TRI_QUERY(cls, METHOD, ::pypgl::Point);         \
     PGL_TRI_QUERY(cls, METHOD, ::pypgl::Triangle);      \
     PGL_TRI_QUERY(cls, METHOD, ::pypgl::Rectangle);     \
@@ -164,9 +168,12 @@ void bind_triangulation(nb::module_ &m) {
             "Whether the triangulation stores no in-domain triangles.");
 
     // ---- membership --------------------------------------------------
-    cls.def("contains", [](const Triangulation &t, const Triangle &tri) { return t.contains(tri); },
+    // Named `has` to mirror pgl, which renamed it from contains() so that a
+    // mesh's "is this one of my triangles/edges" never reads like a shape's
+    // geometric contains(); ShapeTree got the same rename.
+    cls.def("has", [](const Triangulation &t, const Triangle &tri) { return t.has(tri); },
             nb::arg("triangle"), "Whether triangle is one of this triangulation's triangles.");
-    cls.def("contains", [](const Triangulation &t, const Segment &edge) { return t.contains(edge); },
+    cls.def("has", [](const Triangulation &t, const Segment &edge) { return t.has(edge); },
             nb::arg("edge"), "Whether edge is an edge incident to the visible triangulation.");
 
     // ---- navigation ----------------------------------------------------

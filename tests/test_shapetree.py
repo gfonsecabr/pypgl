@@ -23,7 +23,9 @@ from pypgl import (
     Disk,
     Halfplane,
     Line,
+    MonotoneChain,
     Point,
+    Polyline,
     Rectangle,
     Segment,
     ShapeTree,
@@ -88,14 +90,27 @@ def test_iteration_yields_concrete_shapes():
     assert kinds == ["Disk", "Point", "Point", "Point", "Triangle"]
 
 
-def test_contains_is_exact_membership_not_geometric():
+def test_chains_are_storable_elements():
+    # MonotoneChain and Polyline are bounded (they have a bbox), so they are
+    # stored like any other element, not just accepted as queries.
+    chain = MonotoneChain([Point(0, 0), Point(2, 1)])
+    line = Polyline([Point(5, 5), Point(6, 7), Point(7, 5)])
+    t = ShapeTree([chain, line, _triangle()])
+    assert t.has(chain)
+    assert line in t
+    assert t.nearestNeighbor(Point(6, 9)) == line
+    kinds = sorted(type(s).__name__ for s in t.reportIntersecting(Line(Point(0, 0), Point(1, 1))))
+    assert kinds == ["MonotoneChain", "Polyline", "Triangle"]
+
+
+def test_has_is_exact_membership_not_geometric():
     tri = _triangle()
     t = ShapeTree([tri, Point(20, 20)])
     assert tri in t
-    assert t.contains(tri)
+    assert t.has(tri)
     # A point that lies inside the triangle is not a *stored* triangle.
     assert Point(1, 1) not in t
-    assert not t.contains(Point(1, 1))
+    assert not t.has(Point(1, 1))
 
 
 def test_repr():

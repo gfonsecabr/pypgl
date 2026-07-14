@@ -15,10 +15,10 @@
 
 ## Canvas
 
-`Canvas` is a lightweight SVG renderer for Pangolin shapes. It is designed for
+`Canvas` is a lightweight renderer for Pangolin shapes. It is designed for
 inspection, debugging, examples, and test output: you draw shapes onto a canvas,
-optionally change the drawing style in between, and then export the result as an
-SVG file or string.
+optionally change the drawing style in between, and then export the result as
+[SVG, PDF, or Ipe XML](#export-formats).
 
 The canvas automatically fits the drawn geometry into the output image,
 preserves aspect ratio, clips infinite primitives to the visible viewport, and
@@ -101,9 +101,13 @@ Each style method takes an SVG string and returns the canvas:
 | `canvas.fill("value")` | Sets the interior fill used for subsequent filled shapes and points. Use `"none"` to disable filling. |
 | `canvas.fillOpacity("value")` | Sets the fill opacity for subsequent shapes. Values are forwarded as SVG strings, so `"0.2"` makes the fill translucent. |
 | `canvas.strokeOpacity("value")` | Sets the stroke opacity for subsequent shapes. |
+| `canvas.strokeWidth(width)` | Sets the stroke width in pixels for subsequent shapes. |
+| `canvas.pointRadius(radius)` | Sets the rendered radius of `Point` primitives in pixels for subsequent shapes. |
 
-To change the stroke *width* use the numeric `strokeWidth(pixels)` configuration
-method described below.
+`strokeWidth` and `pointRadius` are lengths rather than colors, so they take
+either an SVG length string (`"4"`) or a plain number (`4`). Like every other
+style command they apply per shape: only the shapes drawn *after* the call
+capture them.
 
 Example:
 
@@ -122,7 +126,8 @@ canvas.stroke("sienna").fill("gold").fillOpacity("0.22").draw(rectangle)
 `canvas.draw(shape)` adds a shape using the current style and returns the canvas,
 so draws chain. Every bound shape can be drawn: `Point`, `Segment`,
 `OrientedSegment`, `Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`,
-`Rectangle`, `Convex`, and `Disk`. Results of constructions such as
+`Rectangle`, `Convex`, `MonotoneChain`, `Polyline`, `Polygon`, and `Disk` — plus
+`Triangulation` and `ShapeTree`. Results of constructions such as
 `intersection` are concrete shapes too, so they can be drawn directly. Drawing
 `None` (which an empty `intersection` returns) is a no-op that still returns the
 canvas, so no `None` guard is needed.
@@ -146,14 +151,36 @@ defaults. Each returns the canvas, so they chain:
 | `height(pixels)` | Sets the SVG height in pixels. Must be strictly positive. |
 | `size(width, height)` | Convenience wrapper for setting width and height together. |
 | `margin(pixels)` | Reserves blank space around the fitted drawing, giving the geometry more breathing room inside the image. Must be non-negative. |
-| `pointRadius(pixels)` | Sets the rendered radius of point primitives in pixels. Controls how large `Point` objects appear in the exported SVG. |
-| `strokeWidth(pixels)` | Sets the current stroke width as a numeric pixel value. Updates the current style for subsequently drawn shapes. |
-| `borders(enabled=True)` | Enables or disables a thin rectangular frame around the whole SVG. Especially helpful when debugging clipping and margins. |
-| `writeSVG(path)` | Writes the full SVG document to disk. Raises if the output file cannot be opened. |
-| `toSVG()` | Returns the complete SVG document as a string, which is useful for tests, web responses, or custom output pipelines. |
+| `borders(enabled=True)` | Enables or disables a thin rectangular frame around the whole drawing. Especially helpful when debugging clipping and margins. |
 
 The invalid-argument checks raise a Python exception, so e.g. `canvas.width(0)`
 raises rather than producing a broken image.
+
+(`strokeWidth` and `pointRadius` used to live here, as canvas-wide numeric
+settings. They are now per-shape [style](#style) commands.)
+
+### Export formats
+
+A canvas renders the same fitted drawing to three formats. Each `write*` method
+raises if the file cannot be opened.
+
+| Method | Result |
+| --- | --- |
+| `toSVG()` / `writeSVG(path)` | The SVG document, as a `str` / written to disk. |
+| `toPDF()` / `writePDF(path)` | The PDF document. `toPDF()` returns `bytes`, not `str` — a PDF is binary. |
+| `toIPE()` / `writeIPE(path)` | An [Ipe](https://ipe.otfried.org/) XML document, as a `str`. Ipe is a vector editor widely used in computational geometry, so this is the format to reach for when a figure is headed for a paper. |
+
+```python
+canvas = pgl.Canvas().size(300, 300)
+canvas.stroke("crimson").draw(pgl.Disk(pgl.Point(0, 0), 2))
+canvas.writeSVG("figure.svg")
+canvas.writePDF("figure.pdf")
+canvas.writeIPE("figure.ipe")
+```
+
+`writePDF` and `writeIPE` return the canvas (so they chain), but `writeSVG`
+returns `None` — an inconsistency inherited from pgl, where `writeSVG` returns
+`void` and the other two return `Canvas&`.
 
 ### Inline display in Jupyter
 

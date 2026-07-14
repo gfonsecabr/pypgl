@@ -1,9 +1,13 @@
-"""Canvas SVG rendering (milestone 3 — notebook UX).
+"""Canvas rendering (milestone 3 — notebook UX).
 
 The stream-based C++ Canvas API is exposed as methods: fluent configuration and
 style setters that return the same canvas, one `draw` overload per shape, and
-`toSVG`/`writeSVG`. `_repr_svg_` (canvas-wide and per shape) is what renders
-geometry inline in Jupyter.
+`toSVG`/`toPDF`/`toIPE` plus their write* counterparts. `_repr_svg_`
+(canvas-wide and per shape) is what renders geometry inline in Jupyter.
+
+strokeWidth and pointRadius are *style* commands, not canvas-wide configuration:
+like stroke/fill, each is captured by the shapes drawn after it. Each accepts
+either the SVG length string pgl itself takes or a plain number.
 """
 
 import xml.etree.ElementTree as ET
@@ -24,6 +28,9 @@ from pypgl import (
     Rectangle,
     Convex,
     Disk,
+    MonotoneChain,
+    Polyline,
+    Polygon,
 )
 
 
@@ -39,6 +46,9 @@ ALL_SHAPES = [
     Rectangle(Point(0, 0), Point(3, 2)),
     Convex([Point(0, 0), Point(2, 0), Point(1, 2)]),
     Disk(Point(0, 0), 3),
+    MonotoneChain([Point(0, 0), Point(2, 1), Point(4, 0)]),
+    Polyline([Point(0, 0), Point(2, 3), Point(4, 0)]),
+    Polygon([Point(0, 0), Point(4, 0), Point(4, 4), Point(0, 4)]),
 ]
 
 
@@ -70,8 +80,6 @@ def test_configuration_methods_are_fluent_and_return_same_canvas():
     assert c.width(500) is c
     assert c.height(200) is c
     assert c.margin(10) is c
-    assert c.pointRadius(5) is c
-    assert c.strokeWidth(3) is c
     assert c.borders(True) is c
     assert c.scale(2) is c
 
@@ -82,6 +90,34 @@ def test_style_methods_are_fluent():
     assert c.fill("blue") is c
     assert c.fillOpacity("0.5") is c
     assert c.strokeOpacity("0.5") is c
+    assert c.strokeWidth(3) is c
+    assert c.pointRadius(5) is c
+
+
+def test_length_styles_take_a_number_or_a_string():
+    # pgl's manipulators take an SVG length string; a plain number is accepted
+    # here too, since that is what a caller usually has.
+    for width in (3, "3"):
+        svg = Canvas().strokeWidth(width).draw(Segment(0, 0, 4, 0)).toSVG()
+        assert 'stroke-width="3"' in svg
+    for radius in (7, "7"):
+        svg = Canvas().pointRadius(radius).draw(Point(0, 0)).toSVG()
+        assert 'r="7"' in svg
+
+
+def test_length_styles_are_captured_per_shape():
+    # strokeWidth used to be canvas-wide configuration; upstream made it a style
+    # command, so a shape keeps the width active when it was drawn.
+    svg = (
+        Canvas()
+        .strokeWidth(1)
+        .draw(Segment(0, 0, 4, 0))
+        .strokeWidth(9)
+        .draw(Segment(0, 1, 4, 1))
+        .toSVG()
+    )
+    assert 'stroke-width="1"' in svg
+    assert 'stroke-width="9"' in svg
 
 
 @pytest.mark.parametrize("value", [0, -1])
@@ -176,6 +212,36 @@ def test_write_svg_to_file(tmp_path):
     Canvas().size(100, 100).draw(Point(0, 0)).writeSVG(str(path))
     text = path.read_text()
     _is_valid_svg(text)
+
+
+# --- PDF and Ipe export --------------------------------------------------
+
+def test_to_pdf_returns_bytes():
+    # A PDF is binary, so it comes back as bytes rather than str.
+    pdf = Canvas().size(100, 100).draw(Triangle(Point(0, 0), Point(4, 0), Point(2, 3))).toPDF()
+    assert isinstance(pdf, bytes)
+    assert pdf.startswith(b"%PDF-")
+
+
+def test_write_pdf_to_file_is_fluent(tmp_path):
+    path = tmp_path / "out.pdf"
+    c = Canvas().size(100, 100).draw(Point(0, 0))
+    assert c.writePDF(str(path)) is c
+    assert path.read_bytes().startswith(b"%PDF-")
+
+
+def test_to_ipe_is_valid_xml():
+    ipe = Canvas().size(100, 100).draw(Segment(0, 0, 4, 3)).toIPE()
+    assert isinstance(ipe, str)
+    root = ET.fromstring(ipe)  # raises on malformed XML
+    assert root.tag == "ipe"
+
+
+def test_write_ipe_to_file_is_fluent(tmp_path):
+    path = tmp_path / "out.ipe"
+    c = Canvas().size(100, 100).draw(Point(0, 0))
+    assert c.writeIPE(str(path)) is c
+    assert ET.fromstring(path.read_text()).tag == "ipe"
 
 
 # --- _repr_svg_ (inline notebook rendering) ------------------------------

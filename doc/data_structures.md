@@ -31,11 +31,11 @@ The query methods come in two families. The *intersecting* family matches stored
 
 The query shape may be any shape pypgl binds, including one that cannot itself be stored in a tree (e.g. a `Line`).
 
-Other methods: `size()` and `empty()` report the tree's size; `shapes()` returns all stored shapes, in internal order; `contains(shape)` reports whether a shape equal to `shape` is stored (exact membership, not a geometric test); `insert(shape)` adds a shape without rebalancing the tree (raises if `shape` cannot be stored — see below); `erase(shape)` removes one matching shape and reports whether one was found; `rebuild(leaf_size=0)` restores tree quality after many `insert`/`erase` calls (`0` keeps the current leaf size); `nearestNeighbor(query)` returns the stored shape nearest to `query`, or `None` if the tree is empty; `boundingBoxes()` returns every node's bounding box, in pre-order.
+Other methods: `size()` and `empty()` report the tree's size; `shapes()` returns all stored shapes, in internal order; `has(shape)` reports whether a shape equal to `shape` is stored (exact membership, not a geometric test — which is why it is not called `contains`); `insert(shape)` adds a shape without rebalancing the tree (raises if `shape` cannot be stored — see below); `erase(shape)` removes one matching shape and reports whether one was found; `rebuild(leaf_size=0)` restores tree quality after many `insert`/`erase` calls (`0` keeps the current leaf size); `nearestNeighbor(query)` returns the stored shape nearest to `query`, or `None` if the tree is empty (`nearestNeighborL1` / `nearestNeighborLInf` minimize the Manhattan / Chebyshev distance instead); `boundingBoxes()` returns every node's bounding box, in pre-order.
 
-A tree also behaves like a Python container: `len(tree)`, `for shape in tree`, and `shape in tree` (exact membership, same as `contains`).
+A tree also behaves like a Python container: `len(tree)`, `for shape in tree`, and `shape in tree` (exact membership, same as `has`).
 
-Only bounded shapes can be stored — `Point`, `Segment`, `OrientedSegment`, `Triangle`, `Rectangle`, `Convex`, `Polygon`, `Disk`. An unbounded shape (`Line`, `OrientedLine`, `Ray`, `Halfplane`) raises if passed to the constructor or to `insert`, but remains valid as a query shape.
+Only bounded shapes can be stored — `Point`, `Segment`, `OrientedSegment`, `Triangle`, `Rectangle`, `Convex`, `MonotoneChain`, `Polyline`, `Polygon`, `Disk`. An unbounded shape (`Line`, `OrientedLine`, `Ray`, `Halfplane`) raises if passed to the constructor or to `insert`, but remains valid as a query shape.
 
 Drawing a tree with `canvas.draw(tree)` (or its inline rendering in a notebook) renders every node's bounding box.
 
@@ -60,7 +60,7 @@ Construction and predicates are exact. For a polygon, the triangles between it a
 
 - `numVertices()`, `numTriangles()`, `numEdges()`, `empty()` report the triangulation's size.
 
-- `contains(triangle)` / `contains(edge)` report whether a `Triangle`/`Segment` belongs to the triangulation.
+- `has(triangle)` / `has(edge)` report whether a `Triangle`/`Segment` belongs to the triangulation (exact membership, not a geometric test — which is why it is not called `contains`).
 
 - `triangles()` / `edges()` return all triangles / edges, sorted.
 
@@ -68,7 +68,7 @@ Construction and predicates are exact. For a polygon, the triangles between it a
 
 - Navigation: `otherTriangle(triangle, shared)` returns the triangle on the other side of the shared edge, or `None` on a boundary edge; `edgeAdjacentTriangles(triangle)` returns the (up to three) triangles sharing an edge with `triangle`; `vertexAdjacentTriangles(triangle)` returns the triangles sharing at least one vertex with `triangle` (excluding it); `incidentTriangles(edge)` returns the (up to two) triangles incident to `edge`, and `incidentTriangles(vertex)` returns every triangle around a vertex, in rotational order.
 
-- Range searching: `trianglesIntersecting(query)` returns the triangles `t` with `t.intersects(query)`; `trianglesInteriorIntersecting(query)` filters with `t.interiorsIntersect(query)` instead. `edgesIntersecting(query)` / `edgesInteriorIntersecting(query)` return matching edges instead of triangles. `query` may be a `Segment`, `OrientedSegment`, `Line`, `OrientedLine`, `Ray`, `Point`, `Triangle`, `Rectangle`, `Convex`, `Disk`, or `Halfplane`. If `query` is a `Segment`, `OrientedSegment`, `Line`, `OrientedLine`, or `Ray`, the result is ordered along the query; otherwise the order is unspecified.
+- Range searching: `trianglesIntersecting(query)` returns the triangles `t` with `t.intersects(query)`; `trianglesInteriorIntersecting(query)` filters with `t.interiorsIntersect(query)` instead. `edgesIntersecting(query)` / `edgesInteriorIntersecting(query)` return matching edges instead of triangles. `query` may be a `Segment`, `OrientedSegment`, `Line`, `OrientedLine`, `Ray`, `MonotoneChain`, `Polyline`, `Point`, `Triangle`, `Rectangle`, `Convex`, `Disk`, or `Halfplane`. If `query` is one of the five straight shapes (`Segment`, `OrientedSegment`, `Line`, `OrientedLine`, `Ray`) the result is ordered along the query, and if it is a chain (`MonotoneChain`, `Polyline`) the result is ordered edge by edge along the chain; otherwise the order is unspecified.
 
 - `isConstrained(edge)` reports whether an edge is flagged as constrained; `setConstrained(edge, value=True)` sets or clears that flag.
 

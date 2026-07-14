@@ -34,6 +34,18 @@ def test_point_inside_is_exact_and_contained():
     assert c.interiorContains(c.pointInside())
 
 
+def test_point_inside_of_a_non_convex_polygon():
+    # pgl gained a non-convex pointInside (it cuts a diagonal or an ear at a
+    # convex vertex), so an L-shaped polygon -- whose vertex average falls in the
+    # notch, outside the polygon -- still gets an exact interior witness.
+    P = pypgl.Point
+    L = pypgl.Polygon([P(0, 0), P(4, 0), P(4, 1), P(1, 1), P(1, 4), P(0, 4)])
+    assert not L.isConvex()
+    assert L.interiorContains(L.pointInside())
+    # Polygon still has no verticesContain (pgl does not define it there).
+    assert not hasattr(pypgl.Polygon, "verticesContain")
+
+
 def test_vertices_contain():
     s = pypgl.Segment(0, 0, 4, 6)
     assert s.verticesContain(pypgl.Point(0, 0))

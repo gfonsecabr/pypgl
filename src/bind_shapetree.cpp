@@ -16,7 +16,8 @@ using namespace pypgl;
 // shape objects, never a "Shape" object.
 //
 // Only bounded shapes (those with bbox(): Point, Segment, OrientedSegment,
-// Triangle, Rectangle, Convex, Polygon, Disk) can actually be *stored* --
+// Triangle, Rectangle, Convex, MonotoneChain, Polyline, Polygon, Disk) can
+// actually be *stored* --
 // pgl's own Shape::bbox() throws std::logic_error for the four unbounded
 // alternatives (Line, OrientedLine, Ray, Halfplane), and that exception
 // surfaces to Python unmodified (as a RuntimeError), the same way e.g.
@@ -63,8 +64,8 @@ void bind_shapetree(nb::module_ &m) {
             },
             nb::arg("shapes"), nb::arg("leaf_size") = 6,
             "Build a tree over shapes (Point/Segment/OrientedSegment/Triangle/"
-            "Rectangle/Convex/Polygon/Disk, in any mix). leaf_size caps how many "
-            "elements are kept at a node before it is split.");
+            "Rectangle/Convex/MonotoneChain/Polyline/Polygon/Disk, in any mix). "
+            "leaf_size caps how many elements are kept at a node before it is split.");
 
     // ---- sizes / storage -----------------------------------------------
     cls.def("size", [](const ShapeTree &t) { return t.size(); }, "Number of stored shapes.");
@@ -75,7 +76,7 @@ void bind_shapetree(nb::module_ &m) {
     cls.def("__iter__",
             [](const ShapeTree &t) { return nb::make_iterator(nb::type<ShapeTree>(), "Iterator", t.begin(), t.end()); },
             nb::keep_alive<0, 1>());
-    cls.def("__contains__", [](const ShapeTree &t, const AnyShape &shape) { return t.contains(shape); },
+    cls.def("__contains__", [](const ShapeTree &t, const AnyShape &shape) { return t.has(shape); },
             nb::arg("shape"), "Whether a shape equal to shape is stored (exact membership).");
 
     // ---- mutation ---------------------------------------------------------
@@ -87,7 +88,11 @@ void bind_shapetree(nb::module_ &m) {
             "insert()/erase() calls. Pass 0 to keep the current leaf size.");
     cls.def("erase", [](ShapeTree &t, const AnyShape &shape) { return t.erase(shape); }, nb::arg("shape"),
             "Remove one shape equal to shape; returns whether one was found.");
-    cls.def("contains", [](const ShapeTree &t, const AnyShape &shape) { return t.contains(shape); },
+    // Exact membership, named `has` to mirror pgl (which renamed it from
+    // contains() so that a spatial index's "do you store this shape" never
+    // reads like a shape's geometric contains(); pypgl's `shape in tree` sugar
+    // above is the same query).
+    cls.def("has", [](const ShapeTree &t, const AnyShape &shape) { return t.has(shape); },
             nb::arg("shape"), "Whether a shape equal to shape is stored (exact membership).");
 
     // ---- spatial queries ----------------------------------------------------

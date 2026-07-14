@@ -36,8 +36,10 @@ using Rectangle = pgl::ERectangle;                 // pgl::Rectangle<EPoint>
 using Convex = pgl::EConvex;                        // pgl::Convex<EPoint>
 using Polygon = pgl::EPolygon;                      // pgl::Polygon<EPoint>
 using Disk = pgl::EDisk;                            // pgl::Disk<EPoint>
+using MonotoneChain = pgl::EMonotoneChain;          // pgl::MonotoneChain<EPoint>
+using Polyline = pgl::EPolyline;                    // pgl::Polyline<EPoint>
 
-// Type-erased wrapper over one of the twelve shapes above (shape/shape.hpp).
+// Type-erased wrapper over one of the fourteen shapes above (shape/shape.hpp).
 // Only used as ShapeTree's element/query type (bind_shapetree.cpp) -- see the
 // casters.h caster for pgl::Shape<EPoint>, which is what keeps this wrapper
 // itself unbound and invisible from Python.
@@ -212,7 +214,7 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
             },                                                              \
             nb::arg("other"))
 
-// squaredDistance of SelfT against every bound shape (all eleven, including
+// squaredDistance of SelfT against every bound shape (all fourteen, including
 // itself). pgl makes every pair available (an explicit overload on the
 // higher-rank shape plus rank-based forwarding on the lower-rank one), so
 // every shape in this list can safely call the macro on itself and on each
@@ -232,10 +234,12 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_SQDIST(cls, SelfT, ::pypgl::Triangle);                  \
     PGL_SQDIST(cls, SelfT, ::pypgl::Rectangle);                 \
     PGL_SQDIST(cls, SelfT, ::pypgl::Convex);                    \
+    PGL_SQDIST(cls, SelfT, ::pypgl::MonotoneChain);             \
+    PGL_SQDIST(cls, SelfT, ::pypgl::Polyline);                  \
     PGL_SQDIST(cls, SelfT, ::pypgl::Polygon);                    \
     PGL_SQDIST(cls, SelfT, ::pypgl::Disk)
 
-// Bind the seven predicates of SelfT against every bound shape (all eleven,
+// Bind the seven predicates of SelfT against every bound shape (all fourteen,
 // including itself), so the full pair matrix is exposed. Every pgl shape
 // declares all seven predicates against every other concrete shape (explicit
 // overloads plus a rank-based forwarding template), so each pair compiles;
@@ -253,11 +257,13 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Triangle);       \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Rectangle);      \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Convex);         \
+    PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::MonotoneChain);  \
+    PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Polyline);       \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Polygon);        \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Disk)
 
 // distanceL1/distanceLInf of SelfT against every *non-Disk* bound shape (all
-// eleven, including itself). Unlike squaredDistance, pgl does not (yet) give
+// thirteen, including itself). Unlike squaredDistance, pgl does not (yet) give
 // Disk a closed form against anything but Point (doc/todo.md: "L1 / LInf
 // distance to and from Disk") -- so Disk is deliberately left out of this
 // macro. The Point<->Disk pair is bound by hand in bind_point.cpp/
@@ -273,6 +279,8 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Triangle);          \
     PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Rectangle);         \
     PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Convex);            \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::MonotoneChain);     \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Polyline);          \
     PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Polygon);           \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Point);           \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Segment);         \
@@ -284,6 +292,8 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Triangle);        \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Rectangle);       \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Convex);          \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::MonotoneChain);   \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Polyline);        \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Polygon)
 
 // squaredHausdorffDistance / hausdorffDistanceL1 / hausdorffDistanceLInf of

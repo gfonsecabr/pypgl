@@ -103,7 +103,7 @@ void bind_transformation(nb::module_ &m) {
     cls.def("__mul__", [](const Transformation &a, const Transformation &b) { return a * b; }, nb::is_operator());
 
     // Application to a shape: pgl defines operator* for every shape except
-    // Rectangle and Disk (see the file comment above) -- ten overloads here.
+    // Rectangle and Disk (see the file comment above) -- twelve overloads here.
     cls.def("__mul__", [](const Transformation &t, const Point &s) { return t * s; }, nb::is_operator());
     cls.def("__mul__", [](const Transformation &t, const Segment &s) { return t * s; }, nb::is_operator());
     cls.def("__mul__", [](const Transformation &t, const OrientedSegment &s) { return t * s; }, nb::is_operator());
@@ -113,5 +113,7 @@ void bind_transformation(nb::module_ &m) {
     cls.def("__mul__", [](const Transformation &t, const Halfplane &s) { return t * s; }, nb::is_operator());
     cls.def("__mul__", [](const Transformation &t, const Triangle &s) { return t * s; }, nb::is_operator());
     cls.def("__mul__", [](const Transformation &t, const Convex &s) { return t * s; }, nb::is_operator());
+    cls.def("__mul__", [](const Transformation &t, const MonotoneChain &s) { return t * s; }, nb::is_operator());
+    cls.def("__mul__", [](const Transformation &t, const Polyline &s) { return t * s; }, nb::is_operator());
     cls.def("__mul__", [](const Transformation &t, const Polygon &s) { return t * s; }, nb::is_operator());
 }

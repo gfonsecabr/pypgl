@@ -33,7 +33,7 @@ if(NOT PGL_INCLUDE_DIR)
     # release tag once pgl publishes them.
     FetchContent_Declare(pgl
       GIT_REPOSITORY https://github.com/gfonsecabr/pgl
-      GIT_TAG        3b0729bc060997832524ac80bf22b2a40b0abd0f)
+      GIT_TAG        91b671403277353af72fa7ca4607436e7fc8b79c)
     FetchContent_MakeAvailable(pgl)
     set(PGL_INCLUDE_DIR "${pgl_SOURCE_DIR}/include")
   endif()
@@ -48,6 +48,7 @@ nanobind_add_module(_pgl
   src/bind_lines.cpp
   src/bind_polygons.cpp
   src/bind_polygon.cpp
+  src/bind_chains.cpp
   src/bind_disk.cpp
   src/bind_triangulation.cpp
   src/bind_shapetree.cpp

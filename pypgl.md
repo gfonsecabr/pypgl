@@ -94,7 +94,8 @@ variant wrapper. The `Shape::Variant`
 
 ```
 Point, Segment, OrientedSegment, Line, OrientedLine, Ray,
-Halfplane, Rectangle, Triangle, Convex, Disk, Polygon
+Halfplane, Rectangle, Triangle, Convex, Disk,
+MonotoneChain, Polyline, Polygon
 ```
 
 The seven predicates are uniform across shapes and bound on every class:
@@ -164,6 +165,7 @@ pypgl/                      # separate repo; pgl is fetched, not vendored
     bind_segment.cpp
     bind_lines.cpp          # Line / OrientedLine / Ray / Halfplane
     bind_polygons.cpp       # Triangle / Rectangle / Convex
+    bind_chains.cpp         # MonotoneChain / Polyline
     bind_canvas.cpp
     # bind_disk.cpp, bind_polygon.cpp  (experimental, later)
   pgl/

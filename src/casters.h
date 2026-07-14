@@ -149,10 +149,10 @@ struct type_caster<pgl::ERational> {
 // spatial index that holds a mix of shape types needs a type-erased element,
 // and pgl::Shape<PointType> is exactly that. This caster type-erases on the
 // way in and re-wraps on the way out, so Python code never sees pgl::Shape
-// itself -- only whichever of the twelve concrete classes was actually stored
+// itself -- only whichever of the fourteen concrete classes was actually stored
 // or passed as a query.
 //
-// Py->C++: probes each of the twelve bound classes in turn with an exact,
+// Py->C++: probes each of the fourteen bound classes in turn with an exact,
 // non-converting try_cast; the first match wins. try_cast checks the actual
 // Python type rather than attempting any implicit conversion, so unlike the
 // Triangulation Polygon/point-list overload-order pitfall (see
@@ -173,7 +173,8 @@ struct type_caster<pgl::Shape<pgl::EPoint>> {
     using Shape = pgl::Shape<pgl::EPoint>;
     NB_TYPE_CASTER(Shape,
                     const_name("Point | Segment | OrientedSegment | Line | OrientedLine | "
-                                "Ray | Halfplane | Triangle | Rectangle | Convex | Polygon | Disk"))
+                                "Ray | Halfplane | Triangle | Rectangle | Convex | MonotoneChain | "
+                                "Polyline | Polygon | Disk"))
 
     template <class T>
     bool try_alternative(handle src) noexcept {
@@ -195,6 +196,8 @@ struct type_caster<pgl::Shape<pgl::EPoint>> {
                try_alternative<pgl::ETriangle>(src) ||
                try_alternative<pgl::ERectangle>(src) ||
                try_alternative<pgl::EConvex>(src) ||
+               try_alternative<pgl::EMonotoneChain>(src) ||
+               try_alternative<pgl::EPolyline>(src) ||
                try_alternative<pgl::EPolygon>(src) ||
                try_alternative<pgl::EDisk>(src);
     }

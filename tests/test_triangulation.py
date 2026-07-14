@@ -22,10 +22,12 @@ from pypgl import (
     Disk,
     Halfplane,
     Line,
+    MonotoneChain,
     OrientedLine,
     OrientedSegment,
     Point,
     Polygon,
+    Polyline,
     Ray,
     Rectangle,
     Segment,
@@ -195,15 +197,15 @@ def test_sizes_match_a_triangulated_square():
     assert t.numEdges() == 5  # 4 boundary + 1 diagonal
 
 
-def test_contains_triangle_and_edge():
+def test_has_triangle_and_edge():
     t = Triangulation(_square_points())
     tri = t.triangles()[0]
-    assert t.contains(tri)
-    assert not t.contains(Triangle(Point(100, 100), Point(101, 100), Point(100, 101)))
+    assert t.has(tri)
+    assert not t.has(Triangle(Point(100, 100), Point(101, 100), Point(100, 101)))
 
     edge = t.edges()[0]
-    assert t.contains(edge)
-    assert not t.contains(Segment(Point(100, 100), Point(101, 101)))
+    assert t.has(edge)
+    assert not t.has(Segment(Point(100, 100), Point(101, 101)))
 
 
 # --- navigation ---------------------------------------------------------------
@@ -244,6 +246,21 @@ def test_triangles_intersecting_segment_and_line():
     hit = t.trianglesIntersecting(seg)
     assert len(hit) == 2  # crosses both triangles of the square
     assert t.trianglesIntersecting(Line(Point(-1, -1), Point(5, 5))) != []
+
+
+def test_triangles_intersecting_a_chain():
+    # A chain is neither straight nor convex, so pgl gives it its own traversal:
+    # the directed walk run over each edge in turn, in chain order.
+    t = Triangulation(_square_points())
+    # A zigzag polyline that dips across the (0,0)-(4,4) diagonal and back.
+    zigzag = Polyline([Point(1, 3), Point(3, 1), Point(3, 3)])
+    assert len(t.trianglesIntersecting(zigzag)) == 2
+    assert t.edgesIntersecting(zigzag) != []
+    # A monotone chain along the diagonal itself meets both triangles.
+    diagonal = MonotoneChain([Point(0, 0), Point(4, 4)])
+    assert len(t.trianglesIntersecting(diagonal)) == 2
+    # ...but only along their shared boundary, so neither interior is met.
+    assert t.trianglesInteriorIntersecting(diagonal) == []
 
 
 def test_triangles_intersecting_region_shapes():
@@ -329,8 +346,8 @@ def test_flip_single_edge_round_trips():
     diag = diag[0]
     new_diag = t.flip(diag)
     assert new_diag is not None
-    assert not t.contains(diag)
-    assert t.contains(new_diag)
+    assert not t.has(diag)
+    assert t.has(new_diag)
     # Flipping back restores the original diagonal.
     assert t.flip(new_diag) == diag
 
