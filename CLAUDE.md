@@ -329,7 +329,12 @@ shape, by the shapes drawn *after* the call. Each is bound twice, once taking
 the string pgl takes and once taking a plain number (disjoint types, so the
 overloads never collide). Canvas also gained `toPDF()`/`writePDF(path)` and
 `toIPE()`/`writeIPE(path)` alongside the SVG pair; **`toPDF()` returns `bytes`,
-not `str`** — pgl's `std::string` there is a binary buffer, not text.
+not `str`** — pgl's `std::string` there is a binary buffer, not text. None of
+the three `write*` methods is fluent: all return `None`, mirroring pgl, where
+each returns `void`. (`writePDF`/`writeIPE` briefly returned `Canvas&` upstream,
+and pypgl 0.3.0 shipped them fluent because of it, before pgl made the trio
+consistent — so 0.3.1 is a small breaking change for anyone who chained off
+them.)
 
 `Polygon.pointInside()` is now bound: pgl implements it for a non-convex polygon
 (it cuts a diagonal or an ear at a convex vertex), which it previously did not.

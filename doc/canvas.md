@@ -162,7 +162,7 @@ settings. They are now per-shape [style](#style) commands.)
 ### Export formats
 
 A canvas renders the same fitted drawing to three formats. Each `write*` method
-raises if the file cannot be opened.
+returns `None` and raises if the file cannot be opened.
 
 | Method | Result |
 | --- | --- |
@@ -177,9 +177,6 @@ canvas.writeSVG("figure.svg")
 canvas.writePDF("figure.pdf")
 canvas.writeIPE("figure.ipe")
 ```
-
-`writePDF` and `writeIPE` return the canvas (so they chain), but `writeSVG`
-returns `None`.
 
 ### Inline display in Jupyter
 

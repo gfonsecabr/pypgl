@@ -153,6 +153,11 @@ void bind_canvas(nb::module_ &m) {
     // XML (ipe.otfried.org, a vector editor common in computational geometry).
     // toPDF returns `bytes`, not `str` -- a PDF is binary, and pgl's std::string
     // there is a byte buffer, not text (the other two are genuine text).
+    //
+    // None of the three write* methods is fluent: all return None, mirroring
+    // pgl, where every write* returns void. (writePDF/writeIPE briefly returned
+    // Canvas& upstream -- and pypgl 0.3.0 shipped them fluent because of it --
+    // until pgl made the trio consistent.)
     cls.def("toSVG", [](const pgl::Canvas &c) { return c.toSVG(); },
             "Serialize the canvas to a complete SVG document string.");
     cls.def("writeSVG", [](const pgl::Canvas &c, const std::string &path) { c.writeSVG(path); },
@@ -163,20 +168,10 @@ void bind_canvas(nb::module_ &m) {
                 return nb::bytes(pdf.data(), pdf.size());
             },
             "Serialize the canvas to a complete PDF document (bytes).");
-    cls.def("writePDF",
-            [](pgl::Canvas &c, const std::string &path) -> pgl::Canvas & {
-                c.writePDF(path);
-                return c;
-            },
-            nb::arg("path"), nb::rv_policy::reference_internal,
-            "Write the PDF document to a file (raises if it cannot be opened) and return the canvas.");
+    cls.def("writePDF", [](const pgl::Canvas &c, const std::string &path) { c.writePDF(path); },
+            nb::arg("path"), "Write the PDF document to a file (raises if it cannot be opened).");
     cls.def("toIPE", [](const pgl::Canvas &c) { return c.toIPE(); },
             "Serialize the canvas to a complete Ipe (.ipe) XML document string.");
-    cls.def("writeIPE",
-            [](pgl::Canvas &c, const std::string &path) -> pgl::Canvas & {
-                c.writeIPE(path);
-                return c;
-            },
-            nb::arg("path"), nb::rv_policy::reference_internal,
-            "Write the Ipe XML document to a file (raises if it cannot be opened) and return the canvas.");
+    cls.def("writeIPE", [](const pgl::Canvas &c, const std::string &path) { c.writeIPE(path); },
+            nb::arg("path"), "Write the Ipe XML document to a file (raises if it cannot be opened).");
 }

@@ -223,10 +223,9 @@ def test_to_pdf_returns_bytes():
     assert pdf.startswith(b"%PDF-")
 
 
-def test_write_pdf_to_file_is_fluent(tmp_path):
+def test_write_pdf_to_file(tmp_path):
     path = tmp_path / "out.pdf"
-    c = Canvas().size(100, 100).draw(Point(0, 0))
-    assert c.writePDF(str(path)) is c
+    Canvas().size(100, 100).draw(Point(0, 0)).writePDF(str(path))
     assert path.read_bytes().startswith(b"%PDF-")
 
 
@@ -237,11 +236,17 @@ def test_to_ipe_is_valid_xml():
     assert root.tag == "ipe"
 
 
-def test_write_ipe_to_file_is_fluent(tmp_path):
+def test_write_ipe_to_file(tmp_path):
     path = tmp_path / "out.ipe"
-    c = Canvas().size(100, 100).draw(Point(0, 0))
-    assert c.writeIPE(str(path)) is c
+    Canvas().size(100, 100).draw(Point(0, 0)).writeIPE(str(path))
     assert ET.fromstring(path.read_text()).tag == "ipe"
+
+
+@pytest.mark.parametrize("method", ["writeSVG", "writePDF", "writeIPE"])
+def test_write_methods_are_not_fluent(tmp_path, method):
+    # Every write* returns None, mirroring pgl, where each returns void.
+    c = Canvas().size(100, 100).draw(Point(0, 0))
+    assert getattr(c, method)(str(tmp_path / "out")) is None
 
 
 # --- _repr_svg_ (inline notebook rendering) ------------------------------
