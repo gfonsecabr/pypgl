@@ -77,6 +77,21 @@ print("The diameter of", c,
 # Output: The diameter of Convex[(0,0),(1,0),(1,2),(0,1)] is defined by (0,0)--(1,2) and has length 2.23607
 ```
 
+Distances come in the Euclidean (`squaredDistance`, exact and therefore squared),
+Manhattan (`distanceL1`) and Chebyshev (`distanceLInf`) flavors, each with a
+`Hausdorff` variant between shapes.
+
+Shapes are moved around with `+`/`-`/`*`/`/`, and an arbitrary affine map is
+applied with a [`Transformation`](doc/shape_methods.md#transformations):
+
+```python
+import pypgl as pgl
+
+t = pgl.Transformation.rotation90() * pgl.Transformation.translation(2, 0)
+print(t * pgl.Segment(0, 0, 5, 5))
+# Output: (-5,7)--(0,2)
+```
+
 ## Visualization
 
 A `Canvas` class is provided for [visualization](doc/canvas.md), exporting to SVG, PDF, or [Ipe](https://ipe.otfried.org/):
@@ -109,8 +124,10 @@ PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](d
   detection predicates, all using rational numbers.
 - Sort points: in place by angle (`sortAround`) or Hilbert order (`hilbertSort`).
 - Polyomino enumeration: hole-free free polyominoes as `Polygon` objects.
-- Kd-tree: for points and a generalization for other bounded shapes.
-- Triangulation: including Delaunay and constrained Delaunay triangulations for points and polygons.
+- `ShapeTree`: a kd-tree for points, generalized to a mix of any bounded shapes,
+  answering range and nearest-neighbor queries.
+- `Triangulation`: including Delaunay and constrained Delaunay triangulations for
+  points and polygons, with traversal queries and incremental insertion.
 
 
 ## Installation
@@ -163,5 +180,5 @@ instead of the pinned upstream commit:
 ## More Information
 
 - For a brief description, check the documents at the [doc folder](doc/).
-- For some simple examples, check the files at the [examples folder](examples/).
+- Shapes and canvases render inline in a Jupyter notebook — see [canvas.md](doc/canvas.md#inline-display-in-jupyter).
 - Check the [C++ version](https://github.com/gfonsecabr/pgl).

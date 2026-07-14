@@ -48,10 +48,11 @@ Drawing a tree with `canvas.draw(tree)` (or its inline rendering in a notebook) 
 
 ### Triangulation
 
-`Triangulation` stores a mutable triangulation of either a fixed polygon or a fixed point set: the vertex coordinates are fixed at construction, only the connectivity changes.
+`Triangulation` stores a mutable triangulation of a polygon or of a point set: the connectivity changes with every `flip`, and `insert` adds vertices, but a vertex is never moved.
 
 - `Triangulation()` creates an empty triangulation.
 - `Triangulation(points)` builds the Delaunay triangulation of a list of points.
+- `Triangulation(points, segments)` builds the conforming constrained Delaunay triangulation of a point set with constraint segments: the vertices are the points together with the segments' endpoints, every segment appears as a constrained edge, and — unlike the polygon constructors — nothing is carved away, so the domain is the whole convex hull. The segments must be pairwise non-crossing (sharing an endpoint is fine).
 - `Triangulation(triangles)` builds a triangulation from an explicit set of triangles tiling a region without overlaps.
 - `Triangulation(edges)` builds a triangulation from an explicit set of edges (every bounded face must be a triangle).
 - `Triangulation(polygon, points=[], segments=[])` builds the constrained Delaunay triangulation of a simple polygon (convex or not), optionally adding interior points as extra vertices and/or interior segments as constrained edges — both are assumed, not checked, to lie inside `polygon`. `polygon.triangulation()` and `polygon.triangulation(segments)` are shortcuts for this.
@@ -72,7 +73,13 @@ Construction and predicates are exact. For a polygon, the triangles between it a
 
 - `isConstrained(edge)` reports whether an edge is flagged as constrained; `setConstrained(edge, value=True)` sets or clears that flag.
 
-- `flip(edge)` replaces `edge` by the opposite diagonal, returning the new edge, or `None` if the flip cannot be performed (non-convex quadrilateral or a constrained edge). `flippable(edge)` reports whether the flip is possible, without performing it. Both also accept a list of edges, flipping them all at once if the whole set is simultaneously flippable (all-or-nothing), or returning `None`/`False` otherwise. `flip` is the only method that mutates the triangulation.
+- `flip(edge)` replaces `edge` by the opposite diagonal, returning the new edge, or `None` if the flip cannot be performed (non-convex quadrilateral or a constrained edge). `flippable(edge)` reports whether the flip is possible, without performing it. Both also accept a list of edges, flipping them all at once if the whole set is simultaneously flippable (all-or-nothing), or returning `None`/`False` otherwise.
+
+- `insert(point)` adds `point` as a new vertex, subdividing the triangle or edge that contains it; a point outside the convex hull grows the hull, joining `point` to every hull edge it sees (a constrained hull edge stays constrained and becomes interior). It returns `False`, leaving the triangulation unchanged, only if `point` is already a vertex or the triangulation is empty. `insertDelaunay(point)` does the same and then restores the constrained Delaunay property around the new vertex by Lawson flips (never flipping a constrained edge), so a triangulation that was constrained Delaunay stays constrained Delaunay.
+
+  For a triangulation built from a polygon, `point` **must lie in the closed polygon** — exactly like the constructor's extra points. Inserting one outside it (in the region carved away between the polygon and its hull, or beyond the hull) is undefined behavior, and it is *not* checked: the C++ contract is mirrored as-is, so a bad point silently corrupts the mesh rather than raising.
+
+`flip`, `insert`, `insertDelaunay` and `setConstrained` are the only methods that mutate the triangulation; the vertex coordinates themselves are fixed at construction, except that `insert`/`insertDelaunay` add new ones.
 
 - `checkInvariants()` checks the structural invariants (orientation and neighbor symmetry); intended for debugging.
 

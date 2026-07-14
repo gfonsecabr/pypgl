@@ -80,16 +80,56 @@ t = 3 * (s - p) + p           # t = (0,1)--(6,7)
 ```
 
 **Mutability.** The fixed-size shapes (`Point`, `Segment`, `OrientedSegment`,
-`Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`, `Rectangle`) are
+`Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`, `Rectangle`, `Disk`) are
 immutable and hashable, like `tuple` or `fractions.Fraction`: every operator
 returns a *new* shape, so `s += p` rebinds `s` and leaves any earlier copy — for
-instance one used as a `dict` key — untouched. `Convex` (and, later, `Polygon`)
-is variable-size and is instead **mutable**: it keeps a lazy translation offset
-so `c += p` translates in O(1) regardless of the vertex count. Because it is
-mutable it is **unhashable** (it cannot be a `dict` key or `set` member), exactly
-as Python's own `list`/`set` are — this is what prevents a shape from being
-silently corrupted while stored in a container. For `Convex`, `c + p` still
-returns a new hull (an O(n) copy) when you want one.
+instance one used as a `dict` key — untouched. The variable-size shapes
+(`Convex`, `Polygon`, `MonotoneChain`, `Polyline`) are instead **mutable**: each
+keeps a lazy translation offset, so `c += p` translates in O(1) regardless of the
+vertex count. Because they are mutable they are **unhashable** (they cannot be a
+`dict` key or `set` member), exactly as Python's own `list`/`set` are — this is
+what prevents a shape from being silently corrupted while stored in a container.
+`c + p` still returns a new shape (an O(n) copy) when you want one.
+
+### Transformations
+
+`Transformation` is a general affine map of the plane — a 2x2 linear part plus a
+translation, stored as a 2x3 matrix. The same `*` operator applies it to a shape
+and composes it with another transformation, always with the transformation on
+the left, so `t1 * t2 * shape` composes and applies left to right, with the
+right-hand transformation applied first:
+
+```python
+s = pgl.Segment(0, 0, 5, 5)
+t = pgl.Transformation.rotation90(1) * pgl.Transformation.translation(2, 0)
+print(t * s)   # (-5,7)--(0,2): translated first, then rotated
+```
+
+The factories cover the exact cases: `identity()`, `translation(dx, dy)`,
+`scaling(sx, sy)` (or `scaling(s)` for a uniform one), `rotation90(k=1)`,
+`shearX(k)`, `shearY(k)`, `reflectionX()`, `reflectionY()`. A transformation can
+also be built from its six matrix entries directly,
+`Transformation(a, b, c, d, tx=0, ty=0)`, mapping `(x, y)` to
+`(a*x + b*y + tx, c*x + d*y + ty)`, and read back through `a()`, `b()`, `c()`,
+`d()`, `tx()`, `ty()`. An arbitrary-angle rotation is deliberately **not**
+bound: it is irrational for a general angle, and `pypgl` is exact throughout.
+
+`determinant()` is negative exactly when the transformation reverses orientation
+(a reflection, or an odd number of shears and reflections composed together).
+Shapes with a winding or normalization invariant (`Triangle`, `Convex`,
+`MonotoneChain`, `Polygon`) renormalize themselves, and `Halfplane` swaps its
+source and target to keep the same interior, so the result of `t * shape` is
+always a well-formed shape of the same class.
+
+`isInvertible()` reports whether the determinant is nonzero, and `inverse()`
+returns the inverse transformation — raising `ValueError` on a singular one
+rather than dividing by zero. Coordinates are exact rationals, so the inverse is
+exact too.
+
+Applying a transformation to a `Rectangle` or a `Disk` raises `TypeError`: a
+general affine map turns a rectangle into a parallelogram and a disk into an
+ellipse, and neither class can represent that. (This is what the underlying C++
+reports as a compile error.) Every other shape is accepted.
 
 ### Intersection
 
@@ -121,13 +161,19 @@ elif isinstance(isec, pgl.Segment):
     print(isec)   # (2,0)--(4,0)
 ```
 
-> `intersection` is currently bound for pairs whose result is a point or a 1D
-> shape, plus `Polygon`'s own matrix (see [../CLAUDE.md](../CLAUDE.md)'s
-> Project status section for what's covered and what's still deferred).
+A chain (`Polyline`, `MonotoneChain`) can meet even a straight shape in
+arbitrarily many disjoint places, so `chain.intersection(s)` returns a *list* of
+`Point` and `Segment` pieces instead of a single object; a `Polygon` likewise
+returns a list, of the `Point` pieces of a 1D intersection.
+
+> `intersection` is currently bound for every pair whose result is a point or a
+> 1D shape, plus the full `Polygon` matrix. The intersection of two
+> 2-dimensional shapes among `Triangle`, `Rectangle` and `Convex`, and of a
+> chain with a `Disk` or a `Polygon`, are still missing — see [todo.md](todo.md).
 
 ### Other Methods for Shapes
 
-The transforms come in two flavours. The value-returning forms below return a
+The transforms come in two flavors. The value-returning forms below return a
 new shape and are available on **every** shape:
 
 - `rotated90(k=1)`: Returns the shape rotated by `90k` degrees around the
@@ -148,23 +194,42 @@ new shape and are available on **every** shape:
 The matching in-place forms — `rotate90(k=1)`, `scaleUpX(scalar)`,
 `scaleUpY(scalar)`, `scaleDownX(scalar)`, `scaleDownY(scalar)` — mutate the shape
 and return `None`. Since only the mutable shapes may be modified in place, these
-are bound on `Convex` (and, later, `Polygon`) only; on the immutable fixed-size
-shapes use the value-returning forms above.
+are bound on `Convex`, `Polygon`, `MonotoneChain` and `Polyline` only; on the
+immutable shapes use the value-returning forms above. An arbitrary affine map is
+applied with a [`Transformation`](#transformations).
 
 - `squaredDistance(Shape)`: Returns the exact squared Euclidean distance as a
   `Fraction`. Because `pypgl` is exact throughout, the result is always exact —
   there is no result-type parameter and no truncation. The squared distance,
   rather than the distance itself, is exposed because the distance is generally
   irrational; `Point.distance` is available when an approximate `float` is
-  wanted.
+  wanted. The one exception is a distance involving a `Disk`, which is
+  irrational in general and therefore returns a `float`.
 
-- `squaredHausdorffDistance(Shape)`: Returns the exact squared Hausdorff distance
-  as a `Fraction`.
+- `distanceL1(Shape)` / `distanceLInf(Shape)`: Return the exact Manhattan (L1) or
+  Chebyshev (LInf) distance as a `Fraction`. Unlike the Euclidean case these are
+  rational, so the distance itself is exposed rather than its square. Defined for
+  every pair of shapes except those involving a `Disk`, where only
+  `Point`-to-`Disk` exists so far (and returns a `float`, being irrational in
+  general).
+
+- `squaredHausdorffDistance(Shape)`, `hausdorffDistanceL1(Shape)` /
+  `hausdorffDistanceLInf(Shape)`: Return the exact Hausdorff distance in the same
+  three metrics, with the same squared/unsquared convention as above. **These are
+  the standard *symmetric* Hausdorff distance** — `max(h(A, B), h(B, A))` — so
+  `a.squaredHausdorffDistance(b)` always equals `b.squaredHausdorffDistance(a)`,
+  even though the call reads like a directed measure from `a` to `b`. They are
+  defined for the bounded convex shapes only (`Point`, `Segment`,
+  `OrientedSegment`, `Rectangle`, `Triangle`, `Convex`), where the distance is
+  always attained at a vertex; the unbounded shapes have no Hausdorff distance at
+  all, and `Disk`, `Polygon`, `Polyline` and `MonotoneChain` do not have these
+  methods.
 
 - `bbox()`: Returns the minimum axis-aligned bounding box as a `Rectangle`.
   Defined for the bounded shapes (`Point`, `Segment`, `OrientedSegment`,
-  `Triangle`, `Rectangle`, `Convex`); the unbounded shapes (`Line`,
-  `OrientedLine`, `Ray`, `Halfplane`) have no bounding box.
+  `Triangle`, `Rectangle`, `Disk`, `Convex`, `Polygon`, `MonotoneChain`,
+  `Polyline`); the unbounded shapes (`Line`, `OrientedLine`, `Ray`, `Halfplane`)
+  have no bounding box.
 
 - `area()`: Returns the area.
 
@@ -175,7 +240,7 @@ shapes use the value-returning forms above.
 - `pointInside()`: Returns an exact point in the (relative) interior of the
   shape. Available on every shape except `Point` (a point has no interior).
 
-- `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points. Available on every shape except `Point`.
+- `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points. Available on every shape except `Point` and `Polygon`; on a `Polygon`, use `p.index(point) is not None` instead.
 
 ## Iterating
 

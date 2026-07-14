@@ -486,9 +486,15 @@ A polygon `P` has methods such as:
 
 - `P.isDegenerate()`: Returns true if the polygon has null area.
 - `P.isSimple()`: Returns true if the edges only intersect at the endpoints of consecutive edges. Takes $O(n \log n)$ time for $n$ edges.
+- `P.isConvex()`: Returns true if the polygon is convex, possibly with vertices subdividing convex hull edges. Takes $O(n)$ time.
+- `P.untangle()`: Makes the polygon simple in place, returning `None`. Edges that cross are flipped, and when a flip is blocked by collinear vertices the offending vertex is removed instead, so the vertex set may shrink. On return `P.isSimple()` holds. Worst-case complexity is high.
 - `P.pointInside()`: Returns an exact point strictly inside the polygon, even a non-convex one (the vertex average would not do: it can fall in a notch, outside the polygon).
+- `P.triangulation()` / `P.triangulation(segments)`: Returns the constrained Delaunay [`Triangulation`](data_structures.md#triangulation) of the polygon, optionally with extra constrained edges.
 
-- Other methods:
+`P` is not convex in general, so it has neither a Hausdorff distance nor
+`verticesContain` (use `P.index(point) is not None` for the latter).
+
+- Other methods: area, bbox, boundaryContains, centroid, contains, crosses, diameter, distanceL1, distanceLInf, edges, get, index, interiorContains, interiorsIntersect, intersection, intersects, orientedEdges, rotate90, rotated90, scaleDownX, scaleDownY, scaleUpX, scaleUpY, scaledDownX, scaledDownY, scaledUpX, scaledUpY, separates, size, squaredDistance, twiceArea, vertices, verticesCentroid.
 
 
 ### Convex
