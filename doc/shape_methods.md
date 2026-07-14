@@ -1,3 +1,5 @@
+<!-- AUTO-GENERATED from doc/raw/shape_methods.md by doc/raw/doxylink.py — do not edit; edit the raw version and regenerate. -->
+
 <img align="left" src="figures/logo.png" width="23%"/>
 
 <picture>
@@ -79,12 +81,12 @@ p = s.midpoint()              # p = (3,4)
 t = 3 * (s - p) + p           # t = (0,1)--(6,7)
 ```
 
-**Mutability.** The fixed-size shapes (`Point`, `Segment`, `OrientedSegment`,
-`Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`, `Rectangle`, `Disk`) are
+**Mutability.** The fixed-size shapes ([`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."), [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label."), [`OrientedSegment`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedSegment.html "Directed segment preserving source-to-target order plus optional segment label."),
+[`Line`](https://gfonsecabr.github.io/pgl/structpgl_1_1Line.html "Unoriented infinite line."), [`OrientedLine`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedLine.html "Directed infinite line with left/right side semantics plus optional line label."), [`Ray`](https://gfonsecabr.github.io/pgl/structpgl_1_1Ray.html "Half-infinite line starting from one source point plus optional ray label."), [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line."), [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.")) are
 immutable and hashable, like `tuple` or `fractions.Fraction`: every operator
 returns a *new* shape, so `s += p` rebinds `s` and leaves any earlier copy — for
 instance one used as a `dict` key — untouched. The variable-size shapes
-(`Convex`, `Polygon`, `MonotoneChain`, `Polyline`) are instead **mutable**: each
+([`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect.")) are instead **mutable**: each
 keeps a lazy translation offset, so `c += p` translates in O(1) regardless of the
 vertex count. Because they are mutable they are **unhashable** (they cannot be a
 `dict` key or `set` member), exactly as Python's own `list`/`set` are — this is
@@ -93,7 +95,7 @@ what prevents a shape from being silently corrupted while stored in a container.
 
 ### Transformations
 
-`Transformation` is a general affine map of the plane — a 2x2 linear part plus a
+[`Transformation`](https://gfonsecabr.github.io/pgl/structpgl_1_1Transformation.html "Affine transformation stored as a 2x3 matrix.") is a general affine map of the plane — a 2x2 linear part plus a
 translation, stored as a 2x3 matrix. The same `*` operator applies it to a shape
 and composes it with another transformation, always with the transformation on
 the left, so `t1 * t2 * shape` composes and applies left to right, with the
@@ -116,8 +118,8 @@ bound: it is irrational for a general angle, and `pypgl` is exact throughout.
 
 `determinant()` is negative exactly when the transformation reverses orientation
 (a reflection, or an odd number of shears and reflections composed together).
-Shapes with a winding or normalization invariant (`Triangle`, `Convex`,
-`MonotoneChain`, `Polygon`) renormalize themselves, and `Halfplane` swaps its
+Shapes with a winding or normalization invariant ([`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."),
+[`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices.")) renormalize themselves, and [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line.") swaps its
 source and target to keep the same interior, so the result of `t * shape` is
 always a well-formed shape of the same class.
 
@@ -126,7 +128,7 @@ returns the inverse transformation — raising `ValueError` on a singular one
 rather than dividing by zero. Coordinates are exact rationals, so the inverse is
 exact too.
 
-Applying a transformation to a `Rectangle` or a `Disk` raises `TypeError`: a
+Applying a transformation to a [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.") or a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") raises `TypeError`: a
 general affine map turns a rectangle into a parallelogram and a disk into an
 ellipse, and neither class can represent that. (This is what the underlying C++
 reports as a compile error.) Every other shape is accepted.
@@ -136,7 +138,7 @@ reports as a compile error.) Every other shape is accepted.
 The intersection of two shapes is returned directly as a Python object. The
 result is `None` when the shapes do not meet, and otherwise the concrete shape
 of the intersection — which may depend on the two operands (the intersection of
-two segments, for example, may be a `Point` or a `Segment`). There are no
+two segments, for example, may be a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") or a [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label.")). There are no
 sentinels or wrappers: you test for `None` and otherwise use the object directly.
 
 ```python
@@ -148,7 +150,7 @@ if isec is not None:
     print(isec)   # (3,3)
 ```
 
-Overlapping collinear segments instead yield a `Segment`, so branch on the
+Overlapping collinear segments instead yield a [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label."), so branch on the
 returned type with `isinstance`:
 
 ```python
@@ -161,15 +163,15 @@ elif isinstance(isec, pgl.Segment):
     print(isec)   # (2,0)--(4,0)
 ```
 
-A chain (`Polyline`, `MonotoneChain`) can meet even a straight shape in
+A chain ([`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.")) can meet even a straight shape in
 arbitrarily many disjoint places, so `chain.intersection(s)` returns a *list* of
-`Point` and `Segment` pieces instead of a single object; a `Polygon` likewise
-returns a list, of the `Point` pieces of a 1D intersection.
+[`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") and [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label.") pieces instead of a single object; a [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices.") likewise
+returns a list, of the [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") pieces of a 1D intersection.
 
 > `intersection` is currently bound for every pair whose result is a point or a
-> 1D shape, plus the full `Polygon` matrix. The intersection of two
-> 2-dimensional shapes among `Triangle`, `Rectangle` and `Convex`, and of a
-> chain with a `Disk` or a `Polygon`, are still missing — see [todo.md](todo.md).
+> 1D shape, plus the full [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices.") matrix. The intersection of two
+> 2-dimensional shapes among [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.") and [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), and of a
+> chain with a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") or a [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), are still missing — see [todo.md](todo.md).
 
 ### Other Methods for Shapes
 
@@ -194,7 +196,7 @@ new shape and are available on **every** shape:
 The matching in-place forms — `rotate90(k=1)`, `scaleUpX(scalar)`,
 `scaleUpY(scalar)`, `scaleDownX(scalar)`, `scaleDownY(scalar)` — mutate the shape
 and return `None`. Since only the mutable shapes may be modified in place, these
-are bound on `Convex`, `Polygon`, `MonotoneChain` and `Polyline` only; on the
+are bound on [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.") and [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect.") only; on the
 immutable shapes use the value-returning forms above. An arbitrary affine map is
 applied with a [`Transformation`](#transformations).
 
@@ -203,14 +205,14 @@ applied with a [`Transformation`](#transformations).
   there is no result-type parameter and no truncation. The squared distance,
   rather than the distance itself, is exposed because the distance is generally
   irrational; `Point.distance` is available when an approximate `float` is
-  wanted. The one exception is a distance involving a `Disk`, which is
+  wanted. The one exception is a distance involving a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), which is
   irrational in general and therefore returns a `float`.
 
 - `distanceL1(Shape)` / `distanceLInf(Shape)`: Return the exact Manhattan (L1) or
   Chebyshev (LInf) distance as a `Fraction`. Unlike the Euclidean case these are
   rational, so the distance itself is exposed rather than its square. Defined for
-  every pair of shapes except those involving a `Disk`, where only
-  `Point`-to-`Disk` exists so far (and returns a `float`, being irrational in
+  every pair of shapes except those involving a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), where only
+  [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.")-to-[`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") exists so far (and returns a `float`, being irrational in
   general).
 
 - `squaredHausdorffDistance(Shape)`, `hausdorffDistanceL1(Shape)` /
@@ -219,16 +221,16 @@ applied with a [`Transformation`](#transformations).
   the standard *symmetric* Hausdorff distance** — `max(h(A, B), h(B, A))` — so
   `a.squaredHausdorffDistance(b)` always equals `b.squaredHausdorffDistance(a)`,
   even though the call reads like a directed measure from `a` to `b`. They are
-  defined for the bounded convex shapes only (`Point`, `Segment`,
-  `OrientedSegment`, `Rectangle`, `Triangle`, `Convex`), where the distance is
+  defined for the bounded convex shapes only ([`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."), [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label."),
+  [`OrientedSegment`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedSegment.html "Directed segment preserving source-to-target order plus optional segment label."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.")), where the distance is
   always attained at a vertex; the unbounded shapes have no Hausdorff distance at
-  all, and `Disk`, `Polygon`, `Polyline` and `MonotoneChain` do not have these
+  all, and [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect.") and [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.") do not have these
   methods.
 
-- `bbox()`: Returns the minimum axis-aligned bounding box as a `Rectangle`.
-  Defined for the bounded shapes (`Point`, `Segment`, `OrientedSegment`,
-  `Triangle`, `Rectangle`, `Disk`, `Convex`, `Polygon`, `MonotoneChain`,
-  `Polyline`); the unbounded shapes (`Line`, `OrientedLine`, `Ray`, `Halfplane`)
+- `bbox()`: Returns the minimum axis-aligned bounding box as a [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.").
+  Defined for the bounded shapes ([`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."), [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label."), [`OrientedSegment`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedSegment.html "Directed segment preserving source-to-target order plus optional segment label."),
+  [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."),
+  [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect.")); the unbounded shapes ([`Line`](https://gfonsecabr.github.io/pgl/structpgl_1_1Line.html "Unoriented infinite line."), [`OrientedLine`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedLine.html "Directed infinite line with left/right side semantics plus optional line label."), [`Ray`](https://gfonsecabr.github.io/pgl/structpgl_1_1Ray.html "Half-infinite line starting from one source point plus optional ray label."), [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line."))
   have no bounding box.
 
 - `area()`: Returns the area.
@@ -238,15 +240,15 @@ applied with a [`Transformation`](#transformations).
 - `diameter()`: Returns a segment that defines the diameter.
 
 - `pointInside()`: Returns an exact point in the (relative) interior of the
-  shape. Available on every shape except `Point` (a point has no interior).
+  shape. Available on every shape except [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") (a point has no interior).
 
-- `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points. Available on every shape except `Point` and `Polygon`; on a `Polygon`, use `p.index(point) is not None` instead.
+- `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points. Available on every shape except [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") and [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."); on a [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), use `p.index(point) is not None` instead.
 
 ## Iterating
 
 Every shape is iterable over its defining points — for the polygons these are
 the vertices, for the line-like shapes the two points that define them, and for
-a `Point` its two coordinates:
+a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") its two coordinates:
 
 ```python
 tri = pgl.Triangle(0, 0, 4, 0, 0, 3)
@@ -259,16 +261,16 @@ list(pgl.Point(2, 3))        # [Fraction(2), Fraction(3)]   the coordinates
 
 The accessors below each return a list for constant-storage shapes and a generator for shapes of dynamic size.
 
-- `vertices()`: Yields the `Point` vertices.
+- `vertices()`: Yields the [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") vertices.
 
-- `edges()`: Yields the edges as `Segment`.
+- `edges()`: Yields the edges as [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label.").
 
-- `orientedEdges()`: Yields the edges as `OrientedSegment` in counterclockwise order.
+- `orientedEdges()`: Yields the edges as [`OrientedSegment`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedSegment.html "Directed segment preserving source-to-target order plus optional segment label.") in counterclockwise order.
 
 ### Indexed access
 
 Every shape supports standard Python indexing over the same elements it iterates
-(its defining points, or a `Point`'s two coordinates):
+(its defining points, or a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.")'s two coordinates):
 
 - `len(s)` / `s.size()`: Returns the number of indexable elements.
 

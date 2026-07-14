@@ -1,5 +1,3 @@
-<!-- AUTO-GENERATED from doc/raw/README.md by doc/raw/doxylink.py — do not edit; edit the raw version and regenerate. -->
-
 <img align="left" src="figures/logo.png" width="23%"/>
 
 <picture>
@@ -26,15 +24,15 @@ pip install pypgl
 This folder documents the Python API. Start with the [top-level
 README](../README.md) for a tour, then:
 
-- [shapes.md](shapes.md) — every shape, from [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") and [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label.") to [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."),
-  [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") and the polygonal chains.
+- [shapes.md](shapes.md) — every shape, from `Point` and `Segment` to `Polygon`,
+  `Disk` and the polygonal chains.
 - [shape_methods.md](shape_methods.md) — what every shape can do: the
   [predicates](shape_methods.md#predicates), operators, affine
   [transformations](shape_methods.md#transformations), intersections, distances,
   and iteration.
 - [algorithms.md](algorithms.md) — convex hull, segment intersection, point
   sorting, polyominoes.
-- [data_structures.md](data_structures.md) — [`ShapeTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1ShapeTree.html "Static shape tree of bounded shapes.") and [`Triangulation`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangulation.html "Triangulation whose connectivity may change and whose vertex set may grow.").
+- [data_structures.md](data_structures.md) — `ShapeTree` and `Triangulation`.
 - [canvas.md](canvas.md) — drawing shapes and exporting them as SVG, PDF or Ipe,
   including inline display in a Jupyter notebook.
 - [todo.md](todo.md) — what is not implemented yet.

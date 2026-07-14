@@ -347,6 +347,49 @@ predicate whose coverage is ragged — every shape has it except `Point` and
 (lazy C++ views; `edges()`/`orientedEdges()` already materialize the same
 sequence, which is what a Python caller gets anyway).
 
+**Generated docs + the 42 methods they were promising** (milestone 10):
+[doc/raw/doxylink.py](doc/raw/doxylink.py) (see Docs below) checks every method
+the pages mention against the *built* module, and it immediately found that the
+pages documented 42 mentions of pgl methods pypgl never bound. All of them are
+now bound, so the report is clean:
+
+- shared macros in [src/common.h](src/common.h): `PGL_BIND_XY_AT` (`yAtX`/`xAtY`
+  on `Segment`/`OrientedSegment`/`Line`/`OrientedLine`/`Ray` — `MonotoneChain`
+  keeps its own `yAtX`, which has a different contract), `PGL_BIND_HALFPLANES`
+  (`halfplaneAbove`/`halfplaneBelow` on `Line`/`OrientedLine`/`Ray`), and
+  `PGL_BIND_ORIENTED_HELPERS` (`orientation`/`rightHalfplane`/`leftHalfplane` on
+  the three oriented shapes);
+- `Point.swapped`; `Segment`/`OrientedSegment` `containsEndpoint`;
+  `OrientedSegment.asOrientedLine`/`asRay`; `Halfplane` picks up
+  `PGL_BIND_LINE_HELPERS` (`slope`/`isVertical`/`isHorizontal`, replacing its
+  hand-written `isDegenerate`) plus `asOrientedLine`; `Triangle`
+  `isRectangle`/`isObtuse`/`isIsosceles`/`circumcircle`/`asConvex`/`asPolygon`;
+  `Rectangle` `circumcircle`/`asConvex`/`asPolygon`; `Convex.asPolygon`.
+
+**`orientation` returns an `int`, not an ordering**: pgl's returns a
+`std::partial_ordering`, which nanobind has no caster for, so
+`::pypgl::orientationSign` in [src/common.h](src/common.h) maps it to -1 (point
+to the right of the direction) / +1 (left) / 0 (collinear). The `unordered` case
+cannot arise — the comparison is an exact rational determinant, never a NaN.
+
+**An upstream bug this surfaced**: `halfplaneAbove()` returned the half-plane
+geometrically *below* the supporting line (and vice versa) on all three of
+`Line`/`OrientedLine`/`Ray`. `Halfplane(source, target)` is the closed half-plane
+to the *left* of the directed boundary, so "above" is bounded by `min() -> max()`,
+not `max() -> min()`. pgl's own unit tests asserted the inverted behavior, and its
+`shapes.md` stated it as `orientation(p) <= 0`, which is how it got written that
+way. Fixed upstream (pgl commit `5dabc73`, which `.pgl-ref` and
+[CMakeLists.txt](CMakeLists.txt) are now pinned to) by swapping the two
+implementations and correcting the three unit tests; pypgl's `Line.halfplaneAbove`
+had been shipping the inverted result since 0.3.x. The orientation-dependent
+`rightHalfplane`/`leftHalfplane` pair was always correct and is unchanged.
+Throughout, "above" means larger y — the math convention, not the image one.
+
+`Convex.insert`/`upperHull`/`lowerHull` are documented by *pgl's* `shapes.md` too
+but exist in neither library, so they were dropped from
+[doc/raw/shapes.md](doc/raw/shapes.md) rather than bound (upstream's copy still
+has them).
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 
@@ -444,6 +487,43 @@ Co-develop against another pgl checkout:
 
 Wheels (later milestone): `cibuildwheel` in GitHub Actions; ship generated
 `_pgl.pyi` stubs + `py.typed`.
+
+## Docs
+
+Same split as pgl: the editable pages are [doc/raw/](doc/raw/)`*.md` and
+**[doc/](doc/)`*.md` is generated — never edit the latter (it carries a
+"do not edit" banner). [doc/raw/doxylink.py](doc/raw/doxylink.py) is the pypgl
+port of pgl's script of the same name; it rewrites inline-code API mentions
+(`s.midpoint()`, `pgl.convexHull(points)`, a bare `Segment`) into links to pgl's
+doxygen site, with the C++ `@brief` as the link's hover tooltip.
+
+```bash
+.venv/bin/python doc/raw/doxylink.py           # report only
+.venv/bin/python doc/raw/doxylink.py --write   # regenerate doc/*.md
+```
+
+The one structural difference from pgl's version: **the authority on what exists
+is the built extension, not the headers.** The script `import pypgl`s (so run it
+with the venv interpreter, after a rebuild) and links a mention only if the
+method is actually *bound*; doxygen — run on `.pgl-ref/` for its tag file (urls)
+and XML (briefs) — merely supplies where to point. That asymmetry is the point:
+pypgl binds a subset of pgl, so the report separates
+
+- `not-bound` — the page documents a real pgl method pypgl does not expose
+  (**genuine doc drift**; 42 such mentions existed when the script landed, e.g.
+  `Segment.yAtX`, `OrientedSegment.orientation`, `Triangle.circumcircle`);
+- `no-doxygen` — a bound method with no C++ counterpart (Python-only sugar, e.g.
+  `Canvas.draw`, which replaces pgl's `operator<<`), left unlinked;
+- `not-in-context` / `no-context` — a mention naming another class, or one in a
+  section with no class heading (the generic `A.contains(B)` in
+  [doc/raw/shape_methods.md](doc/raw/shape_methods.md)). Both are left alone.
+
+A bare `- Other methods:` line in a class section is a placeholder, filled with
+every **bound** method of that section's class that got no link in the section
+(dropped entirely when there is nothing left to list, so it doubles as a
+self-maintaining drift catcher in the fully-documented sections). The class comes
+from the nearest heading naming one (`### Oriented Segment` → `OrientedSegment`);
+`` `t.collinear()`{Point} `` overrides it for one mention.
 
 ## Gotchas learned while binding
 

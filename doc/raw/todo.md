@@ -1,5 +1,3 @@
-<!-- AUTO-GENERATED from doc/raw/todo.md by doc/raw/doxylink.py — do not edit; edit the raw version and regenerate. -->
-
 <img align="left" src="figures/logo.png" width="23%"/>
 
 <picture>
@@ -19,10 +17,10 @@
 
 These are gaps in the underlying C++ library, so they are missing here too:
 
-- `intersection` between two 2-dimensional shapes among [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), and [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.").
-- `intersection` of a chain ([`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.")) with a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") or a [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices.").
-- `distanceL1` / `distanceLInf` to and from a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), which pgl implements only against a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") so far.
-- Hausdorff distance for the non-convex shapes ([`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.")) and for [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.").
+- `intersection` between two 2-dimensional shapes among `Triangle`, `Rectangle`, and `Convex`.
+- `intersection` of a chain (`Polyline`, `MonotoneChain`) with a `Disk` or a `Polygon`.
+- `distanceL1` / `distanceLInf` to and from a `Disk`, which pgl implements only against a `Point` so far.
+- Hausdorff distance for the non-convex shapes (`Polygon`, `Polyline`, `MonotoneChain`) and for `Disk`.
 
 The 1-dimensional chains that used to be listed here are now implemented: an
 arbitrary, possibly self-intersecting chain is [`Polyline`](shapes.md#polyline),

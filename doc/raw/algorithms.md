@@ -1,5 +1,3 @@
-<!-- AUTO-GENERATED from doc/raw/algorithms.md by doc/raw/doxylink.py — do not edit; edit the raw version and regenerate. -->
-
 <img align="left" src="figures/logo.png" width="23%"/>
 
 <picture>
@@ -17,9 +15,9 @@
 
 ## Algorithms
 
-The algorithms are module-level functions ([`pgl.convexHull(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a3999bfdf73609b7ec708a4882fcaea2f "Computes the convex hull of a point container."), not a
-method on a shape). Every one of them takes a plain Python list — of [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") or
-of [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label.") — and, like the shapes, computes exactly.
+The algorithms are module-level functions (`pgl.convexHull(points)`, not a
+method on a shape). Every one of them takes a plain Python list — of `Point` or
+of `Segment` — and, like the shapes, computes exactly.
 
 ### Intersection of Line Segments
 
@@ -29,20 +27,20 @@ stricter relation where each one passes from one side of the other to the other
 side (a shared endpoint, or a collinear overlap, intersects but does not cross).
 
 The reporting functions return a list of pairs, each pair a list of the two
-[`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label.") objects involved.
+`Segment` objects involved.
 
-- [`findIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#adcd493466342b027a48fe7bf0718434b "Finds all intersecting segment pairs with Bentley-Ottmann."): All intersecting pairs, using the
+- `findIntersections(segments)`: All intersecting pairs, using the
   Bentley-Ottmann sweep line. Runs in $O((n+k) \log n)$ time for $k$ reported
   pairs.
 
-- [`findCrossings(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#abf691f267558aaeea543045e723d292e "Finds all proper crossing segment pairs with Bentley-Ottmann."): All crossing pairs, same sweep line and same
+- `findCrossings(segments)`: All crossing pairs, same sweep line and same
   $O((n+k) \log n)$ time.
 
-- [`bruteForceIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a390afa6b90488531f4702bc242322d46 "Finds all intersecting segment pairs by brute force.") / [`bruteForceCrossings(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#aac3ae3a0e91834aef9525388948417c4 "Finds all crossing segment pairs by brute force."): The same
+- `bruteForceIntersections(segments)` / `bruteForceCrossings(segments)`: The same
   two results, computed by testing every pair. They take $O(n^2)$ time, but are
   faster in practice when the output is large.
 
-- [`detectIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#adea0ebb84e7d7ada3ae27ae23ea116bc "Detects whether any two segments intersect.") / [`detectCrossings(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ade9af54c89044d728daf207e9c534759 "Detects whether any two segments properly cross."): Return `True` as
+- `detectIntersections(segments)` / `detectCrossings(segments)`: Return `True` as
   soon as one intersecting (respectively crossing) pair exists, in
   $O(n \log n)$ time, without reporting it.
 
@@ -60,11 +58,11 @@ These functions use the same predicate conventions documented in
 
 ### Convex hull
 
-- [`convexHull(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a3999bfdf73609b7ec708a4882fcaea2f "Computes the convex hull of a point container."): Returns the list of hull vertices in counterclockwise
+- `convexHull(points)`: Returns the list of hull vertices in counterclockwise
   order, starting from the smallest (leftmost, breaking ties by lowest) point.
   Complexity $O(n \log n)$ for $n$ input points.
 
-- [`convexHullExtended(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ace788332cf5ee8db888decfb08383cda "Computes the convex hull of a point container."): Returns the hull in the same order, but keeps the
+- `convexHullExtended(points)`: Returns the hull in the same order, but keeps the
   input points that lie in the interior of a hull edge instead of dropping them.
   Complexity $O(n \log n)$.
 
@@ -76,13 +74,13 @@ To get the hull as a shape rather than as a list of points, construct a
 Both of these reorder the Python list you pass **in place** and return `None`,
 like `list.sort` does.
 
-- [`sortAround(points, p)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#aab7826153f78fb8c4468ad851564fd8f "Sorts points counterclockwise around a center point."): Reorders `points` counterclockwise around the center
+- `sortAround(points, p)`: Reorders `points` counterclockwise around the center
   `p`, starting from the lexicographically smallest point and breaking ties by
   putting farther points first. Connecting the result in order traces a simple
   star-shaped polygon whose kernel contains `p`. Relies only on exact orientation
   and squared-distance comparisons. Complexity $O(n \log n)$.
 
-- [`hilbertSort(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a57def78cd131e9c518e478cafe93e137 "Sorts points along a Hilbert space-filling curve."): Reorders `points` along a Hilbert space-filling curve,
+- `hilbertSort(points)`: Reorders `points` along a Hilbert space-filling curve,
   so points close in the plane stay close in the sequence — a useful
   preprocessing step for incremental algorithms such as
   [`Triangulation.insertDelaunay`](data_structures.md#triangulation). Uses only
@@ -97,17 +95,17 @@ print(points)
 
 ### Polyominoes
 
-- [`polyominoes(size)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a9008f6bc68cdaae01e41b0e572127a43 "Enumerates the free polyominoes of a given size as polygons."): Returns one [`Polygon`](shapes.md#polygon) per free
+- `polyominoes(size)`: Returns one [`Polygon`](shapes.md#polygon) per free
   polyomino of `size` cells (counted up to translation, rotation, and
   reflection). Each polygon traces the polyomino boundary with small
   non-negative integer coordinates. Polyominoes that enclose a hole (possible
   from seven cells onward) are omitted, since their boundary is not a simple
   polygon.
 
-- [`polyominoes(n1, n2)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a9008f6bc68cdaae01e41b0e572127a43 "Enumerates the free polyominoes of a given size as polygons."): Returns the free polyominoes of every size in
+- `polyominoes(n1, n2)`: Returns the free polyominoes of every size in
   `[n1, n2]`, smallest first.
 
-- [`polyominoesUpTo(n)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ab11fd9fab1a04d2a326acb61c619e822 "Enumerates the free polyominoes of every size from 1 to n."): Returns the free polyominoes of every size from `1` to
+- `polyominoesUpTo(n)`: Returns the free polyominoes of every size from `1` to
   `n`, smallest first.
 
 ```python
