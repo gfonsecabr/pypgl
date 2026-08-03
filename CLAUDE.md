@@ -39,13 +39,26 @@ module, with the Python-layer sugar re-added via
 **Wheels CI done** (milestone 4): `cibuildwheel` is configured in
 [pyproject.toml](pyproject.toml) and run by
 [.github/workflows/wheels.yml](.github/workflows/wheels.yml) — CPython 3.9–3.13 on
-`manylinux_2_28` (GCC 12 for C++20), macOS arm64 (`macos-14`), and Windows, plus
+`manylinux_2_28` (GCC 12 for C++20), macOS arm64 (`macos-15`), and Windows, plus
 sdist. macOS x86_64 (`macos-13`) was dropped — GitHub is retiring the Intel
 runners, so the jobs sat queued for hours and timed out. pgl has no native deps,
 so the build only `FetchContent`s the **pinned** pgl commit (kept in lockstep with
 `.pgl-ref`, since the sdist omits the gitignored `.pgl-ref/`). Native-arch only
 (no QEMU/cross) because `nanobind_add_stub` imports the just-built `_pgl` to emit
 `_pgl.pyi`.
+
+**The macOS runner floor is a compiler floor** (milestone 11 follow-up): the
+`macos-14` runner ships AppleClang 15, i.e. LLVM 16, which cannot match the
+constraint on an *out-of-line* member-template definition when that constraint
+names the enclosing class template. pgl defines every shape's `minkowskiSum`
+exactly that way, so pgl 0.5-era headers do not compile there at all and the
+0.5.0 wheel job failed twice on it. LLVM 17 is the first release that accepts
+the pattern (bisected locally in containers against the pinned pgl commit;
+16 fails, 17/18/19 pass), so the matrix moved to `macos-15` (Xcode 16). Two
+process notes worth keeping: **pushes to `main` run this same workflow without
+publishing**, so the macOS job is testable for free before any tag is moved —
+use that rather than burning a release tag; and a green `main` run is the
+signal to tag.
 
 **Released done** (milestone 4): `pypgl 0.1.0` is live on
 [PyPI](https://pypi.org/project/pypgl/) (`pip install pypgl`). Trusted Publishing
