@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pypgl"
-version = "0.5.0"
+version = "0.5.1"
 description = "Python bindings for the Pangolin (pgl) exact geometry library"
 # README.md is the user-facing front page rendered on PyPI; pypgl.md is the
 # internal design contract and is intentionally not shipped as the description.
@@ -27,6 +27,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Mathematics",
   "Typing :: Typed",
 ]
@@ -54,7 +55,11 @@ sdist.exclude = [".ipynb_checkpoints", "**/*.ipynb", ".pytest_cache",
 # wheel build needs only a modern compiler — no system libraries to install.
 # The sdist does not ship the gitignored .pgl-ref/, so CMake FetchContents the
 # pinned pgl commit (see CMakeLists.txt) during each build.
-build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+# cp314 needs cibuildwheel >= 3 (see the pinned action in wheels.yml). The
+# pattern is deliberately cp314-*, not cp314t-*, so the free-threaded build is
+# left out: nanobind supports it, but it is a separate ABI and a separate wheel
+# per platform, and nothing has asked for it yet.
+build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 # Skip PyPy (nanobind targets CPython), 32-bit, and musl (lean matrix to start).
 skip = "pp* *_i686 *-win32 *-musllinux_*"
 build-frontend = "build"

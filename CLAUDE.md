@@ -38,7 +38,7 @@ module, with the Python-layer sugar re-added via
 
 **Wheels CI done** (milestone 4): `cibuildwheel` is configured in
 [pyproject.toml](pyproject.toml) and run by
-[.github/workflows/wheels.yml](.github/workflows/wheels.yml) — CPython 3.9–3.13 on
+[.github/workflows/wheels.yml](.github/workflows/wheels.yml) — CPython 3.9–3.14 on
 `manylinux_2_28` (GCC 12 for C++20), macOS arm64 (`macos-15`), and Windows, plus
 sdist. macOS x86_64 (`macos-13`) was dropped — GitHub is retiring the Intel
 runners, so the jobs sat queued for hours and timed out. pgl has no native deps,
@@ -59,6 +59,17 @@ process notes worth keeping: **pushes to `main` run this same workflow without
 publishing**, so the macOS job is testable for free before any tag is moved —
 use that rather than burning a release tag; and a green `main` run is the
 signal to tag.
+
+**CPython 3.14 wheels** (0.5.1): 0.5.0 shipped 3.9–3.13, so 3.14 users fell
+through to the sdist and compiled pgl themselves (which works — that is how the
+0.5.0 release was smoke-tested locally — but takes a minute and needs a C++20
+compiler). `cp314-*` is now in `build`, which required moving the action from
+`cibuildwheel@v2.21` to `@v3.4.1`: v2 has no cp314 at all. Held at v3 rather
+than v4 because v4 makes `delvewheel` the default Windows repair step and adds
+`abi3audit` — neither is wanted for a single self-contained extension with no
+DLL dependencies and no stable ABI. The pattern is `cp314-*` and not `cp314t-*`,
+so the free-threaded build is deliberately out of scope (separate ABI, separate
+wheel per platform).
 
 **Released done** (milestone 4): `pypgl 0.1.0` is live on
 [PyPI](https://pypi.org/project/pypgl/) (`pip install pypgl`). Trusted Publishing
