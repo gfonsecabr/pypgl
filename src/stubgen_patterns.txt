@@ -28,7 +28,21 @@ ShapeTree\.__suffix__:
 
 Transformation\.__suffix__:
 
-# Every other shape is indexed/iterated over its defining points. The class-name
+# HalfplaneIntersection is indexed/iterated over its stored *half-planes*, not
+# over points -- those are what pgl gives it size()/get()/index() for, its own
+# corners being implicit. Must precede the generic rule below, which would
+# otherwise claim it and promise Point.
+HalfplaneIntersection\.__suffix__:
+    \from collections.abc import Iterator
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> Halfplane: ...
+    def __iter__(self) -> Iterator[Halfplane]: ...
+    def __contains__(self, point: Point) -> bool: ...
+
+# Every other shape is indexed/iterated over its defining points. PolygonWithHoles
+# takes this rule too: C++ iterates its holes and gives it no size()/get() at all,
+# but the Python layer flattens its rings' vertices so it reads like every other
+# shape (see pypgl/__init__.py). The class-name
 # segment in the query keeps this from matching the bare module suffix
 # (`_pgl.__suffix__`), which would inject the methods at module scope.
 \.[A-Z]\w*\.__suffix__:

@@ -20,6 +20,10 @@ void bind_segment(nb::module_ &m) {
     cls.def("lengthL1", [](const Segment &s) { return s.lengthL1(); }, "Exact Manhattan (L1) length.");
     cls.def("lengthLInf", [](const Segment &s) { return s.lengthLInf(); }, "Exact Chebyshev (L-infinity) length.");
     cls.def("asLine", [](const Segment &s) { return s.asLine(); }, "Supporting unoriented line.");
+    cls.def("asPolyline", [](const Segment &s) { return s.asPolyline(); },
+            "The same segment as a two-vertex Polyline.");
+    cls.def("asHalfplaneIntersection", [](const Segment &s) { return s.asHalfplaneIntersection(); },
+            "The same segment as a (degenerate) HalfplaneIntersection.");
     cls.def("bbox", [](const Segment &s) { return s.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
     cls.def("containsEndpoint", [](const Segment &s, const Point &p) { return s.containsEndpoint(p); },
             nb::arg("point"), "Whether the point is one of the two endpoints.");
@@ -28,9 +32,11 @@ void bind_segment(nb::module_ &m) {
 
     PGL_BIND_OPERATORS(cls, Segment);
     PGL_BIND_TRANSFORMS(cls, Segment);
+    PGL_BIND_CONVEX_MINKOWSKI(cls, Segment);
     PGL_BIND_VERTEX_QUERIES(cls, Segment);
     PGL_BIND_INDEXING(cls, Segment);
     PGL_BIND_LINE_HELPERS(cls, Segment);
+    PGL_BIND_DEGENERACY_POINT(cls, Segment);
     PGL_BIND_XY_AT(cls, Segment);
     PGL_BIND_COLLINEAR(cls, Segment);
     PGL_BIND_PARALLEL(cls, Segment);
@@ -82,9 +88,11 @@ void bind_oriented_segment(nb::module_ &m) {
 
     PGL_BIND_OPERATORS(cls, OrientedSegment);
     PGL_BIND_TRANSFORMS(cls, OrientedSegment);
+    PGL_BIND_CONVEX_MINKOWSKI(cls, OrientedSegment);
     PGL_BIND_VERTEX_QUERIES(cls, OrientedSegment);
     PGL_BIND_INDEXING(cls, OrientedSegment);
     PGL_BIND_LINE_HELPERS(cls, OrientedSegment);
+    PGL_BIND_DEGENERACY_POINT(cls, OrientedSegment);
     PGL_BIND_XY_AT(cls, OrientedSegment);
     PGL_BIND_ORIENTED_HELPERS(cls, OrientedSegment);
     PGL_BIND_COLLINEAR(cls, OrientedSegment);

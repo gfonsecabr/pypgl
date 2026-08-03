@@ -180,5 +180,8 @@ instead of the pinned upstream commit:
 ## More Information
 
 - For a brief description, check the documents at the [doc folder](doc/).
+- Runnable scripts live in the [examples folder](examples/), ported one for one
+  from pgl's own — predicates, canvas styling, a shape gallery, `ShapeTree`
+  queries and constrained triangulation.
 - Shapes and canvases render inline in a Jupyter notebook — see [canvas.md](doc/canvas.md#inline-display-in-jupyter).
 - Check the [C++ version](https://github.com/gfonsecabr/pgl).

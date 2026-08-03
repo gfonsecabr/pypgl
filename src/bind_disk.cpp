@@ -82,6 +82,13 @@ void bind_disk(nb::module_ &m) {
             "An exact point strictly inside the disk (the midpoint of a chord).");
     cls.def("isDegenerate", [](const Disk &d) { return d.isDegenerate(); },
             "Whether the three boundary points are collinear (no finite circle).");
+    // A disk is never a segment, so isPoint and isUndefined cover every
+    // degenerate disk between them: the radius-zero case (all three boundary
+    // points equal) is the point, and three *distinct* collinear points -- which
+    // no circle passes through, while two distinct ones admit infinitely many --
+    // are the undefined case.
+    PGL_BIND_DEGENERACY_POINT(cls, Disk);
+    PGL_BIND_TRANSLATION_MINKOWSKI(cls, Disk);
     cls.def("bbox", [](const Disk &d) { return d.bbox(); },
             "Exact axis-aligned bounding box (a Rectangle); tight when built from a center and radius.");
 

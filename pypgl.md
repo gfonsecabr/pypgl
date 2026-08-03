@@ -95,7 +95,8 @@ variant wrapper. The `Shape::Variant`
 ```
 Point, Segment, OrientedSegment, Line, OrientedLine, Ray,
 Halfplane, Rectangle, Triangle, Convex, Disk,
-MonotoneChain, Polyline, Polygon
+MonotoneChain, Polyline, Polygon, PolygonWithHoles,
+HalfplaneIntersection
 ```
 
 The seven predicates are uniform across shapes and bound on every class:

@@ -245,3 +245,10 @@ stay visually constant even when the geometry is scaled to fit the output box.
 - `Halfplane` fill and `Rectangle` fill are often easier to read when combined
   with a translucent `fillOpacity(...)`.
 - `Triangle` supports both stroke and fill just like `Rectangle`.
+- A [`PolygonWithHoles`](shapes.md#polygon-with-holes) is drawn as a single path
+  with one closed subpath per ring, so its holes are punched out of the fill
+  rather than painted over: SVG asks for `fill-rule="evenodd"`, and the PDF and
+  Ipe backends get the same result by winding each hole against the outer ring.
+- A [`HalfplaneIntersection`](shapes.md#halfplane-intersection) is clipped to the
+  visible viewport, and only its real boundary edges are stroked — so an
+  unbounded one draws sensibly even though it has no bounding box.

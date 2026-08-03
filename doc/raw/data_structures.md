@@ -37,7 +37,7 @@ Other methods: `size()` and `empty()` report the tree's size; `shapes()` returns
 
 A tree also behaves like a Python container: `len(tree)`, `for shape in tree`, and `shape in tree` (exact membership, same as `has`).
 
-Only bounded shapes can be stored — `Point`, `Segment`, `OrientedSegment`, `Triangle`, `Rectangle`, `Convex`, `MonotoneChain`, `Polyline`, `Polygon`, `Disk`. An unbounded shape (`Line`, `OrientedLine`, `Ray`, `Halfplane`) raises if passed to the constructor or to `insert`, but remains valid as a query shape.
+Only bounded shapes can be stored — `Point`, `Segment`, `OrientedSegment`, `Triangle`, `Rectangle`, `Convex`, `MonotoneChain`, `Polyline`, `Polygon`, `PolygonWithHoles`, `Disk`. An unbounded shape (`Line`, `OrientedLine`, `Ray`, `Halfplane`) raises if passed to the constructor or to `insert`, but remains valid as a query shape. A `HalfplaneIntersection` is the one shape that falls on both sides: a bounded one stores like any other, an unbounded one raises, so which it is depends on the value rather than the type.
 
 Drawing a tree with `canvas.draw(tree)` (or its inline rendering in a notebook) renders every node's bounding box.
 
@@ -58,6 +58,7 @@ Drawing a tree with `canvas.draw(tree)` (or its inline rendering in a notebook) 
 - `Triangulation(triangles)` builds a triangulation from an explicit set of triangles tiling a region without overlaps.
 - `Triangulation(edges)` builds a triangulation from an explicit set of edges (every bounded face must be a triangle).
 - `Triangulation(polygon, points=[], segments=[])` builds the constrained Delaunay triangulation of a simple polygon (convex or not), optionally adding interior points as extra vertices and/or interior segments as constrained edges — both are assumed, not checked, to lie inside `polygon`. `polygon.triangulation()` and `polygon.triangulation(segments)` are shortcuts for this.
+- `Triangulation(region, points=[], segments=[])` does the same for a [`PolygonWithHoles`](shapes.md#polygon-with-holes), with `region.triangulation()` and `region.triangulation(segments)` as the shortcuts. Every ring becomes constrained edges and the hole interiors are left out of the domain, so the in-domain triangles cover exactly the part of the region that has area — a slit, having none, carries no triangle.
 
 Construction and predicates are exact. For a polygon, the triangles between it and its convex hull are excluded, so the public view — sizes, `triangles()`, `edges()`, `locate`, … — describes exactly the polygon, including non-convex ones.
 

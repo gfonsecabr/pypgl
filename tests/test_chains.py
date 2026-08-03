@@ -215,8 +215,13 @@ def test_chain_intersection_returns_a_list_of_pieces(make):
 @pytest.mark.parametrize("make", [MonotoneChain, Polyline])
 def test_chain_transformations(make):
     c = make([Point(0, 0), Point(2, 2)])
-    assert (Transformation.rotation90() * c).vertices() == [Point(-2, 2), Point(0, 0)]
-    assert c.rotated90().vertices() == [Point(-2, 2), Point(0, 0)]
+    # The two chains store their vertices differently, so a transform that moves
+    # them past each other in the lexicographic order lands them in a different
+    # sequence: MonotoneChain re-sorts (it is a point set), while Polyline keeps
+    # the traversal order it was given and only maps each vertex in place.
+    rotated = [Point(-2, 2), Point(0, 0)] if make is MonotoneChain else [Point(0, 0), Point(-2, 2)]
+    assert (Transformation.rotation90() * c).vertices() == rotated
+    assert c.rotated90().vertices() == rotated
     assert c.scaledUpX(3).vertices()[-1] == Point(6, 2)
     assert c.vertices()[-1] == Point(2, 2)  # the value-returning form copies
 

@@ -111,6 +111,24 @@ void bind_triangulation(nb::module_ &m) {
             "extra vertices and/or interior segments as constrained edges "
             "(both assumed, not checked, to lie inside polygon).");
 
+    // Same reasoning, and the same registration-order requirement, for the
+    // region: a PolygonWithHoles is iterable in the Python layer too. Every
+    // ring becomes constrained edges and the hole interiors are left out of the
+    // domain, so the in-domain triangles cover exactly the part of the region
+    // that has area -- a slit, having none, carries no triangle.
+    cls.def("__init__",
+            [](Triangulation *self, const PolygonWithHoles &region,
+               const std::vector<Point> &points,
+               const std::vector<Segment> &segments) {
+                new (self) Triangulation(region, points, segments);
+            },
+            nb::arg("region"), nb::arg("points") = std::vector<Point>{},
+            nb::arg("segments") = std::vector<Segment>{},
+            "Build the constrained Delaunay triangulation of a region with holes, "
+            "optionally adding interior points as extra vertices and/or interior "
+            "segments as constrained edges (both assumed, not checked, to lie in "
+            "the region).");
+
     cls.def("__init__",
             [](Triangulation *self, const std::vector<Triangle> &triangles) {
                 new (self) Triangulation(triangles);

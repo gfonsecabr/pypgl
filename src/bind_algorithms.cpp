@@ -73,4 +73,30 @@ void bind_algorithms(nb::module_ &m) {
     m.def("polyominoesUpTo",
           [](std::size_t size) { return pgl::polyominoesUpTo<Num>(size); },
           nb::arg("size"), "Return the hole-free free polyominoes up to a cell count.");
+
+    // The region-valued counterparts, which omit *none* of the polyominoes: a
+    // PolygonWithHoles can represent one that encloses a hole (possible from
+    // seven cells onward), where a Polygon cannot, since such a boundary is not
+    // a simple polygon. So these return the full free-polyomino counts -- 108 at
+    // size seven against polyominoes' 107, and 369 at size eight against 363.
+    // A hole may touch the outer boundary at a single point, where two
+    // diagonally opposite cells pinch it shut against the outside, as in the
+    // smallest holed polyomino; isValid() accepts that, and the point is in the
+    // region but has no region interior around it.
+    m.def("polyominoRegions",
+          [](std::size_t size) { return pgl::polyominoRegions<Num>(size); },
+          nb::arg("size"),
+          "Return every free polyomino of one cell count as a region, holed ones "
+          "included.");
+    m.def("polyominoRegions",
+          [](std::size_t n1, std::size_t n2) {
+              return pgl::polyominoRegions<Num>(n1, n2);
+          },
+          nb::arg("min_size"), nb::arg("max_size"),
+          "Return every free polyomino for each cell count in an inclusive range, "
+          "as regions, smallest first.");
+    m.def("polyominoRegionsUpTo",
+          [](std::size_t size) { return pgl::polyominoRegionsUpTo<Num>(size); },
+          nb::arg("size"),
+          "Return every free polyomino up to a cell count, as regions, smallest first.");
 }

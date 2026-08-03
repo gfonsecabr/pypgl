@@ -42,7 +42,13 @@ void bind_point(nb::module_ &m) {
     cls.def("__mul__", [](const Point &a, const Num &k) { return a * k; }, nb::is_operator());
     cls.def("__rmul__", [](const Point &a, const Num &k) { return k * a; }, nb::is_operator());
     cls.def("__truediv__", [](const Point &a, const Num &k) { return a / k; }, nb::is_operator());
+    cls.def("asHalfplaneIntersection", [](const Point &p) { return p.asHalfplaneIntersection(); },
+            "The same point as a (degenerate) HalfplaneIntersection.");
     PGL_BIND_TRANSFORMS(cls, Point);
+    // A Point is the smallest bounded convex shape, so it takes the whole
+    // convex Minkowski matrix: summing with a point is a translation, and
+    // summing with any other bounded convex shape is that shape translated.
+    PGL_BIND_CONVEX_MINKOWSKI(cls, Point);
 
     // A Point indexes over its two coordinates (so get(i) yields a coordinate,
     // not a Point). size() is 2.

@@ -21,6 +21,8 @@ from ._pgl import (
     MonotoneChain,
     Polyline,
     Polygon,
+    PolygonWithHoles,
+    HalfplaneIntersection,
     Disk,
     Triangulation,
     ShapeTree,
@@ -38,6 +40,8 @@ from ._pgl import (
     hilbertSort,
     polyominoes,
     polyominoesUpTo,
+    polyominoRegions,
+    polyominoRegionsUpTo,
 )
 
 try:
@@ -59,6 +63,8 @@ __all__ = [
     "MonotoneChain",
     "Polyline",
     "Polygon",
+    "PolygonWithHoles",
+    "HalfplaneIntersection",
     "Disk",
     "Triangulation",
     "ShapeTree",
@@ -76,6 +82,8 @@ __all__ = [
     "hilbertSort",
     "polyominoes",
     "polyominoesUpTo",
+    "polyominoRegions",
+    "polyominoRegionsUpTo",
 ]
 
 
@@ -114,6 +122,8 @@ for _cls in (
     MonotoneChain,
     Polyline,
     Polygon,
+    PolygonWithHoles,
+    HalfplaneIntersection,
     Disk,
 ):
     _cls.__contains__ = _shape_contains
@@ -145,10 +155,34 @@ for _cls in (
     Polyline,
     Polygon,
     Disk,
+    # HalfplaneIntersection's size()/get() are over its *half-planes*, not over
+    # points, which is exactly what pgl indexes too -- so len(region) is the
+    # constraint count and iterating yields Halfplane objects. Its implicit
+    # corners, which are generally not representable in the coordinate type of
+    # the half-planes that bound them, are reached through vertexCount() /
+    # vertex(i) / vertices() instead.
+    HalfplaneIntersection,
 ):
     _add_indexing(_cls)
 
 del _cls
+
+
+# PolygonWithHoles has neither size() nor get(): its vertices are spread over
+# its rings rather than forming one indexable sequence, and C++ deliberately
+# gives it vertexCount() instead of size() so that a name shared with a polygon
+# never means two different things in generic code. Iterating one in C++ gives
+# its *holes*.
+#
+# Python goes the other way and iterates the vertices, so a region reads like
+# every other pypgl shape -- `len(shape)` is a vertex count and iterating gives
+# points, here just flattened across the rings (outer boundary first). The holes
+# stay reachable through holeCount() / hole(i) / holes(). Indexing is cyclic
+# like every other shape's, and materializes the vertex list, so prefer
+# vertices() when walking one repeatedly.
+PolygonWithHoles.__len__ = lambda self: self.vertexCount()
+PolygonWithHoles.__getitem__ = lambda self, index: self.vertices()[index % self.vertexCount()]
+PolygonWithHoles.__iter__ = lambda self: iter(self.vertices())
 
 
 # --- Inline SVG rendering in Jupyter / IPython ---
@@ -184,6 +218,8 @@ for _cls in (
     MonotoneChain,
     Polyline,
     Polygon,
+    PolygonWithHoles,
+    HalfplaneIntersection,
     Disk,
     # Triangulation and ShapeTree are not "shapes" (see the loops above), but
     # Canvas.draw() accepts them just like every bound shape, so the same

@@ -125,6 +125,13 @@ void bind_canvas(nb::module_ &m) {
     CANVAS_DRAW(cls, MonotoneChain);
     CANVAS_DRAW(cls, Polyline);
     CANVAS_DRAW(cls, Polygon);
+    // A region is drawn as one path with a closed subpath per ring, so its
+    // holes are punched out of the fill rather than painted over (SVG asks for
+    // fill-rule=evenodd; PDF and Ipe get the same result by winding each hole
+    // against the outer ring). A half-plane intersection is clipped to the
+    // visible viewport, and only its real boundary edges are stroked.
+    CANVAS_DRAW(cls, PolygonWithHoles);
+    CANVAS_DRAW(cls, HalfplaneIntersection);
     CANVAS_DRAW(cls, Disk);
     CANVAS_DRAW(cls, Triangulation);
     CANVAS_DRAW(cls, ShapeTree);

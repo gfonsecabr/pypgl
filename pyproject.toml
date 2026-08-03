@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pypgl"
-version = "0.4.0"
+version = "0.5.0"
 description = "Python bindings for the Pangolin (pgl) exact geometry library"
 # README.md is the user-facing front page rendered on PyPI; pypgl.md is the
 # internal design contract and is intentionally not shipped as the description.
@@ -41,7 +41,8 @@ minimum-version = "0.10"
 build-dir = "build/{wheel_tag}"
 wheel.packages = ["pypgl"]
 # Keep dev cruft out of the sdist (CI builds wheels from it).
-sdist.exclude = [".ipynb_checkpoints", "**/*.ipynb", ".pytest_cache"]
+sdist.exclude = [".ipynb_checkpoints", "**/*.ipynb", ".pytest_cache",
+                 "examples/*.svg", "examples/*.pdf", "examples/*.ipe"]
 
 # pgl is header-only. By default the build uses an in-tree .pgl-ref/include
 # checkout if present (offline dev), otherwise CMake FetchContents it. Point at a

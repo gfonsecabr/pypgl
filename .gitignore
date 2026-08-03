@@ -2,6 +2,12 @@
 build/
 *.so
 __pycache__/
+.ipynb_checkpoints/
 *.egg-info/
 dist/
 .venv/
+
+# What the examples write when run (see examples/README.md).
+examples/*.svg
+examples/*.pdf
+examples/*.ipe

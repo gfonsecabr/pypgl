@@ -108,6 +108,12 @@ print(points)
   `[n1, n2]`, smallest first.
 
 - [`polyominoesUpTo(n)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ab11fd9fab1a04d2a326acb61c619e822 "Enumerates the free polyominoes of every size from 1 to n."): Returns the free polyominoes of every size from `1` to
+
+- [`polyominoRegions(size)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ac6b73b7ed31a9544846662b7726f1fb3 "Enumerates the free polyominoes of a given size as regions.") returns one [`PolygonWithHoles`](shapes.md#polygon-with-holes) per free polyomino of `size` cells, omitting **none** of them: a region can represent one that encloses a hole, where a polygon cannot, since such a boundary is not a simple polygon. So these are the full free-polyomino counts — 108 at size seven, where `polyominoes` returns 107, and 369 at size eight against 363. Each region has small non-negative integer coordinates, canonical rings, and area equal to the cell count.
+
+  A hole may touch the outer boundary at a single point — two diagonally opposite cells pinch the hole shut against the outside, as in the smallest holed polyomino — which `isValid()` accepts. Such a point is in the region but has no region interior around it.
+
+- [`polyominoRegions(min_size, max_size)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ac6b73b7ed31a9544846662b7726f1fb3 "Enumerates the free polyominoes of a given size as regions.") and [`polyominoRegionsUpTo(n)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a9e59554fb52a45324cc9e7e558be8709 "Enumerates the free polyominoes of every size from 1 to n as regions.") mirror the two [`polyominoes`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a9008f6bc68cdaae01e41b0e572127a43 "Enumerates the free polyominoes of a given size as polygons.") range overloads.
   `n`, smallest first.
 
 ```python

@@ -64,6 +64,17 @@ void bind_polygon(nb::module_ &m) {
     cls.def("isDegenerate", [](const Polygon &p) { return p.isDegenerate(); }, "Whether the polygon has zero area.");
     cls.def("isSimple", [](const Polygon &p) { return p.isSimple(); },
             "Whether the boundary does not touch or cross itself.");
+    cls.def("asPolygonWithHoles", [](const Polygon &p) { return p.asPolygonWithHoles(); },
+            "The same polygon as a hole-free PolygonWithHoles region.");
+    // A polygon is star-shaped when some point sees all of it; the set of such
+    // points is its kernel, the intersection of the inner half-planes of its
+    // edges -- hence a HalfplaneIntersection, and None when there is no such
+    // point. isStarShaped() is just "the kernel is non-empty".
+    cls.def("isStarShaped", [](const Polygon &p) { return p.isStarShaped(); },
+            "Whether some point of the polygon sees every other point of it.");
+    cls.def("getStarShapedKernel", [](const Polygon &p) { return p.getStarShapedKernel(); },
+            "The kernel -- every point that sees the whole polygon -- as a "
+            "HalfplaneIntersection, or None when the polygon is not star-shaped.");
     cls.def("isConvex", [](const Polygon &p) { return p.isConvex(); },
             "Whether every boundary turn has the same orientation (meaningful only for a simple polygon).");
     cls.def("diameter", [](const Polygon &p) { return p.diameter(); }, "Longest distance as a segment between two vertices.");
@@ -98,6 +109,13 @@ void bind_polygon(nb::module_ &m) {
     // Value-returning transforms (new polygon) plus their in-place
     // counterparts (mutate, return None), mirroring Convex.
     PGL_BIND_TRANSFORMS(cls, Polygon);
+    PGL_BIND_BOOLEANS(cls, Polygon);
+    // Only the region operand pulls in the region-valued intersection; the
+    // other four keep the general one bound above.
+    PGL_PRED(cls, Polygon, intersection, ::pypgl::PolygonWithHoles);
+    PGL_BIND_REGION_MINKOWSKI(cls, Polygon);
+    PGL_BIND_POLYLINE_OPERAND(cls, Polygon);
+    PGL_BIND_DEGENERACY(cls, Polygon);
     cls.def("rotate90", [](Polygon &p, int k) { p.rotate90(k); }, nb::arg("k") = 1,
             "Rotate the polygon in place by 90*k degrees about the origin.");
     cls.def("scaleUpX", [](Polygon &p, const Num &k) { p.scaleUpX(k); }, nb::arg("scalar"),

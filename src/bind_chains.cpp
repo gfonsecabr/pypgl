@@ -21,12 +21,14 @@ using namespace pypgl;
 //     it is also why the chain can grow: insert() splices a new vertex into the
 //     sorted sequence.
 //
-//   * Polyline keeps its vertices in *traversal order* (only the direction is
-//     canonicalized -- the sequence is reversed when the reversal compares
-//     lexicographically smaller -- so a polyline equals its own reverse). It may
-//     therefore self-intersect; isSimple() checks. Being an arbitrary chain it
-//     has no ordered structure to exploit, so no vertical queries and no
-//     incremental insert.
+//   * Polyline keeps its vertices in *traversal order*, stored verbatim: what
+//     vertices()/indexing/iteration give back is exactly what was passed.
+//     Direction is still not part of its identity -- equality, ordering and
+//     hashing read the vertices through the canonical direction, so a polyline
+//     equals its own reverse -- but the storage never moves, which is what lets
+//     it be edited in place (set/insert/pushBack) and flipped edge-wise. It may
+//     self-intersect; isSimple() checks. Being an arbitrary chain it has no
+//     ordered structure to exploit, so it has no vertical queries.
 //
 // Both have n - 1 edges for n vertices (no closing edge, unlike Polygon) and,
 // as 1-dimensional manifolds with boundary, their boundary is the two extreme
@@ -106,6 +108,7 @@ namespace {
     cls.def("__rmul__", [](const SelfT &c, const Num &k) { SelfT r = c; r *= k; return r; }, nb::is_operator());       \
     cls.def("__truediv__", [](const SelfT &c, const Num &k) { SelfT r = c; r /= k; return r; }, nb::is_operator());    \
     PGL_BIND_TRANSFORMS(cls, SelfT);                                                                                  \
+    PGL_BIND_DEGENERACY(cls, SelfT);                                                                                  \
     cls.def("rotate90", [](SelfT &c, int k) { c.rotate90(k); }, nb::arg("k") = 1,                                     \
             "Rotate the " NOUN " in place by 90*k degrees about the origin.");                                        \
     cls.def("scaleUpX", [](SelfT &c, const Num &k) { c.scaleUpX(k); }, nb::arg("scalar"),                             \
@@ -157,6 +160,38 @@ void bind_chains(nb::module_ &m) {
         cls.def("insert", [](MonotoneChain &c, const std::vector<Point> &points) { c.insert(points); },
                 nb::arg("points"), "Insert several vertices at once (a merge, cheaper than repeated insert).");
 
+        // Shrinking it again. Erasing an interior vertex reroutes the chain
+        // through a single edge between its neighbours; erasing an extreme one
+        // shortens it. The point form is O(log n) (the vertices are sorted) and
+        // reports whether it found a vertex to remove; the index form is
+        // positional, over the same lexicographic order that indexing uses.
+        cls.def("erase", [](MonotoneChain &c, const Point &p) { return c.erase(p); },
+                nb::arg("point"),
+                "Remove the vertex equal to point, returning whether there was one.");
+        cls.def("erase", [](MonotoneChain &c, std::size_t i) { c.erase(i); }, nb::arg("index"),
+                "Remove the i-th vertex in lexicographic order; i must be less than size().");
+
+        // A perturbation-robust crossing test, unique to this shape: true when
+        // this chain has a point strictly above the other and one strictly
+        // below, so every small enough perturbation of both still leaves them
+        // intersecting. Unlike crosses(), a touch that does not swap sides never
+        // counts, and overlapping x-extents of a single point are rejected
+        // outright -- a shared x that is only one chain's own extreme vertex is
+        // not robust.
+        // A chain's only summable pair is with a Point; anything wider needs
+        // asPolyline() (see the Polyline section below).
+        PGL_BIND_TRANSLATION_MINKOWSKI(cls, MonotoneChain);
+
+        cls.def("edgesCross",
+                [](const MonotoneChain &a, const MonotoneChain &b) { return a.edgesCross(b); },
+                nb::arg("other"),
+                "Whether the two chains cross robustly: this chain has a point "
+                "strictly above the other and one strictly below.");
+
+        cls.def("asPolyline", [](const MonotoneChain &c) { return c.asPolyline(); },
+                "The same vertex sequence as a Polyline. A MonotoneChain has no "
+                "minkowskiSum of its own, so this is how to ask for one.");
+
         // Vertical queries -- the payoff of the sorted storage, and unique to
         // this shape. All are O(log n) and exact; each returns None rather than
         // an index when the query x lies outside the chain's x-extent.
@@ -196,16 +231,16 @@ void bind_chains(nb::module_ &m) {
         nb::class_<Polyline> cls(m, "Polyline");
         cls.def(nb::init<>(), "Create an empty polyline (no vertices).");
         cls.def("__init__",
-                [](Polyline *self, const std::vector<Point> &points, bool trusted) {
-                    new (self) Polyline(points, trusted);
+                [](Polyline *self, const std::vector<Point> &points) {
+                    new (self) Polyline(points);
                 },
-                nb::arg("points"), nb::arg("trusted") = false,
+                nb::arg("points"),
                 "Create a polyline through the given vertices, in traversal order. "
-                "Unless trusted is set the sequence is canonicalized by direction "
-                "only (reversed when the reversal is lexicographically smaller), so "
-                "a polyline equals its own reverse; the vertex order is otherwise "
-                "kept as given, and self-intersections are allowed (use isSimple() "
-                "to check).");
+                "The sequence is stored verbatim -- iteration and indexing give it "
+                "back exactly as passed. Direction is not part of a polyline's "
+                "identity, though: equality, ordering and hashing read the vertices "
+                "through the canonical direction, so a polyline still equals its own "
+                "reverse. Self-intersections are allowed (use isSimple() to check).");
 
         PGL_BIND_CHAIN_COMMON(cls, Polyline, "polyline");
 
@@ -214,5 +249,64 @@ void bind_chains(nb::module_ &m) {
                 "non-adjacent edges meet, adjacent edges meet only at their shared "
                 "vertex, and no edge has zero length. A closed polyline (first "
                 "vertex equal to the last) is therefore not simple.");
+
+        // The 2-opt edge flip: remove one edge and rejoin the two sub-paths it
+        // leaves by a different edge over the same vertex set. Removing edge
+        // (p_i, p_i+1) from [p_0 .. p_n-1] leaves A = [p_0 .. p_i] and
+        // B = [p_i+1 .. p_n-1], so the new edge must connect an endpoint of A to
+        // one of B; the three non-trivial reconnections reverse the suffix, the
+        // prefix, or both. Re-adding the removed edge is not a flip.
+        cls.def("flippable",
+                [](const Polyline &p, const Segment &oldEdge, const Segment &newEdge) {
+                    return p.flippable(oldEdge, newEdge);
+                },
+                nb::arg("old_edge"), nb::arg("new_edge"),
+                "Whether replacing old_edge (an existing edge) by new_edge yields a "
+                "path over the same vertices. Edges are compared as unordered vertex "
+                "pairs; in a self-intersecting polyline old_edge may match several "
+                "edges, and the first that admits new_edge is used.");
+        cls.def("flipped",
+                [](const Polyline &p, const Segment &oldEdge, const Segment &newEdge) {
+                    return p.flipped(oldEdge, newEdge);
+                },
+                nb::arg("old_edge"), nb::arg("new_edge"),
+                "A copy with old_edge flipped to new_edge. The flip must be possible "
+                "-- check flippable() first.");
+        cls.def("flip",
+                [](Polyline &p, const Segment &oldEdge, const Segment &newEdge) {
+                    p.flip(oldEdge, newEdge);
+                },
+                nb::arg("old_edge"), nb::arg("new_edge"),
+                "Flip old_edge to new_edge in place. The flip must be possible -- "
+                "check flippable() first.");
+
+        // With the direction invariant gone upstream (the sequence is now stored
+        // verbatim rather than canonicalized on every mutation), a polyline can
+        // be edited in place. A MonotoneChain has no counterpart to these: it
+        // keeps its vertices sorted, so it has no positional insert and its
+        // erase is by value or by sorted position.
+        cls.def("set", [](Polyline &p, std::size_t i, const Point &v) { p.set(i, v); },
+                nb::arg("index"), nb::arg("point"), "Replace the i-th vertex.");
+        cls.def("insert", [](Polyline &p, std::size_t i, const Point &v) { p.insert(i, v); },
+                nb::arg("index"), nb::arg("point"),
+                "Insert a vertex at position i (in [0, size()]), shifting the rest along.");
+        cls.def("insert",
+                [](Polyline &p, std::size_t i, const std::vector<Point> &points) {
+                    p.insert(i, points);
+                },
+                nb::arg("index"), nb::arg("points"),
+                "Insert several vertices at position i, in traversal order.");
+        cls.def("pushBack", [](Polyline &p, const Point &v) { p.pushBack(v); }, nb::arg("point"),
+                "Append a vertex, extending the polyline by one edge.");
+        cls.def("pushBack",
+                [](Polyline &p, const std::vector<Point> &points) { p.pushBack(points); },
+                nb::arg("points"), "Append several vertices, in traversal order.");
+
+        // A chain has no area of its own, and the sum still needs a region:
+        // dragging a shape along a chain that comes back on itself closes the
+        // swept material over a hole, a closed chain being the plainest example.
+        // A MonotoneChain has no minkowskiSum -- convert with asPolyline() when
+        // its sum is wanted, which is what pgl asks for too.
+        PGL_BIND_REGION_MINKOWSKI(cls, Polyline);
     }
 }

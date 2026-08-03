@@ -106,7 +106,7 @@ Still to do: broaden `intersection` to 2D∩2D among `Triangle`/`Rectangle`/
 complete), and consider STABLE_ABI to cut the wheel count before the next
 release. (pgl-side gaps that keep pypgl's matrices ragged are tracked in
 [doc/todo.md](doc/todo.md): chain ∩ `Disk`/`Polygon`, L1/LInf distance to a
-`Disk`, Hausdorff distance for the non-convex shapes.)
+`Disk`, Hausdorff distance for the non-convex shapes, `polyline + polyline`.)
 [pypgl.md](pypgl.md) remains the authoritative design contract —
 update it in lockstep if a decision changes.
 
@@ -390,6 +390,137 @@ but exist in neither library, so they were dropped from
 [doc/raw/shapes.md](doc/raw/shapes.md) rather than bound (upstream's copy still
 has them).
 
+**`PolygonWithHoles` + `HalfplaneIntersection`, booleans, Minkowski sums, and
+the degeneracy family** (milestone 11): `.pgl-ref` re-pinned to `830d9a7`, which
+brought 156 upstream commits — two new shape classes, two new operation
+families, and one cross-cutting addition to every existing shape.
+
+**The re-pin did not build**, and the fix was upstream (pgl commit `830d9a7`,
+made in this session and pushed). `Shape::squaredDistanceOf` probes
+`left.squaredDistance<ResultNumber>(right)` first; `PolygonWithHoles` and
+`HalfplaneIntersection` declare that templated form but answered in a hard-coded
+`double`, so the probe won and the `double`→`ERational` conversion failed. (The
+older shapes escaped only because their `Disk` overloads take no `ResultNumber`
+at all and fell through to the untemplated second probe.) The fix generalizes the
+whole family: `detail::floating_result_t<ResultNumber>` — the requested type when
+it is floating-point, `double` otherwise — so every `Disk` distance now takes a
+`ResultNumber` and computes in that width, including the golden-section searches
+behind `distanceL1`/`distanceLInf`. `Shape`'s three distance helpers convert
+explicitly on both probes. **One exception is load-bearing**: `Disk`'s two
+`distanceL1`/`distanceLInf(Shape<PointType>)` overloads keep their untemplated
+`double`. Giving them a `ResultNumber` slot makes the rank-forwarding probe
+`o.template distanceL1<ResultNumber>(self)` *succeed* by converting the other
+shape to `Shape<PointType>`, so `line.distanceL1(disk)` forwards to
+`disk.distanceL1(Shape(line))`, which visits the `Line` alternative and forwards
+straight back — a stack overflow, not a compile error. pgl's own
+`tests/unit/shape.cpp` caught it; a regression test for the original bug was
+added there too.
+
+`PolygonWithHoles` ([src/bind_region.cpp](src/bind_region.cpp)) is the 15th
+bound class: a closed region, an outer simple polygon minus the *interiors* of
+pairwise interior-disjoint holes. Mutable (`addHole`/`eraseHole`) and therefore
+unhashable, like `Convex`/`Polygon`. Structural validity is a precondition, not
+an invariant — `isValid()` checks it on demand. The subtle predicate is
+`isRegular()`: a valid region may pinch shut along a stretch of edge (a **slit**,
+material with no area on either side), and `regularized()` returns the pieces of
+`closure(interior)` without them. Pinching at an isolated *point* is not a slit.
+`isSolidVertex` is **private** upstream and is not bound.
+
+`HalfplaneIntersection`
+([src/bind_halfplaneintersection.cpp](src/bind_halfplaneintersection.cpp)) is the
+16th: convex like `Convex` but possibly unbounded and possibly empty. Two
+conventions bite. A **default-constructed one is the whole plane**, the opposite
+of `Convex()`. And its **stored elements are half-planes, not points** — its
+corners are implicit and generally rational even for integer half-planes, which
+is precisely the case pypgl's single `ERational` instantiation handles exactly.
+
+**The two new shapes take opposite decisions on container sugar**, both
+deliberate (see [pypgl/__init__.py](pypgl/__init__.py) and
+[src/stubgen_patterns.txt](src/stubgen_patterns.txt)):
+
+- `HalfplaneIntersection` **mirrors C++**: `len`/`[]`/iteration run over its
+  half-planes, since that is what pgl gives it `size()`/`get()`/`index()` for.
+  Its own corners come from `vertexCount()`/`vertex(i)`/`vertices()`. It needs
+  its own stubgen rule, ahead of the generic one, or the stub would promise
+  `Point`.
+- `PolygonWithHoles` **diverges from C++**: pgl iterates its *holes* and gives it
+  no `size()`/`get()` at all (deliberately, so a name shared with a polygon never
+  means two things). Python instead flattens the rings' vertices, outer boundary
+  first, so a region reads like every other pypgl shape. `holeCount()`/`hole(i)`/
+  `holes()` reach the holes. It takes the generic stubgen rule.
+
+Both are 15th/16th entries in `PGL_BIND_ALL_PREDICATES` /
+`PGL_BIND_ALL_SQUARED_DISTANCE` / `PGL_BIND_ALL_L1LINF_DISTANCE`
+([src/common.h](src/common.h)) — pgl's coverage is complete, so the whole 16×16
+matrix compiled first try. Neither gets the Hausdorff family. Both are `Canvas`
+targets; `PolygonWithHoles` is a storable `ShapeTree` element, while a
+`HalfplaneIntersection` is the one shape whose storability depends on the
+*value*: bounded ones store, unbounded ones raise, and either is a valid query.
+The `casters.h` `Shape` caster grew to sixteen alternatives.
+
+**Boolean operations and Minkowski sums** are bound through new macros in
+[src/common.h](src/common.h) rather than a file of their own — a first attempt at
+a separate `bind_booleans.cpp` used `nb::borrow<nb::class_<T>>` to re-open
+classes registered in other TUs, which is unnecessary: nanobind resolves argument
+types at call time, so registration order across TUs is irrelevant and each shape
+can simply call the macro itself. `difference`/`unionWith`/`symmetricDifference`
+live on `Polygon`/`PolygonWithHoles`, with the three symmetric ones forwarded
+from a `Convex`/`Triangle`/`Rectangle` receiver (`difference` is not symmetric
+and forwards nowhere, so those shapes have no `difference` attribute at all). All
+return `list[PolygonWithHoles]` and all are **regularized**, so
+`a.unionWith(a)` is `a.regularized()`, not `a`.
+
+`minkowskiSum`/`+` is bound for every summable pair per the user's decision to
+mirror pgl exactly, so `polygon + rectangle` returns `list[PolygonWithHoles]`
+while `triangle + triangle` returns a `Convex`. Two subtleties cost a round of
+test failures each: the convex shapes have a **rank-based forwarder** for
+non-convex operands (`rectangle.minkowskiSum(polygon)` works), and `Polyline` is
+a valid operand for the `Polygon`/`PolygonWithHoles` receivers but
+`polyline + polyline` is not a pair. Unsupported pairs (`Disk`, unbounded
+operands) are simply not bound, so they raise `TypeError` — the runtime
+equivalent of pgl's compile error.
+
+**The degeneracy family** (`isPoint`/`getIfPoint`, `isSegment`/`getIfSegment`,
+`isUndefined`) is bound across every shape via three tiered macros in
+[src/common.h](src/common.h), since not every shape can collapse every way:
+`PGL_BIND_IS_UNDEFINED` for `Line`/`OrientedLine`/`Ray`/`Halfplane` (nothing to
+collapse *to*), `PGL_BIND_DEGENERACY_POINT` for `Segment`/`OrientedSegment`/
+`Disk`, and `PGL_BIND_DEGENERACY` for the rest. `PolygonWithHoles` has the two
+tests but no `getIf*` pair upstream, so it binds them by hand. **The chains are
+the case worth remembering**: a straight `MonotoneChain`/`Polyline` satisfies
+`isSegment()` but is *not* `isDegenerate()` — a chain is one-dimensional already,
+so it has dropped nothing and keeps its relative interior, unlike a flattened
+`Triangle`.
+
+**A pypgl-side guard was needed for `Convex.insert`.** C++ accepts only shapes
+exposing `vertices()`, making a `Disk` or a `Line` a compile error. In Python
+they are not, because every pypgl shape is iterable over its defining points, so
+a `Disk` satisfied the `list[Point]` overload and `c.insert(disk)` quietly
+inserted the disk's three *boundary* points — whose hull the disk bulges straight
+past, so the answer was wrong rather than merely surprising. Five explicit
+refusing overloads now raise `TypeError`, and **they must be registered first**:
+nanobind takes the first matching overload, and the converting list overload
+would otherwise win.
+
+Also bound in this milestone: `Convex.insert`/`upperHull`/`lowerHull` (which
+[doc/raw/shapes.md](doc/raw/shapes.md) had dropped back in milestone 10 as
+existing in neither library — they exist now); `Polygon.isStarShaped`/
+`getStarShapedKernel` (the kernel is a `HalfplaneIntersection`, or `None`);
+`MonotoneChain.erase`/`asPolyline`; `Polyline`'s 2-opt edge flip
+(`flip`/`flipped`/`flippable`, which take an *old and a new edge* — not a
+direction reversal) plus in-place `set`/`insert`/`pushBack`; `Halfplane`'s whole
+`intersection` overload set, which it had lacked entirely; `asPolygonWithHoles`
+and `asHalfplaneIntersection` across the shapes that have them; `Triangulation`
+from a region; and `polyominoRegions`/`polyominoRegionsUpTo`, which omit no
+polyomino (108 at size seven against `polyominoes`' 107).
+
+**Breaking: `Polyline` stores its vertices verbatim.** Upstream dropped the
+constructor's `trusted` parameter and stopped canonicalizing the traversal
+direction, so `vertices()` now returns exactly what was passed and a transform
+that moves vertices past each other in the lexicographic order no longer
+re-sorts them. Equality, ordering and hashing stay direction-agnostic, so a
+polyline still equals its own reverse.
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 
@@ -487,6 +618,47 @@ Co-develop against another pgl checkout:
 
 Wheels (later milestone): `cibuildwheel` in GitHub Actions; ship generated
 `_pgl.pyi` stubs + `py.typed`.
+
+## Examples
+
+[examples/](examples/) is the Python port of pgl's `examples/`, one file per C++
+one, plus a `README.md` and a `Makefile` (`make` runs them all, `make clean`
+removes what they wrote — the C++ Makefile compiles, this one only runs). Their
+generated `.svg`/`.pdf`/`.ipe` are gitignored and excluded from the sdist.
+
+They are the closest thing to an integration test of the *user-facing* API, and
+they earn it: porting `example3.cpp` immediately turned up that
+`Convex.verticesCentroid` was never bound, though `Polygon` and
+`PolygonWithHoles` both had it. Re-run them after changing a binding.
+
+That one prompted a full audit — every class's doxygen-documented C++ methods
+against `dir(cls)` — which found seven more pre-existing omissions, all now
+bound: `orientedEdges` on `Triangle`/`Rectangle`/`Convex` (it was bound on
+`Polygon` and the chains, and pgl documents it for all of them), `Triangle.a/b/c`
+(the counterpart of `Disk.a/b/c`, which was bound), `Rectangle.center`/`width`/
+`height`/`insert`, `MonotoneChain.edgesCross`, the in-place `rotate90`/`scale*`
+on `PolygonWithHoles`/`HalfplaneIntersection` (every other mutable shape had
+them), and the named `minkowskiSum` on the translation-only shapes — `shape +
+point` always worked there, so which spelling was available depended on which
+shape you held. The audit script is worth re-running after a re-pin; it is a few
+lines of regex over the headers plus a `dir()` diff.
+
+What it still reports is noise or deliberate: iterator typedefs, `detail::`
+helpers, private members, `fbox`/`pointInsideInteriorContainedIn`/labels (all
+deliberately unbound), and the in-place transforms on the *immutable* shapes,
+which by contract only get the value-returning `rotated90`/`scaled*`. A handful
+of genuinely marginal ones are left alone: `Segment.area`/`twiceArea`/`edges`
+(uniformity methods for generic C++ code), `containsCollinear` (an unchecked
+precondition fast path for `contains`), `Line.asSegmentFor`,
+`OrientedLine.crossingOrder`, `Convex.edgesAtX`/`maxIndex`, and
+`Polyline.polygonIntersection`.
+
+Three places where a port cannot be literal, all called out in the examples'
+README: the canvas is methods rather than a stream, `float` coordinates are
+rejected so trigonometric layouts must `round()` first, and only the fixed-size
+shapes take flat coordinate lists (`Segment(0, 0, 8, 8)`) — `Convex`, `Polygon`,
+`MonotoneChain` and `Polyline` want a sequence of `Point`, so `example_canvas.py`
+carries a small `points(*coords)` helper.
 
 ## Docs
 

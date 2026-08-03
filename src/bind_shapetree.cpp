@@ -16,10 +16,13 @@ using namespace pypgl;
 // shape objects, never a "Shape" object.
 //
 // Only bounded shapes (those with bbox(): Point, Segment, OrientedSegment,
-// Triangle, Rectangle, Convex, MonotoneChain, Polyline, Polygon, Disk) can
-// actually be *stored* --
+// Triangle, Rectangle, Convex, MonotoneChain, Polyline, Polygon,
+// PolygonWithHoles, Disk) can actually be *stored* --
 // pgl's own Shape::bbox() throws std::logic_error for the four unbounded
-// alternatives (Line, OrientedLine, Ray, Halfplane), and that exception
+// alternatives (Line, OrientedLine, Ray, Halfplane) -- and for a
+// HalfplaneIntersection, which is bounded only sometimes: an unbounded one
+// throws just the same, so whether it can be stored depends on the value, not
+// on the type. That exception
 // surfaces to Python unmodified (as a RuntimeError), the same way e.g.
 // Disk.radius() already lets pgl's own throwing radius<ERational>() surface
 // for an irrational radius. Unbounded shapes remain perfectly valid *queries*
@@ -64,7 +67,8 @@ void bind_shapetree(nb::module_ &m) {
             },
             nb::arg("shapes"), nb::arg("leaf_size") = 6,
             "Build a tree over shapes (Point/Segment/OrientedSegment/Triangle/"
-            "Rectangle/Convex/MonotoneChain/Polyline/Polygon/Disk, in any mix). "
+            "Rectangle/Convex/MonotoneChain/Polyline/Polygon/PolygonWithHoles/Disk, "
+            "in any mix, plus a bounded HalfplaneIntersection). "
             "leaf_size caps how many elements are kept at a node before it is split.");
 
     // ---- sizes / storage -----------------------------------------------

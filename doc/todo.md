@@ -21,13 +21,18 @@ These are gaps in the underlying C++ library, so they are missing here too:
 
 - `intersection` between two 2-dimensional shapes among [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), and [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.").
 - `intersection` of a chain ([`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.")) with a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") or a [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices.").
+- `minkowskiSum` of two chains (`polyline + polyline`), and of a [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.") receiver — convert with `asPolyline()` for the latter.
 - `distanceL1` / `distanceLInf` to and from a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), which pgl implements only against a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") so far.
-- Hausdorff distance for the non-convex shapes ([`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.")) and for [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.").
+- Hausdorff distance for the non-convex shapes ([`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.")), for [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), and for the possibly-unbounded [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty.").
 
 The 1-dimensional chains that used to be listed here are now implemented: an
 arbitrary, possibly self-intersecting chain is [`Polyline`](shapes.md#polyline),
 and the x-monotone one (formerly called `PolyFunction`) is
-[`MonotoneChain`](shapes.md#monotonechain).
+[`MonotoneChain`](shapes.md#monotonechain). Two 2-dimensional shapes have since
+joined them: [`PolygonWithHoles`](shapes.md#polygon-with-holes), which is what
+the [boolean operations](shape_methods.md#boolean-operations) and the non-convex
+[Minkowski sum](shape_methods.md#minkowski-sum) return, and
+[`HalfplaneIntersection`](shapes.md#halfplane-intersection).
 
 ## Deliberately Not Exposed
 
@@ -36,8 +41,9 @@ purpose, and are not expected to arrive:
 
 - **Other number types.** Only the exact arbitrary-precision rational
   instantiation is bound, which is what keeps the API (and the binary) small.
-  This is also why an arbitrary-angle `Transformation.rotation(radians)` and
-  `Disk.fbox()` are missing: both exist only in a floating-point flavor.
+  This is also why an arbitrary-angle `Transformation.rotation(radians)`,
+  `Disk.fbox()` and `HalfplaneIntersection.fbox()` are missing: all exist only in
+  a floating-point flavor.
 - **Callback-based traversals** (`visitTriangles…`, `visitIntersecting`, …). Every
   traversal here returns a list instead, which is what a Python caller wants
   anyway.
