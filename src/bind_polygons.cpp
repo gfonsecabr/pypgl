@@ -44,13 +44,22 @@ void bind_polygons(nb::module_ &m) {
         cls.def("asHalfplaneIntersection", [](const Triangle &t) { return t.asHalfplaneIntersection(); },
                 "The same shape as a HalfplaneIntersection, one half-plane per edge.");
         cls.def("asConvex", [](const Triangle &t) { return t.asConvex(); }, "The same triangle as a Convex.");
+        cls.def("asPolygonSet", [](const Triangle &t) { return t.asPolygonSet(); },
+                "The same shape as a one-component PolygonSet.");
         cls.def("asPolygon", [](const Triangle &t) { return t.asPolygon(); }, "The same triangle as a Polygon.");
 
         bind_value_semantics<Triangle>(cls);
         PGL_BIND_OPERATORS(cls, Triangle);
         PGL_BIND_TRANSFORMS(cls, Triangle);
-        PGL_BIND_FORWARDED_BOOLEANS(cls, Triangle);
-        PGL_BIND_CONVEX_MINKOWSKI(cls, Triangle);
+        // The three symmetric booleans over the six bounded region types, plus
+        // the difference, whose argument may also be unbounded. Every one of
+        // them answers with a PolygonSet, so a triangle takes part in the
+        // same closed algebra the regions do -- only the regularized
+        // *intersection* needs a region or a set on one side (bound just
+        // below), since a triangle cannot hold an answer with a hole.
+        PGL_BIND_BOOLEANS(cls, Triangle);
+        PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Triangle);
+        PGL_BIND_MINKOWSKI_CONVEX(cls, Triangle);
         PGL_BIND_DEGENERACY(cls, Triangle);
         PGL_BIND_VERTEX_QUERIES(cls, Triangle);
         PGL_BIND_INDEXING(cls, Triangle);
@@ -58,18 +67,21 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Triangle);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Triangle);
         PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Triangle);
+        PGL_BIND_ALL_SAME_POINT_SET(cls, Triangle);
 
-        cls.def("intersection", [](const Triangle &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Triangle &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Triangle &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Triangle &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Triangle &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Triangle &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
+        // The literal intersection, against every shape but a Disk: a Point or
+        // a Segment where the operand is lower-dimensional, a Convex where two
+        // convex bodies overlap, and a list of pieces where the operand is a
+        // chain or a non-convex region.
+        PGL_BIND_INTERSECTION_AREA(cls, Triangle);
     }
 
     // --- Rectangle ---
     {
         nb::class_<Rectangle> cls(m, "Rectangle");
+        cls.def(nb::init<>(),
+                "Create the empty rectangle, which covers no point. Growing it with "
+                "insert() gives the bounding box of whatever is inserted.");
         cls.def(nb::init<Point, Point>(), nb::arg("first"), nb::arg("second"),
                 "Create the axis-aligned bounding rectangle of two points.");
         cls.def(nb::init<Num, Num, Num, Num>(), nb::arg("x1"), nb::arg("y1"), nb::arg("x2"), nb::arg("y2"),
@@ -121,6 +133,11 @@ void bind_polygons(nb::module_ &m) {
         cls.def("midpoint", [](const Rectangle &r) { return r.midpoint(); }, "Exact midpoint of the diagonal.");
         cls.def("diameter", [](const Rectangle &r) { return r.diameter(); }, "Diagonal as a segment.");
         cls.def("isDegenerate", [](const Rectangle &r) { return r.isDegenerate(); }, "Whether the rectangle has zero area.");
+        cls.def("empty", [](const Rectangle &r) { return r.empty(); },
+                "Whether the rectangle covers no point at all: its stored maximum corner "
+                "falls below its minimum one on an axis, which is the state a "
+                "default-constructed Rectangle is in. Distinct from isDegenerate(), which "
+                "is a rectangle collapsed to a segment or a point and still covers those.");
         cls.def("bbox", [](const Rectangle &r) { return r.bbox(); }, "Exact axis-aligned bounding box (the rectangle itself).");
         cls.def("circumcircle", [](const Rectangle &r) { return r.circumcircle(); },
                 "The Disk through the four corners.");
@@ -180,13 +197,22 @@ void bind_polygons(nb::module_ &m) {
         cls.def("asHalfplaneIntersection", [](const Rectangle &r) { return r.asHalfplaneIntersection(); },
                 "The same shape as a HalfplaneIntersection, one half-plane per edge.");
         cls.def("asConvex", [](const Rectangle &r) { return r.asConvex(); }, "The same rectangle as a Convex.");
+        cls.def("asPolygonSet", [](const Rectangle &r) { return r.asPolygonSet(); },
+                "The same shape as a one-component PolygonSet.");
         cls.def("asPolygon", [](const Rectangle &r) { return r.asPolygon(); }, "The same rectangle as a Polygon.");
 
         bind_value_semantics<Rectangle>(cls);
         PGL_BIND_OPERATORS(cls, Rectangle);
         PGL_BIND_TRANSFORMS(cls, Rectangle);
-        PGL_BIND_FORWARDED_BOOLEANS(cls, Rectangle);
-        PGL_BIND_CONVEX_MINKOWSKI(cls, Rectangle);
+        // The three symmetric booleans over the six bounded region types, plus
+        // the difference, whose argument may also be unbounded. Every one of
+        // them answers with a PolygonSet, so a rectangle takes part in the
+        // same closed algebra the regions do -- only the regularized
+        // *intersection* needs a region or a set on one side (bound just
+        // below), since a rectangle cannot hold an answer with a hole.
+        PGL_BIND_BOOLEANS(cls, Rectangle);
+        PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Rectangle);
+        PGL_BIND_MINKOWSKI_CONVEX(cls, Rectangle);
         PGL_BIND_DEGENERACY(cls, Rectangle);
         PGL_BIND_VERTEX_QUERIES(cls, Rectangle);
         PGL_BIND_INDEXING(cls, Rectangle);
@@ -194,13 +220,13 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Rectangle);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Rectangle);
         PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Rectangle);
+        PGL_BIND_ALL_SAME_POINT_SET(cls, Rectangle);
 
-        cls.def("intersection", [](const Rectangle &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Rectangle &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Rectangle &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Rectangle &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Rectangle &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Rectangle &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
+        // The literal intersection, against every shape but a Disk: a Point or
+        // a Segment where the operand is lower-dimensional, a Convex where two
+        // convex bodies overlap, and a list of pieces where the operand is a
+        // chain or a non-convex region.
+        PGL_BIND_INTERSECTION_AREA(cls, Rectangle);
     }
 
     // --- Convex ---
@@ -210,9 +236,27 @@ void bind_polygons(nb::module_ &m) {
         // The C++ range constructor is a template; bind it via a placement-new
         // factory taking a list of points (Graham-scanned into a convex hull).
         cls.def("__init__",
-                [](Convex *self, const std::vector<Point> &points) { new (self) Convex(points); },
-                nb::arg("points"),
-                "Create the convex hull of the given points.");
+                [](Convex *self, const std::vector<Point> &points, bool trusted) {
+                    new (self) Convex(points, trusted);
+                },
+                nb::arg("points"), nb::arg("trusted") = false,
+                "Create the convex hull of the given points. Set trusted only if "
+                "they already are the hull vertices in counterclockwise order from "
+                "the leftmost one, in which case they are stored as given.");
+        // The same constructor spelled as a flat coordinate list, mirroring
+        // pgl's initializer_list<Number> one: Convex([0,0, 8,0, 4,6]) instead of
+        // Convex([Point(0,0), Point(8,0), Point(4,6)]). Registered after the
+        // point overload, which is what disambiguates the empty list (both match
+        // it; either builds the same empty hull). The two never collide
+        // otherwise: a Point has no numerator/denominator so it is not a
+        // coordinate, and a number is not a Point.
+        cls.def("__init__",
+                [](Convex *self, const std::vector<Num> &coords, bool trusted) {
+                    new (self) Convex(pointsFromCoords(coords), trusted);
+                },
+                nb::arg("coords"), nb::arg("trusted") = false,
+                "Create the convex hull of the points spelled by a flat coordinate "
+                "list, read in (x, y) pairs: Convex([0,0, 8,0, 4,6]).");
 
         cls.def("vertices", [](const Convex &c) { return c.vertices(); }, "Hull vertices in CCW order from the leftmost.");
         cls.def("orientedEdges", [](const Convex &c) { return c.orientedEdges(); },
@@ -226,8 +270,14 @@ void bind_polygons(nb::module_ &m) {
                 "differs from the area-weighted centroid.");
         cls.def("diameter", [](const Convex &c) { return c.diameter(); }, "Diameter as a segment between two vertices.");
         cls.def("isDegenerate", [](const Convex &c) { return c.isDegenerate(); }, "Whether the hull is lower-dimensional.");
+        cls.def("empty", [](const Convex &c) { return c.empty(); },
+                "Whether the hull covers no point at all -- the empty set, which is what a "
+                "vertexless Convex is: the default-constructed one, the hull of no points, "
+                "and every convex-valued result that comes back empty.");
         cls.def("bbox", [](const Convex &c) { return c.bbox(); }, "Exact axis-aligned bounding box (a Rectangle).");
         cls.def("asPolygon", [](const Convex &c) { return c.asPolygon(); }, "The same hull as a Polygon.");
+        cls.def("asPolygonSet", [](const Convex &c) { return c.asPolygonSet(); },
+                "The same hull as a one-component PolygonSet.");
         cls.def("asPolygonWithHoles", [](const Convex &c) { return c.asPolygonWithHoles(); },
                 "The same hull as a hole-free PolygonWithHoles region.");
         cls.def("asHalfplaneIntersection", [](const Convex &c) { return c.asHalfplaneIntersection(); },
@@ -317,8 +367,15 @@ void bind_polygons(nb::module_ &m) {
         // Value-returning transforms (new hull) plus their in-place counterparts
         // (mutate, return None), mirroring pgl.
         PGL_BIND_TRANSFORMS(cls, Convex);
-        PGL_BIND_FORWARDED_BOOLEANS(cls, Convex);
-        PGL_BIND_CONVEX_MINKOWSKI(cls, Convex);
+        // The three symmetric booleans over the six bounded region types, plus
+        // the difference, whose argument may also be unbounded. Every one of
+        // them answers with a PolygonSet, so a convex takes part in the
+        // same closed algebra the regions do -- only the regularized
+        // *intersection* needs a region or a set on one side (bound just
+        // below), since a convex cannot hold an answer with a hole.
+        PGL_BIND_BOOLEANS(cls, Convex);
+        PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Convex);
+        PGL_BIND_MINKOWSKI_CONVEX(cls, Convex);
         PGL_BIND_DEGENERACY(cls, Convex);
         cls.def("rotate90", [](Convex &c, int k) { c.rotate90(k); }, nb::arg("k") = 1,
                 "Rotate the hull in place by 90*k degrees about the origin.");
@@ -341,12 +398,12 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Convex);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Convex);
         PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Convex);
+        PGL_BIND_ALL_SAME_POINT_SET(cls, Convex);
 
-        cls.def("intersection", [](const Convex &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Convex &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Convex &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Convex &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Convex &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Convex &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
+        // The literal intersection, against every shape but a Disk: a Point or
+        // a Segment where the operand is lower-dimensional, a Convex where two
+        // convex bodies overlap, and a list of pieces where the operand is a
+        // chain or a non-convex region.
+        PGL_BIND_INTERSECTION_AREA(cls, Convex);
     }
 }

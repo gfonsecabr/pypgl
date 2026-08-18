@@ -45,6 +45,77 @@ void bind_algorithms(nb::module_ &m) {
           nb::arg("points"),
           "Return the convex hull, retaining input points on its edge interiors.");
 
+    // The smallest closed disk containing every given point, by Welzl's
+    // randomized incremental algorithm (expected linear time). pgl's warning
+    // about even coordinates does not apply here: pypgl's coordinates are
+    // exact rationals, so halving a coordinate never truncates.
+    m.def("smallestEnclosingDisk",
+          [](const std::vector<Point> &points) {
+              if (points.empty())
+                  throw nb::value_error(
+                      "smallestEnclosingDisk() needs at least one point");
+              return pgl::smallestEnclosingDisk(points);
+          },
+          nb::arg("points"),
+          "Return the unique smallest closed Disk containing every given point.");
+
+    // The classic divide-and-conquer closest pair. Only squared distances are
+    // compared, so the answer is exact.
+    m.def("closestPair",
+          [](const std::vector<Point> &points) {
+              if (points.size() < 2)
+                  throw nb::value_error("closestPair() needs at least two points");
+              return pgl::closestPair(points);
+          },
+          nb::arg("points"),
+          "Return a Segment joining two of the given points at minimum distance from "
+          "each other. O(n log n) on ordinary inputs; ties are broken arbitrarily.");
+
+    // The union of many regions in one arrangement, rather than one arrangement
+    // per step as folding regularizedUnion over the list would build. Bound once
+    // per operand type, since the C++ template takes a homogeneous range.
+    //
+    // All six bounded region types are accepted. Triangle, Rectangle and
+    // PolygonSet ranges used to fail to compile upstream -- the cut-segment
+    // collection asked every piece for an `edgesView()` that the two fixed-size
+    // shapes do not have, and the arrangement does not accept a set as an input
+    // shape -- which pgl fixed by materializing the edges of whatever carries no
+    // view and by separating a set into its components first. The range stays
+    // homogeneous (that is the C++ template's shape), so a mixed list still needs
+    // asConvex() / asPolygon() / asPolygonWithHoles() to line the pieces up, or
+    // `functools.reduce(Polygon.regularizedUnion, shapes)` as the slower fallback.
+    {
+        auto unionOf = [](const auto &shapes, bool simpleBoundaries) {
+            return pgl::regularizedUnionOf<Point>(shapes, simpleBoundaries);
+        };
+        const char *doc =
+            "Return the regularized union of every given shape as one PolygonSet, "
+            "settled by a single arrangement over all their boundaries -- which is what "
+            "makes it the right way to unite many pieces at once. Set simple_boundaries "
+            "when no piece has two boundary edges overlapping each other (always true of "
+            "a Convex, a Triangle and a Rectangle, true of a Polygon that meets its "
+            "simplicity precondition, and true of a PolygonWithHoles exactly when it "
+            "carries no slit) to take the faster face-classification path.";
+        m.def("regularizedUnionOf",
+              [unionOf](const std::vector<Convex> &shapes, bool simple) { return unionOf(shapes, simple); },
+              nb::arg("shapes"), nb::arg("simple_boundaries") = false, doc);
+        m.def("regularizedUnionOf",
+              [unionOf](const std::vector<Polygon> &shapes, bool simple) { return unionOf(shapes, simple); },
+              nb::arg("shapes"), nb::arg("simple_boundaries") = false, doc);
+        m.def("regularizedUnionOf",
+              [unionOf](const std::vector<PolygonWithHoles> &shapes, bool simple) { return unionOf(shapes, simple); },
+              nb::arg("shapes"), nb::arg("simple_boundaries") = false, doc);
+        m.def("regularizedUnionOf",
+              [unionOf](const std::vector<PolygonSet> &shapes, bool simple) { return unionOf(shapes, simple); },
+              nb::arg("shapes"), nb::arg("simple_boundaries") = false, doc);
+        m.def("regularizedUnionOf",
+              [unionOf](const std::vector<Triangle> &shapes, bool simple) { return unionOf(shapes, simple); },
+              nb::arg("shapes"), nb::arg("simple_boundaries") = false, doc);
+        m.def("regularizedUnionOf",
+              [unionOf](const std::vector<Rectangle> &shapes, bool simple) { return unionOf(shapes, simple); },
+              nb::arg("shapes"), nb::arg("simple_boundaries") = false, doc);
+    }
+
     m.def("sortAround",
           [](nb::list points, const Point &center) {
               auto sorted = nb::cast<std::vector<Point>>(points);

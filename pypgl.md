@@ -55,12 +55,12 @@ casters; all three live in a single `casters.h` shared by all translation units.
 
 ### 3. `pgl::Shape<EPoint>` ↔ a concrete pypgl shape object
 
-`ShapeTree` is the one bound type that needs a mix of shape types in a single
-container, which the "bind concrete shapes, not the variant wrapper" rule
-below can't express on its own. This caster is what keeps `pgl::Shape` itself
-unbound and invisible from Python:
+The spatial indexes (`ShapeTree`, and later `IntervalTree`) are the bound types
+that need a mix of shape types in a single container, which the "bind concrete
+shapes, not the variant wrapper" rule below can't express on its own. This
+caster is what keeps `pgl::Shape` itself unbound and invisible from Python:
 
-- **Py→C++:** try each of the twelve bound classes with an exact,
+- **Py→C++:** try each of the bound shape classes with an exact,
   non-converting cast; the first match wins.
 - **C++→Py:** dispatch on the stored alternative and hand it to the already-
   registered caster for that concrete class.
@@ -116,7 +116,10 @@ Bound directly from C++:
 
 - **Constructors** mirroring the C++ ones, e.g. `Point(x, y)`,
   `Segment(p, q)` and `Segment(x1, y1, x2, y2)`, `Triangle(...)`, etc., with
-  coordinates accepted as `int`, `Fraction`, or `"a/b"` strings.
+  coordinates accepted as `int`, `Fraction`, or `"a/b"` strings. The
+  variable-size shapes (`Convex`, `Polygon`, `MonotoneChain`, `Polyline`) take
+  either a sequence of `Point` or one flat coordinate list read in `(x, y)`
+  pairs — the Python spelling of pgl's `initializer_list<Number>` constructors.
 - **`__repr__` / `__str__`** from `io.hpp`.
 - **`__eq__`, `__lt__`, `__hash__`** → usable in `set` / `dict` immediately.
 - **Accessors** (`.x()`, `.y()`, `.min()`, `.max()`, vertices, `.length()`,

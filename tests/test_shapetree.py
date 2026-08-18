@@ -266,3 +266,32 @@ def test_repr_svg():
     t = ShapeTree(_mixed_shapes())
     svg = t._repr_svg_()
     assert svg.startswith("<?xml") or "<svg" in svg
+
+
+# --- k nearest neighbors ----------------------------------------------------
+
+def test_k_nearest_neighbors_come_back_nearest_first():
+    shapes = [Point(0, 0), Point(3, 0), Point(10, 0), Point(30, 0)]
+    tree = ShapeTree(shapes)
+    assert tree.kNearestNeighbors(Point(1, 0), 3) == [Point(0, 0), Point(3, 0), Point(10, 0)]
+
+
+def test_asking_for_more_neighbors_than_there_are_gives_what_there_is():
+    tree = ShapeTree([Point(0, 0), Point(3, 0)])
+    assert len(tree.kNearestNeighbors(Point(1, 0), 10)) == 2
+
+
+def test_a_non_positive_k_or_an_empty_tree_gives_an_empty_list():
+    # Unlike nearestNeighbor, which answers None for an empty tree, there is no
+    # None case here: an empty answer is simply an empty list.
+    tree = ShapeTree([Point(0, 0)])
+    assert tree.kNearestNeighbors(Point(1, 0), 0) == []
+    assert tree.kNearestNeighbors(Point(1, 0), -1) == []
+    assert ShapeTree().kNearestNeighbors(Point(1, 0), 3) == []
+
+
+def test_the_first_neighbor_is_the_nearest_one():
+    shapes = [Point(0, 0), Segment(4, 4, 5, 5), Triangle(Point(9, 0), Point(10, 0), Point(9, 1))]
+    tree = ShapeTree(shapes)
+    query = Point(4, 3)
+    assert tree.kNearestNeighbors(query, 1) == [tree.nearestNeighbor(query)]

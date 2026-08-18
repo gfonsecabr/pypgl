@@ -185,8 +185,13 @@ def test_an_empty_chain_is_undefined():
     assert Polyline([]).isUndefined()
 
 
-def test_an_empty_convex_is_undefined():
-    assert Convex([]).isUndefined()
+def test_an_empty_convex_is_the_empty_set_not_an_undefined_one():
+    # Upstream gave Rectangle, Convex and Polygon a real empty state: a hull
+    # with no vertex is now the empty set, which is well defined (contained in
+    # every shape, meeting none) rather than undefined.
+    empty = Convex([])
+    assert empty.empty()
+    assert not empty.isUndefined()
 
 
 def test_a_halfplane_intersection_is_never_undefined():

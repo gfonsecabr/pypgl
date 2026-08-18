@@ -1,6 +1,6 @@
 """Iterated midpoint polygon.
 
-The Python port of pgl's `examples/example3.cpp`.
+The Python port of pgl's `examples/example_convex.cpp`.
 
 Starting from the convex hull of random points sampled inside a disk, this
 repeatedly replaces the polygon by its "midpoint polygon" -- the convex hull of

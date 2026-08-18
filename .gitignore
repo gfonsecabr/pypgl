@@ -7,7 +7,8 @@ __pycache__/
 dist/
 .venv/
 
-# What the examples write when run (see examples/README.md).
+# What the examples write when run (see examples/README.md). The copies under
+# examples/figures/ are the gallery's images and are tracked on purpose.
 examples/*.svg
 examples/*.pdf
 examples/*.ipe

@@ -71,6 +71,99 @@ These functions use the same predicate conventions documented in
 To get the hull as a shape rather than as a list of points, construct a
 [`Convex`](shapes.md#convex) directly: `pgl.Convex(points)` computes the hull.
 
+### Smallest enclosing disk
+
+- [`smallestEnclosingDisk(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ac8734297c4d99750062ee028e743d0d0 "Computes the smallest closed disk containing a set of points."): Returns the unique smallest closed
+  [`Disk`](shapes.md#disk) containing every given point, by a randomized
+  incremental algorithm in expected $O(n)$ time. Constructing a disk supported by
+  two points halves a coordinate, which stays exact here, so the center and the
+  squared radius come back exact whatever the input. Raises for an empty list.
+
+```python
+corners = [pgl.Point(0,0), pgl.Point(4,0), pgl.Point(4,4), pgl.Point(0,4)]
+disk = pgl.smallestEnclosingDisk(corners)
+print(disk.center(), disk.squaredRadius())
+# Output: (2,2) 8
+```
+
+### Closest pair of points
+
+- [`closestPair(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a9d03d057595b9229d8cc245045ce4df4 "Computes a closest pair of points by divide and conquer."): Returns a [`Segment`](shapes.md#segment) joining two of
+  the given points at minimum distance from each other, by divide and conquer in
+  $O(n \log n)$ on ordinary inputs. Only squared distances are compared, so the
+  answer is exact; ties are broken arbitrarily. Needs at least two points.
+
+### Visibility
+
+[`Polygon`](shapes.md#polygon), [`PolygonWithHoles`](shapes.md#polygon-with-holes)
+and [`Triangulation`](data_structures.md#triangulation) each answer the same six
+visibility questions, all by *triangular expansion*: the domain is triangulated
+once, then each vertex or query point runs a single traversal of the mesh
+carrying a cone of still-unobstructed directions that every crossed diagonal
+clips, at a cost proportional to the part of the domain that vertex actually
+sees.
+
+Sight is stopped by the boundary of the domain and, on a triangulation, by every
+constrained edge as well — so `poly.triangulation(walls).visibilityGraph()` is
+visibility inside `poly` among the segment obstacles `walls`.
+
+Three of them return a [`Graph`](data_structures.md#graph) on the domain's
+vertices:
+
+- `visibilityGraph()`: joins two vertices $a, b$ when the segment $ab$ stays
+  inside the domain, even if it touches the boundary along the way.
+- `clearVisibilityGraph()`: the strict reading — the segment must not meet the
+  boundary except at $a$ and $b$. Always a subgraph of `visibilityGraph()`. A
+  degenerate domain has no interior, so its vertices come back with no edges.
+- `reducedVisibilityGraph()`: the subgraph a shortest path can bend along, namely
+  the edges tangent to the obstacles at both ends. What survives is the boundary
+  edges and the bitangents between reflex corners, which is far sparser.
+
+The other three answer for one query point in the domain, which need not be a
+vertex:
+
+- `visibleVertices(q)`: the domain's vertices visible from `q`, under
+  `visibilityGraph()`'s convention, counterclockwise around `q` starting from the
+  lexicographically smallest. This is what joins a query point to
+  `reducedVisibilityGraph()`.
+- `clearlyVisibleVertices(q)`: the strict counterpart, always a subset.
+- `regularizedVisiblePolygon(q)`: the *region* visible from `q`, as a
+  [`Polygon`](shapes.md#polygon) — every point reachable by a segment that stays
+  in the domain and crosses no wall. It is star-shaped about `q`, hence simply
+  connected, so one polygon holds it however many holes the domain has.
+  *Regularized* means the closure of the interior, so a sightline running along a
+  wall or slipping through a vertex into a part beyond contributes nothing: what
+  comes back always bounds area. Its vertices are the domain's own together with
+  the *window* ends where a sightline past a reflex corner lands on a farther
+  edge.
+
+```python
+room = pgl.PolygonWithHoles(outer, holes)
+graph = room.reducedVisibilityGraph()
+for w in room.visibleVertices(source):
+    graph.addEdge(source, w)                 # and the same for the target
+path = graph.shortestPath(source, target, lambda a, b: a.distance(b))
+```
+
+### Boolean operations and Minkowski sum
+
+Both families are documented under
+[shape methods](shape_methods.md#boolean-operations). One free function belongs
+here:
+
+- [`regularizedUnionOf(shapes, simple_boundaries=False)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ae72efa38504e74942758d2d4fb78ffcd "The regularized union of arbitrarily many shapes, as a set of regions."): Returns the regularized
+  union of every given shape as one [`PolygonSet`](shapes.md#polygon-set),
+  settled by a single arrangement over all their boundaries — where uniting them
+  one at a time would build one arrangement per step and re-triangulate
+  everything accumulated so far. The list must be homogeneous, and may hold any
+  one of the six bounded region types — [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."),
+  [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes.") or [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors."); a set contributes its
+  components. Set `simple_boundaries` when no piece has two boundary edges
+  overlapping each other (always true of a [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), a [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.") and a
+  [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), true of a [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices.") that meets its simplicity precondition, and true
+  of a [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes.") exactly when it carries no slit) to take the faster
+  face-classification path.
+
 ### Sorting points
 
 Both of these reorder the Python list you pass **in place** and return `None`,

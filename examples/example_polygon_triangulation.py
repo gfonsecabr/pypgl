@@ -1,6 +1,6 @@
 """Constrained Delaunay triangulation of a spiral polygon.
 
-The Python port of pgl's `examples/example_triangulation2.cpp`.
+The Python port of pgl's `examples/example_polygon_triangulation.cpp`.
 
 The domain is a corridor of constant width winding around the origin. Because
 the triangulation is *constrained*, no triangle crosses a wall of the corridor,
@@ -11,7 +11,7 @@ The spiral is laid out with floating-point trigonometry and then rounded to
 integer vertices, since pypgl coordinates are exact and reject `float`. Once
 built, everything downstream is exact.
 
-Output: example_triangulation2.svg
+Output: example_polygon_triangulation.svg
 """
 
 import math
@@ -67,16 +67,13 @@ def draw(filename, triangulation, query, interior_hits, hits):
     canvas.draw(triangulation)
 
     canvas.stroke("#10b305").fill("#10b305").fillOpacity(".5")
-    for triangle in triangulation.triangles():
-        canvas.draw(triangle)
+    canvas.draw(triangulation.triangles())
 
     canvas.stroke("#ff0000").fill("#ff0000").fillOpacity(".5")
-    for triangle in interior_hits:
-        canvas.draw(triangle)
+    canvas.draw(interior_hits)
 
     canvas.stroke("#ffff00").fill("#ffff00").fillOpacity(".3")
-    for triangle in hits:
-        canvas.draw(triangle)
+    canvas.draw(hits)
 
     canvas.stroke("#1100ff").fill("#1100ff").fillOpacity(".5")
     canvas.draw(query)
@@ -94,11 +91,9 @@ def main():
     # outside it is triangulated.
     triangulation = pgl.Triangulation(spiral, points)
 
-    query = pgl.Convex(
-        [pgl.Point(-47, -36), pgl.Point(53, 64), pgl.Point(53, -36), pgl.Point(27, -74)]
-    )
+    query = pgl.Convex([-47, -36, 53, 64, 53, -36, 27, -74])
     draw(
-        "example_triangulation2.svg",
+        "example_polygon_triangulation.svg",
         triangulation,
         query,
         triangulation.trianglesInteriorIntersecting(query),

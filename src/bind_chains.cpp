@@ -42,30 +42,13 @@ using namespace pypgl;
 // Neither has the Hausdorff family: pgl defines it only for the six convex
 // shapes (see PGL_BIND_ALL_HAUSDORFF_DISTANCE), and a chain is not convex.
 //
-// intersection() is bound against the twelve shapes pgl implements it for --
-// every shape except Disk and Polygon (a chain-vs-disk intersection has no
-// exact closed form, and a chain-vs-polygon one is simply not written yet).
-// The result is always a *list* of Point/Segment pieces: a chain can meet even
-// a line in arbitrarily many disjoint places, so there is no single-piece
-// optional form like Convex's.
+// intersection() is bound against the fourteen shapes pgl implements it for --
+// every shape except a Disk (no exact closed form against a circle), a
+// HalfplaneIntersection and a PolygonSet. The result is always a *list* of
+// Point/Segment pieces: a chain can meet even a line in arbitrarily many
+// disjoint places, so there is no single-piece optional form like Convex's.
 
 namespace {
-
-// The intersection overloads shared by both chains: every shape except Disk and
-// Polygon (see the file comment). Each returns a list of Point/Segment pieces.
-#define PGL_BIND_CHAIN_INTERSECTION(cls, SelfT)                                                                     \
-    cls.def("intersection", [](const SelfT &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));      \
-    cls.def("intersection", [](const SelfT &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));    \
-    cls.def("intersection", [](const SelfT &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other")); \
-    cls.def("intersection", [](const SelfT &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));       \
-    cls.def("intersection", [](const SelfT &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other")); \
-    cls.def("intersection", [](const SelfT &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));        \
-    cls.def("intersection", [](const SelfT &a, const Halfplane &b) { return a.intersection(b); }, nb::arg("other"));  \
-    cls.def("intersection", [](const SelfT &a, const Rectangle &b) { return a.intersection(b); }, nb::arg("other"));  \
-    cls.def("intersection", [](const SelfT &a, const Triangle &b) { return a.intersection(b); }, nb::arg("other"));   \
-    cls.def("intersection", [](const SelfT &a, const Convex &b) { return a.intersection(b); }, nb::arg("other"));     \
-    cls.def("intersection", [](const SelfT &a, const MonotoneChain &b) { return a.intersection(b); }, nb::arg("other")); \
-    cls.def("intersection", [](const SelfT &a, const Polyline &b) { return a.intersection(b); }, nb::arg("other"))
 
 // The vertex/edge accessors, measures, value semantics, operators and
 // transforms shared by both chains. Everything here is spelled the same for a
@@ -123,7 +106,9 @@ namespace {
     PGL_BIND_ALL_PREDICATES(cls, SelfT);                                                                              \
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, SelfT);                                                                        \
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, SelfT);                                                                         \
-    PGL_BIND_CHAIN_INTERSECTION(cls, SelfT)
+    PGL_BIND_ALL_SAME_POINT_SET(cls, SelfT);                                                                          \
+    PGL_BIND_INTERSECTION_CHAIN(cls, SelfT);                                                                          \
+    PGL_BIND_MINKOWSKI_REGION(cls, SelfT)
 
 }  // namespace
 
@@ -142,6 +127,17 @@ void bind_chains(nb::module_ &m) {
                 "trusted is set they are sorted lexicographically (by x, ties "
                 "broken by y) and deduplicated, so any input order gives the same "
                 "chain.");
+        // The same constructor spelled as a flat coordinate list, mirroring
+        // pgl's initializer_list<Number> one: MonotoneChain([0,0, 4,3, 8,1]).
+        // Registered after the point overload, which is what disambiguates the
+        // empty list (both match it; either builds the same empty chain).
+        cls.def("__init__",
+                [](MonotoneChain *self, const std::vector<Num> &coords, bool trusted) {
+                    new (self) MonotoneChain(pointsFromCoords(coords), trusted);
+                },
+                nb::arg("coords"), nb::arg("trusted") = false,
+                "Create the chain through the points spelled by a flat coordinate "
+                "list, read in (x, y) pairs: MonotoneChain([0,0, 4,3, 8,1]).");
 
         PGL_BIND_CHAIN_COMMON(cls, MonotoneChain, "chain");
 
@@ -178,9 +174,10 @@ void bind_chains(nb::module_ &m) {
         // counts, and overlapping x-extents of a single point are rejected
         // outright -- a shared x that is only one chain's own extreme vertex is
         // not robust.
-        // A chain's only summable pair is with a Point; anything wider needs
-        // asPolyline() (see the Polyline section below).
-        PGL_BIND_TRANSLATION_MINKOWSKI(cls, MonotoneChain);
+        // A MonotoneChain now sums with every bounded shape (the shared
+        // PGL_BIND_MINKOWSKI_REGION above): with a non-degenerate bounded
+        // convex operand the answer is a single Polygon, since dragging a
+        // convex body along an x-monotone chain cannot close over a hole.
 
         cls.def("edgesCross",
                 [](const MonotoneChain &a, const MonotoneChain &b) { return a.edgesCross(b); },
@@ -189,8 +186,8 @@ void bind_chains(nb::module_ &m) {
                 "strictly above the other and one strictly below.");
 
         cls.def("asPolyline", [](const MonotoneChain &c) { return c.asPolyline(); },
-                "The same vertex sequence as a Polyline. A MonotoneChain has no "
-                "minkowskiSum of its own, so this is how to ask for one.");
+                "The same vertex sequence as a Polyline, which keeps its vertices in "
+                "traversal order rather than as a sorted point set.");
 
         // Vertical queries -- the payoff of the sorted storage, and unique to
         // this shape. All are O(log n) and exact; each returns None rather than
@@ -241,6 +238,18 @@ void bind_chains(nb::module_ &m) {
                 "identity, though: equality, ordering and hashing read the vertices "
                 "through the canonical direction, so a polyline still equals its own "
                 "reverse. Self-intersections are allowed (use isSimple() to check).");
+        // The same constructor spelled as a flat coordinate list, mirroring
+        // pgl's initializer_list<Number> one: Polyline([0,0, 4,3, 8,1]).
+        // Registered after the point overload, which is what disambiguates the
+        // empty list (both match it; either builds the same empty polyline).
+        cls.def("__init__",
+                [](Polyline *self, const std::vector<Num> &coords) {
+                    new (self) Polyline(pointsFromCoords(coords));
+                },
+                nb::arg("coords"),
+                "Create a polyline through the points spelled by a flat coordinate "
+                "list, read in traversal order as (x, y) pairs: "
+                "Polyline([0,0, 4,3, 8,1]).");
 
         PGL_BIND_CHAIN_COMMON(cls, Polyline, "polyline");
 
@@ -302,11 +311,11 @@ void bind_chains(nb::module_ &m) {
                 [](Polyline &p, const std::vector<Point> &points) { p.pushBack(points); },
                 nb::arg("points"), "Append several vertices, in traversal order.");
 
-        // A chain has no area of its own, and the sum still needs a region:
+        // A polyline has no area of its own, and the sum still needs a region:
         // dragging a shape along a chain that comes back on itself closes the
-        // swept material over a hole, a closed chain being the plainest example.
-        // A MonotoneChain has no minkowskiSum -- convert with asPolyline() when
-        // its sum is wanted, which is what pgl asks for too.
-        PGL_BIND_REGION_MINKOWSKI(cls, Polyline);
+        // swept material over a hole, a closed chain being the plainest
+        // example. Summing two chains is the one case that is not guaranteed
+        // connected, and answers with a PolygonSet.
+
     }
 }

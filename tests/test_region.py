@@ -20,6 +20,7 @@ import pypgl
 from pypgl import (
     Point,
     Polygon,
+    PolygonSet,
     PolygonWithHoles,
     Rectangle,
     Segment,
@@ -58,7 +59,7 @@ def test_region_importable_and_in_all():
 
 def test_empty_region():
     r = PolygonWithHoles()
-    assert r.isEmpty()
+    assert r.empty()
     assert not r.hasHoles()
     assert r.holeCount() == 0
     assert r.vertexCount() == 0
@@ -70,7 +71,7 @@ def test_empty_region():
 
 def test_hole_free_region_from_polygon():
     r = PolygonWithHoles(_square())
-    assert not r.isEmpty()
+    assert not r.empty()
     assert not r.hasHoles()
     assert r.outer() == _square()
     assert r.area() == 100
@@ -217,7 +218,7 @@ def test_holes_touching_at_a_boundary_stay_valid():
 def test_region_with_area_and_no_slit_is_regular():
     r = _annulus()
     assert r.isRegular()
-    assert r.regularized() == [r]
+    assert r.regularized() == PolygonSet(r)
 
 
 def test_holes_meeting_at_a_point_stay_regular():
@@ -237,16 +238,16 @@ def test_a_slit_makes_a_region_irregular():
     assert not r.isRegular()
     # regularized() drops the slit, which here merges the two holes into one.
     pieces = r.regularized()
-    assert len(pieces) == 1
-    assert pieces[0].isRegular()
-    assert pieces[0].area() == r.area()
+    assert pieces.componentCount() == 1
+    assert pieces.component(0).isRegular()
+    assert pieces.area() == r.area()
 
 
 def test_degenerate_region_regularizes_to_nothing():
     flat = Polygon([Point(0, 0), Point(4, 0), Point(2, 0)])
     r = PolygonWithHoles(flat)
     assert r.isDegenerate()
-    assert r.regularized() == []
+    assert r.regularized().empty()
 
 
 # --- degeneracy classification ---------------------------------------------

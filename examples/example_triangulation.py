@@ -31,16 +31,13 @@ def draw(filename, triangulation, query, interior_hits, hits):
     canvas.draw(triangulation)
 
     canvas.stroke("#10b305").fill("#10b305").fillOpacity(".5")
-    for triangle in triangulation.triangles():
-        canvas.draw(triangle)
+    canvas.draw(triangulation.triangles())
 
     canvas.stroke("#ff0000").fill("#ff0000").fillOpacity(".5")
-    for triangle in interior_hits:
-        canvas.draw(triangle)
+    canvas.draw(interior_hits)
 
     canvas.stroke("#ffff00").fill("#ffff00").fillOpacity(".3")
-    for triangle in hits:
-        canvas.draw(triangle)
+    canvas.draw(hits)
 
     canvas.stroke("#1100ff").fill("#1100ff").fillOpacity(".5")
     canvas.draw(query)

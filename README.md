@@ -32,7 +32,7 @@ if s.intersects(t):
 | --- | --- |
 | 0-dimensional | [`Point`](doc/shapes.md#point) |
 | 1-dimensional | [`Segment`](doc/shapes.md#segment), [`OrientedSegment`](doc/shapes.md#oriented-segment), [`Line`](doc/shapes.md#line), [`OrientedLine`](doc/shapes.md#oriented-line), [`Ray`](doc/shapes.md#ray), [`Polyline`](doc/shapes.md#polyline), [`MonotoneChain`](doc/shapes.md#monotonechain) |
-| 2-dimensional | [`Halfplane`](doc/shapes.md#half-plane), [`Triangle`](doc/shapes.md#triangle), [`Rectangle`](doc/shapes.md#rectangle), [`Disk`](doc/shapes.md#disk), [`Convex`](doc/shapes.md#convex), [`Polygon`](doc/shapes.md#polygon) |
+| 2-dimensional | [`Halfplane`](doc/shapes.md#half-plane), [`Triangle`](doc/shapes.md#triangle), [`Rectangle`](doc/shapes.md#rectangle), [`Disk`](doc/shapes.md#disk), [`Convex`](doc/shapes.md#convex), [`Polygon`](doc/shapes.md#polygon), [`PolygonWithHoles`](doc/shapes.md#polygon-with-holes), [`PolygonSet`](doc/shapes.md#polygon-set), [`HalfplaneIntersection`](doc/shapes.md#halfplane-intersection) |
 
 The following [predicates](doc/shape_methods.md#predicates) are implemented as methods of all shapes.
 
@@ -79,7 +79,23 @@ print("The diameter of", c,
 
 Distances come in the Euclidean (`squaredDistance`, exact and therefore squared),
 Manhattan (`distanceL1`) and Chebyshev (`distanceLInf`) flavors, each with a
-`Hausdorff` variant between shapes.
+`Hausdorff` variant between shapes. `samePointSet` asks whether two shapes cover
+the same points, across types and regardless of how each is written.
+
+The [boolean operations](doc/shape_methods.md#boolean-operations)
+(`regularizedUnion`, `difference`, `symmetricDifference`,
+`regularizedIntersection`) and the
+[Minkowski sum](doc/shape_methods.md#minkowski-sum) are closed over the region
+shapes, so a result feeds straight back in:
+
+```python
+import pypgl as pgl
+
+square = pgl.Polygon([pgl.Point(0,0), pgl.Point(10,0), pgl.Point(10,10), pgl.Point(0,10)])
+holed = square.difference(pgl.Rectangle(pgl.Point(3,3), pgl.Point(7,7)))
+print(holed.area(), holed.holeCount())
+# Output: 84 1
+```
 
 Shapes are moved around with `+`/`-`/`*`/`/`, and an arbitrary affine map is
 applied with a [`Transformation`](doc/shape_methods.md#transformations):
@@ -122,12 +138,24 @@ PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](d
 - Convex hull: `convexHull` / `convexHullExtended`, computed with Graham scan.
 - Line segment intersection: sweep-line and brute-force pair enumeration plus
   detection predicates, all using rational numbers.
+- Smallest enclosing disk (`smallestEnclosingDisk`) and closest pair of points
+  (`closestPair`), both exact.
+- Visibility: visibility graphs and the visible region from a query point, for a
+  polygon, a region, or a triangulation with walls.
 - Sort points: in place by angle (`sortAround`) or Hilbert order (`hilbertSort`).
-- Polyomino enumeration: hole-free free polyominoes as `Polygon` objects.
+- Polyomino enumeration: free polyominoes as `Polygon` or `PolygonWithHoles`
+  objects.
 - `ShapeTree`: a kd-tree for points, generalized to a mix of any bounded shapes,
   answering range and nearest-neighbor queries.
+- `IntervalTree`: a mutable one-dimensional index over the shapes' projections,
+  balanced under insertion and removal.
 - `Triangulation`: including Delaunay and constrained Delaunay triangulations for
-  points and polygons, with traversal queries and incremental insertion.
+  points, polygons and regions, with traversal queries, incremental insertion,
+  convex decomposition and Voronoi duals.
+- `Arrangement`: the exact subdivision of the plane induced by segments, rays and
+  lines, with point location and face extraction.
+- `Graph`: the combinatorial companion of the geometric structures, with
+  connectivity, clique cover, minimum spanning tree and shortest path.
 
 
 ## Installation
@@ -140,7 +168,7 @@ PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](d
 pip install pypgl
 ```
 
-Pre-built wheels are published for CPython 3.9–3.13 on Linux (`manylinux_2_28`,
+Pre-built wheels are published for CPython 3.9–3.14 on Linux (`manylinux_2_28`,
 x86_64), macOS (Apple Silicon), and Windows, so most users need no compiler.
 
 ### From source
@@ -180,8 +208,9 @@ instead of the pinned upstream commit:
 ## More Information
 
 - For a brief description, check the documents at the [doc folder](doc/).
-- Runnable scripts live in the [examples folder](examples/), ported one for one
-  from pgl's own — predicates, canvas styling, a shape gallery, `ShapeTree`
-  queries and constrained triangulation.
+- Runnable scripts live in the [examples folder](examples/) — predicates, canvas
+  styling, a shape gallery, `ShapeTree` queries, constrained triangulation,
+  Minkowski sums, minimum spanning trees, visibility, arrangements and Voronoi
+  diagrams.
 - Shapes and canvases render inline in a Jupyter notebook — see [canvas.md](doc/canvas.md#inline-display-in-jupyter).
 - Check the [C++ version](https://github.com/gfonsecabr/pgl).

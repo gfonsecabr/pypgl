@@ -14,8 +14,7 @@
 ⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
 
 `pypgl` is the Python interface to [Pangolin](https://github.com/gfonsecabr/pgl)
-(or `pgl`), a C++ library for computational geometry algorithms in the plane. The
-API mirrors the C++ one, so the class and method names are the same.
+(or `pgl`), a library for exact computational geometry in the plane.
 
 ```bash
 pip install pypgl
@@ -30,9 +29,10 @@ README](../README.md) for a tour, then:
   [predicates](shape_methods.md#predicates), operators, affine
   [transformations](shape_methods.md#transformations), intersections, distances,
   and iteration.
-- [algorithms.md](algorithms.md) — convex hull, segment intersection, point
-  sorting, polyominoes.
-- [data_structures.md](data_structures.md) — `ShapeTree` and `Triangulation`.
+- [algorithms.md](algorithms.md) — convex hull, segment intersection, smallest
+  enclosing disk, closest pair, visibility, point sorting, polyominoes.
+- [data_structures.md](data_structures.md) — `ShapeTree`, `IntervalTree`,
+  `Triangulation`, `Arrangement` and `Graph`.
 - [canvas.md](canvas.md) — drawing shapes and exporting them as SVG, PDF or Ipe,
   including inline display in a Jupyter notebook.
 - [todo.md](todo.md) — what is not implemented yet.
@@ -41,5 +41,4 @@ Coordinates are **exact**: a single arbitrary-precision rational number type is
 used throughout, so there is nothing to choose and no rounding to worry about.
 They are given as Python `int`, `fractions.Fraction`, or `"a/b"` strings, and
 come back as `Fraction`. A `float` coordinate is rejected rather than silently
-approximated — the C++ library's `double` and fixed-width instantiations are
-deliberately not exposed.
+approximated: there is no inexact number type to fall back to.

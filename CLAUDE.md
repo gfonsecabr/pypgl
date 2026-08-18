@@ -125,12 +125,12 @@ self-pair since `Disk` is in both lists), and the explicit `Polygon↔Disk` /
 `Convex↔Disk` lines in `bind_polygon.cpp`/`bind_polygons.cpp` were removed as
 redundant.
 
-Still to do: broaden `intersection` to 2D∩2D among `Triangle`/`Rectangle`/
-`Convex` themselves (unrelated to `Polygon`, whose own matrix is now
-complete), and consider STABLE_ABI to cut the wheel count before the next
-release. (pgl-side gaps that keep pypgl's matrices ragged are tracked in
-[doc/todo.md](doc/todo.md): chain ∩ `Disk`/`Polygon`, L1/LInf distance to a
-`Disk`, Hausdorff distance for the non-convex shapes, `polyline + polyline`.)
+Still to do: consider STABLE_ABI to cut the wheel count before the next
+release. (The 2D∩2D `intersection` gap that used to be listed here closed in
+milestone 12. pgl-side gaps that keep pypgl's matrices ragged are tracked in
+[doc/todo.md](doc/todo.md): chain ∩ `Disk`, L1/LInf distance to a `Disk`, and
+Hausdorff distance for the non-convex shapes. The `regularizedUnionOf` range gap
+listed here closed in milestone 13.)
 [pypgl.md](pypgl.md) remains the authoritative design contract —
 update it in lockstep if a decision changes.
 
@@ -545,6 +545,204 @@ that moves vertices past each other in the lexicographic order no longer
 re-sorts them. Equality, ordering and hashing stay direction-agnostic, so a
 polyline still equals its own reverse.
 
+
+**`PolygonSet`, `Graph`, `Arrangement`, `IntervalTree`, visibility, and the
+closed boolean algebra** (milestone 12, version 0.6.0): `.pgl-ref` re-pinned to
+`fab9f4e`, 174 upstream commits on from `1c6c6ee`. Four new bound classes, three
+breaking renames, and the two ragged matrices (`intersection`, `minkowskiSum`)
+filled in.
+
+**Ground truth came from a probe, not from reading headers.** The pair matrices
+are far too large to reason about by hand now, so
+`scratchpad/probe.cpp` (generated, throwaway) instantiated
+`requires`-guarded calls for all 17×17 pairs of every method family and printed
+the demangled return type of each. That produced the exact operand lists the new
+macros encode. **A `requires` check is not enough on its own**: it proves the
+declaration is viable, not that the body compiles, which is how
+`regularizedUnionOf` over a `Triangle` range passed the probe and then failed to
+build (fixed upstream in milestone 13, but the lesson stands). Re-run the probe after any re-pin; compile a real call for
+anything whose body might be a template that only some operands instantiate.
+
+**`PolygonSet`** ([src/bind_polygonset.cpp](src/bind_polygonset.cpp)) is the
+17th bound class: a set of `PolygonWithHoles` components with pairwise disjoint
+interiors, whose point set is their union. It is what **closes the regularized
+boolean operations** — they used to answer with a bare `list`, which could not
+be fed back in, compared, hashed, drawn or measured. It is also the one shape
+whose point set need not be connected (`isConnected()`), and its components are
+deliberately not nested. Mutable (`addComponent`/`eraseComponent`) and therefore
+unhashable, like `Convex`/`Polygon`/`PolygonWithHoles`; it takes the same
+container-sugar decision as `PolygonWithHoles` (Python flattens the vertices of
+every ring of every component, C++ iterates the components) and hence the generic
+stubgen rule.
+
+**Breaking renames, all upstream's:** `unionWith` → `regularizedUnion`;
+`isEmpty` → `empty` on `PolygonWithHoles` and `HalfplaneIntersection` (every
+shape with an empty state now spells it `empty()`, and `Rectangle`, `Convex` and
+`Polygon` *gained* that state — a vertexless `Convex` is now the empty set, not
+an undefined shape, and `Rectangle()` is the empty rectangle); and the
+region-valued `intersection` is now `regularizedIntersection`, a separate
+operation from the literal `intersection` rather than an overload of it. The
+Canvas default viewport also shrank from 1000×1000 to 800×800.
+
+**The boolean grids are wider and not square** (see the section comment in
+[src/common.h](src/common.h)): all four operations over the six bounded region
+types (`Triangle`, `Rectangle`, `Convex`, `Polygon`, `PolygonWithHoles`,
+`PolygonSet`), with `difference` also taking an unbounded *argument*, and
+`regularizedIntersection` requiring a `PolygonWithHoles` or a `PolygonSet` on
+one side — so `rectangle.regularizedIntersection(triangle)` raises where the
+other three answer.
+
+**`minkowskiSum` now covers every pair pgl has**, each with the tightest return
+type: `Convex`/`Rectangle` for the bounded convex pairs, `Polygon` for a
+`MonotoneChain` with a convex body, `HalfplaneIntersection` for the unbounded
+convex ones, `Halfplane` when one operand already is one, `PolygonWithHoles`
+when the answer is guaranteed connected and `PolygonSet` when it is not, and
+`Disk` for two disks. **The two `Disk` sums and `Halfplane + Disk` are bound by
+hand**: pgl defaults their result to `double`, which pypgl does not instantiate,
+so they request `ERational` explicitly and raise for an irrational radius.
+
+**`intersection` is now a full grid too** — the "still to do" item from
+milestone 5. Four macros rather than one, since the operand sets differ by
+receiver (chains take no `HalfplaneIntersection`, a `PolygonSet` takes only
+shapes with area, a `Disk` still only takes a `Point`).
+
+**`samePointSet`** is bound 17×17 via `PGL_BIND_ALL_SAME_POINT_SET`: geometric
+equality across types, which `==` cannot express (it compares representations of
+one type, and a `Polygon` with a redundant collinear vertex is unequal to one
+without it while covering the same points).
+
+**`Graph`** ([src/bind_graph.h](src/bind_graph.h) +
+[src/bind_graph.cpp](src/bind_graph.cpp)) is bound as a template because pgl
+instantiates it over two vertex types pypgl exposes: `Point` (visibility,
+`Triangulation.asGraph`) and an arrangement's `VertexId` (`ArrangementGraph`),
+whose vertex at infinity has no position and so could not be keyed by a point.
+Two deliberate departures from C++: `vertices`/`edges`/`neighbors` are
+materialized **sorted** copies rather than lazy views over a hash table (so
+output never depends on hashing), and `degree` answers `None` rather than -1.
+The weighted algorithms take a Python callable whose return value *is* the
+weight: `PyWeight` wraps `nb::object` with `<` and `+` through the Python
+protocols, so an exact `Fraction` weight stays exact and a `float` one is
+allowed — no C++ number type is imposed.
+
+**`Arrangement`** ([src/bind_arrangement.cpp](src/bind_arrangement.cpp)) is
+bound as the **single instantiation `Arrangement<Point, Point>`**, i.e. with
+`Point` labels, because `Triangulation.voronoiDiagram()` returns exactly that
+and a Voronoi diagram should not be a second Python class. Two consequences:
+face labels of a plain arrangement start as `Point(0, 0)` (writable via
+`setLabel`, which is what recording a per-cell classification wants), and the
+label type propagates into the shapes the class hands back — its `SegmentType`
+is `Segment<Point, Point>`, a type no caster knows — so `edges()`,
+`boundedEdges()` and `halfedge()` go through `stripLabel`, rebuilding each piece
+as the bound label-free shape. The three handle families (`VertexId`,
+`HalfedgeId`, `FaceId`) are bound as distinct small classes, which is what lets
+`locateCell` return "whichever kind of cell contains this point" and the caller
+tell them apart with `isinstance`.
+
+**`IntervalTree`** ([src/bind_intervaltree.cpp](src/bind_intervaltree.cpp)) is
+bound as two classes, `IntervalTree` and `IntervalTreeY`, since the axis is a
+template parameter and a runtime flag would cost the tight storage. Its
+projection query family answers a genuinely different question from the exact
+one, and — unlike `ShapeTree` — an unbounded shape is rejected as a *query* too,
+since every query is projected before anything else happens.
+
+Also bound: `smallestEnclosingDisk`, `closestPair`, `regularizedUnionOf`,
+`ShapeTree.kNearestNeighbors`, `Triangulation`'s domain predicates
+(`contains`/`interiorContains`/`intersects`/`interiorsIntersect` against all 17
+shapes, a *smaller* family than `PGL_BIND_ALL_PREDICATES` since a mesh has no
+`boundaryContains`/`separates`/`crosses`), `convexPartition`/`convexCovering` on
+`Polygon`/`PolygonWithHoles`/`PolygonSet`/`Triangulation`, the six visibility
+methods on those same four classes, `asPolygonSet` across the region shapes, and
+`Canvas.view` (framing by an explicit rectangle instead of by the drawing's
+bounding box).
+
+**Two upstream bodies did not compile, and the workaround was a narrower
+binding** — since fixed upstream and widened in milestone 13 below.
+`regularizedUnionOf` over a `Triangle` or `Rectangle` range asked the pieces for
+an `edgesView()` neither has, and over a `PolygonSet` range hit the
+arrangement's "accepts points, segment-bounded shapes, lines, and rays"
+static_assert, so only `Convex`/`Polygon`/`PolygonWithHoles` ranges were bound.
+A constraint segment that
+*touches* the polygon boundary also silently produces an empty triangulation
+(pgl documents interior segments as a precondition), which cost a round of test
+failures before the tests moved their walls strictly inside.
+
+**The build dir pins `PGL_INCLUDE_DIR` to `../pgl-public`**, not to `.pgl-ref`:
+`build/cp314-*/CMakeCache.txt` was configured that way, and scikit-build-core
+reuses it. Both checkouts sat at the same commit here, so it went unnoticed
+until an error message named the wrong path. Check the cache before concluding
+that a header change did not take.
+
+**`regularizedUnionOf` accepts all six bounded region types** (milestone 13):
+`.pgl-ref` re-pinned to `60c2328`, one commit on from `fab9f4e`, which fixed
+both bodies milestone 12 had to route around — `appendCutSegments` now dispatches
+on whether a piece carries a lazy `edgesView()` and materializes its `edges()`
+otherwise (which is what a `Triangle`/`Rectangle` returns, a fixed-size array),
+and a `PolygonSet` range is separated into its components before anything else,
+since a set is already a union of regions and is not something an `Arrangement`
+can be built from. So [src/bind_algorithms.cpp](src/bind_algorithms.cpp) simply
+gained three more overloads (`Triangle`, `Rectangle`, `PolygonSet`) beside the
+existing three; the range is still homogeneous, which is the C++ template's
+shape, not a binding choice. `simple_boundaries` is now free for a `Triangle`
+and a `Rectangle` too — both are convex with a simple boundary by construction,
+like a `Convex` — and separating a set's components is also what *weakens* what
+the flag has to promise, a boundary stretch two components share being two
+distinct origins once they are apart.
+
+**Docs carry no C++ comparisons** (user's instruction, this milestone): the
+markdown under [doc/](doc/) and [examples/README.md](examples/README.md) describe
+the Python API on its own terms — no "in C++ this is…", no "unlike the C++
+original". Source comments and this file are exempt; they are for maintainers.
+Seven new examples were ported (`mindisk`, `minkowskisum`, `mst`, `visibility`,
+`arrangement`, `voronoi`), and `example3.py`/`example_triangulation2.py` were
+renamed to `example_convex.py`/`example_polygon_triangulation.py` to match
+upstream.
+
+**Flat coordinate lists and collection drawing** (milestone 14): two
+convenience features asked for by the user, both about how much boilerplate a
+literal drawing costs.
+
+`Convex`, `Polygon`, `MonotoneChain` and `Polyline` now take **one flat
+coordinate list** read in `(x, y)` pairs — `Polygon([0,0, 4,0, 4,4])` — which is
+the Python spelling of the `std::initializer_list<NumberType>` constructor pgl
+gives those same four shapes (and only those). `pypgl::pointsFromCoords` in
+[src/common.h](src/common.h) does the pairing; pgl states the even-count
+requirement as an `assert()`, compiled out in the release build pypgl ships, so
+it is checked there and raised as a `ValueError` rather than silently dropping
+the odd trailing value. **The coordinate overload must be registered after the
+point one**: both match an empty list (either builds the same empty shape, so the
+tie is harmless), and registration order is what settles it. Nothing else
+collides — a `Point` has no `numerator`/`denominator`, so the `ERational` caster
+refuses it, and a number is not a `Point`. `Convex`'s *point* constructor also
+picked up the `trusted` flag it had always had in C++ (and which
+[doc/raw/shapes.md](doc/raw/shapes.md) had been documenting), so the two
+overloads agree.
+
+**`Canvas.draw` now takes a collection** and draws its elements one by one, each
+capturing the style active at the call: `canvas.draw(polygon.edges())`,
+`canvas.draw(triangulation.triangles())`, `canvas.draw([tri, disk, point])`. The
+overload takes `nb::iterable` and goes back through `self.attr("draw")`, so a
+collection may mix types, hold `None`, and nest. It lives in C++ rather than in
+[pypgl/__init__.py](pypgl/__init__.py) with the rest of the sugar because its
+whole behavior is a question of *where in the overload set* it sits:
+it is registered **after every typed shape overload** (every bound shape is
+iterable in the Python layer, so a `Point` would otherwise be drawn as its two
+coordinates) and **before the `None`/type-error fallback**. A `str` is iterable
+too and a one-character string iterates to itself, which would recurse forever,
+so `str`/`bytes` `throw nb::next_overload()` and land in the fallback as the type
+error they are. The lambda returns the canvas's own Python object, so the fluent
+chain still works; `nb::sig` says so in the stub, which would otherwise promise a
+bare `object`.
+
+Every example was then simplified with both: the `points(*coords)` / `ring(...)`
+helpers that three of them carried are gone, and a `for x in …: canvas.draw(x)`
+loop is now one `canvas.draw(…)`. Every generated SVG is byte-identical to
+before, which is the check worth repeating after touching them — with two
+pre-existing exceptions that are not the edits' doing: the PDF carries a
+creation date, and `example_mindisk.svg` varies run to run because
+`smallestEnclosingDisk` is randomized, so the same disk comes back through a
+different triple of boundary points (the `<title>` tooltip changes, the drawing
+does not).
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 
@@ -585,9 +783,10 @@ else is mechanical `.def(...)`:
 2. `pgl::ERational` ↔ Python `fractions.Fraction` — built from `numerator()` /
    `denominator()` (stored in lowest terms), each term flowing through the BigInt
    caster so arbitrarily large coordinates round-trip.
-3. `pgl::Shape<EPoint>` ↔ a concrete pypgl shape object — `ShapeTree`-only (see
-   milestone 7 above); probes the fourteen bound classes with an exact `try_cast`
-   going in, dispatches on the stored alternative via `nb::cast` coming out.
+3. `pgl::Shape<EPoint>` ↔ a concrete pypgl shape object — used by `ShapeTree`
+   and `IntervalTree` (see milestones 7 and 12); probes the seventeen bound
+   classes with an exact `try_cast` going in, dispatches on the stored
+   alternative via `nb::cast` coming out.
 
 What falls out for free from pgl's typed API (built-in nanobind casters):
 `std::optional<T>` → `T`/`None`; `std::variant<Point, Segment, …>` → the concrete
@@ -600,17 +799,19 @@ Pythonic sugar lives in `pgl/__init__.py`: vertex iteration, `point in shape` �
 methods), pickling, and `_repr_svg_` for inline Jupyter rendering via `Canvas`.
 
 **Translation units:** one `bind_*.cpp` per shape group (point, segment, lines,
-polygons, chains, canvas) so heavy template instantiation compiles in parallel and objects
+polygons, polygon, region, polygonset, chains, canvas, and one per data
+structure: triangulation, shapetree, intervaltree, arrangement, graph) so heavy template instantiation compiles in parallel and objects
 stay small. A `PGL_BIND_PREDICATES(cls, OtherTypes...)` macro in `src/common.h`
 keeps the seven uniform predicates (`contains`, `boundaryContains`,
 `interiorContains`, `intersects`, `interiorsIntersect`, `separates`, `crosses`)
 consistent across classes; each predicate is overloaded per accepted shape type.
 
-`Disk` and `Polygon` are no longer gated or asymmetric: both `PGL_BIND_ALL_PREDICATES`
-and `PGL_BIND_ALL_SQUARED_DISTANCE` now list all fourteen shapes, including
-themselves, so e.g. `triangle.contains(disk)` and `disk.intersects(triangle)`
-both work (see milestone 5's `Disk` follow-up in Project status above) — pgl
-closed every remaining pair upstream.
+`PGL_BIND_ALL_PREDICATES`, `PGL_BIND_ALL_SQUARED_DISTANCE` and
+`PGL_BIND_ALL_SAME_POINT_SET` list all **seventeen** shapes, including
+themselves, so every pair works in both directions;
+`PGL_BIND_ALL_L1LINF_DISTANCE` lists sixteen (no `Disk`, which pgl implements
+only against a `Point`) and `PGL_BIND_ALL_HAUSDORFF_DISTANCE` only the six
+bounded convex ones.
 
 ## Build & test
 
@@ -649,6 +850,9 @@ Wheels (later milestone): `cibuildwheel` in GitHub Actions; ship generated
 one, plus a `README.md` and a `Makefile` (`make` runs them all, `make clean`
 removes what they wrote — the C++ Makefile compiles, this one only runs). Their
 generated `.svg`/`.pdf`/`.ipe` are gitignored and excluded from the sdist.
+Its `README.md` is a **gallery** like upstream's, so one copy of each output
+is tracked under [examples/figures/](examples/figures/) — `make figures` runs
+every example and refreshes them; the sdist leaves that directory out too.
 
 They are the closest thing to an integration test of the *user-facing* API, and
 they earn it: porting `example3.cpp` immediately turned up that
@@ -677,12 +881,11 @@ precondition fast path for `contains`), `Line.asSegmentFor`,
 `OrientedLine.crossingOrder`, `Convex.edgesAtX`/`maxIndex`, and
 `Polyline.polygonIntersection`.
 
-Three places where a port cannot be literal, all called out in the examples'
-README: the canvas is methods rather than a stream, `float` coordinates are
-rejected so trigonometric layouts must `round()` first, and only the fixed-size
-shapes take flat coordinate lists (`Segment(0, 0, 8, 8)`) — `Convex`, `Polygon`,
-`MonotoneChain` and `Polyline` want a sequence of `Point`, so `example_canvas.py`
-carries a small `points(*coords)` helper.
+Two places where a port cannot be literal, both called out in the examples'
+README: the canvas is methods rather than a stream, and `float` coordinates are
+rejected so trigonometric layouts must `round()` first. (A third — that only the
+fixed-size shapes took flat coordinates — went away in milestone 14, which is
+also what removed the `points(*coords)` helper three examples carried.)
 
 ## Docs
 

@@ -71,8 +71,11 @@ def test_rectangle_bounding_box_of_points():
                          pypgl.Point(5, 4), pypgl.Point(2, 3)])
     assert r == pypgl.Rectangle(1, 1, 5, 4)        # componentwise min/max
     assert pypgl.Rectangle([pypgl.Point(2, 2)]) == pypgl.Rectangle(2, 2, 2, 2)
-    with pytest.raises(ValueError):
-        pypgl.Rectangle([])                        # empty range is rejected
+    # The bounding box of nothing is the empty rectangle, which upstream gave
+    # Rectangle as a real state: it covers no point, and inserting into it gives
+    # the box of whatever went in.
+    assert pypgl.Rectangle([]).empty()
+    assert pypgl.Rectangle().empty()
 
 
 def test_rectangle_bounding_box_of_shapes():

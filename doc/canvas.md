@@ -128,8 +128,12 @@ canvas.stroke("sienna").fill("gold").fillOpacity("0.22").draw(rectangle)
 `canvas.draw(shape)` adds a shape using the current style and returns the canvas,
 so draws chain. Every bound shape can be drawn: [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."), [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label."),
 [`OrientedSegment`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedSegment.html "Directed segment preserving source-to-target order plus optional segment label."), [`Line`](https://gfonsecabr.github.io/pgl/structpgl_1_1Line.html "Unoriented infinite line."), [`OrientedLine`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedLine.html "Directed infinite line with left/right side semantics plus optional line label."), [`Ray`](https://gfonsecabr.github.io/pgl/structpgl_1_1Ray.html "Half-infinite line starting from one source point plus optional ray label."), [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line."), [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."),
-[`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), and [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") — plus
-[`Triangulation`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangulation.html "Triangulation whose connectivity may change and whose vertex set may grow.") and [`ShapeTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1ShapeTree.html "Static shape tree of bounded shapes."). Results of constructions such as
+[`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."),
+[`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes."), [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors."), [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty."), and [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") — plus
+[`Triangulation`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangulation.html "Triangulation whose connectivity may change and whose vertex set may grow.") and [`ShapeTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1ShapeTree.html "Static shape tree of bounded shapes."). A region or a set of regions is drawn as one
+shape with a closed subpath per ring, so its holes are punched out of the fill
+rather than painted over, and a boolean result draws as one shape however many
+pieces it came apart into. Results of constructions such as
 `intersection` are concrete shapes too, so they can be drawn directly. Drawing
 `None` (which an empty `intersection` returns) is a no-op that still returns the
 canvas, so no `None` guard is needed.
@@ -140,6 +144,23 @@ canvas.draw(pgl.Triangle(-1, -1, 0, 2, 1, -2)) \
       .draw(pgl.Disk(pgl.Point(0, 0), 2)) \
       .draw(pgl.Point(0, 0))
 ```
+
+`draw` also takes a *collection* of shapes and draws them one by one, in order,
+each with the style active at the call — so whatever a construction hands back
+goes over in one line:
+
+```python
+polygon = pgl.Polygon([0, 0, 8, 0, 8, 8, 4, 4, 0, 8])
+
+canvas = pgl.Canvas()
+canvas.stroke("royalblue").draw(polygon.edges())          # every edge
+canvas.stroke("crimson").draw(polygon.vertices())         # every vertex
+canvas.stroke("teal").draw(polygon.triangulation().triangles())
+```
+
+Any iterable works — a list, a tuple, a generator expression — and its elements
+may be of mixed types, may be `None`, and may themselves be collections (a list
+of lists draws flattened).
 
 ### Configuration
 
@@ -154,6 +175,7 @@ defaults. Each returns the canvas, so they chain:
 | [`size(width, height)`](https://gfonsecabr.github.io/pgl/classpgl_1_1Canvas.html#ab56282ffe4990051d30b69a0468e2394 "Sets the exported SVG size in pixels.") | Convenience wrapper for setting width and height together. |
 | [`margin(pixels)`](https://gfonsecabr.github.io/pgl/classpgl_1_1Canvas.html#ac5d887cdc706ea1473bebdda02c2390d "Sets the margin reserved around the fitted drawing.") | Reserves blank space around the fitted drawing, giving the geometry more breathing room inside the image. Must be non-negative. |
 | [`borders(enabled=True)`](https://gfonsecabr.github.io/pgl/classpgl_1_1Canvas.html#a6621826426cfa82bd0b5fd8221b7376b "Enables or disables the optional border around the SVG.") | Enables or disables a thin rectangular frame around the whole drawing. Especially helpful when debugging clipping and margins. |
+| [`view(rectangle)`](https://gfonsecabr.github.io/pgl/classpgl_1_1Canvas.html#a6676e76708f678fc3ca476c1cb9db942 "Fits the export to an explicit window of the plane instead of to the inserted geometry.") | Fits the export to an explicit window of the plane instead of to the drawing's bounding box, so whatever falls outside it falls outside the image. This is how to frame a drawing whose interesting part is not its bounding box — an arrangement whose far-away crossings would shrink everything else, or a drawing stretched by the two points defining a line. Calling it again replaces the window, and [`scale`](https://gfonsecabr.github.io/pgl/classpgl_1_1Canvas.html#a40b9eaa91fa720483a2999d09e89e47b "Sets the global zoom factor used during SVG export.") and [`margin`](https://gfonsecabr.github.io/pgl/classpgl_1_1Canvas.html#ac5d887cdc706ea1473bebdda02c2390d "Sets the margin reserved around the fitted drawing.") still apply on top of it. |
 
 The invalid-argument checks raise a Python exception, so e.g. [`canvas.width(0)`](https://gfonsecabr.github.io/pgl/classpgl_1_1Canvas.html#ae77d195e33e5becef12de273bd327f51 "Sets the exported SVG width in pixels.")
 raises rather than producing a broken image.
@@ -191,8 +213,8 @@ pgl.Triangle(-1, -1, 0, 2, 1, -2)        # displays the triangle
 ```
 
 A shape is drawn on a one-shot canvas whose side length is `pypgl.REPR_SVG_SIZE`
-pixels (500 by default, half pgl's 1000×1000, so a shape does not dominate the
-cell). Reassign it to scale every inline shape — e.g. `pypgl.REPR_SVG_SIZE = 250`
+pixels (500 by default, smaller than a canvas's own 800×800, so a shape does not
+dominate the cell). Reassign it to scale every inline shape — e.g. `pypgl.REPR_SVG_SIZE = 250`
 for half again as small. A canvas you build yourself is unaffected: it honors its
 own [`size`](https://gfonsecabr.github.io/pgl/classpgl_1_1Canvas.html#ab56282ffe4990051d30b69a0468e2394 "Sets the exported SVG size in pixels.").
 

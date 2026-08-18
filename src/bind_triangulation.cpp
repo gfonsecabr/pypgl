@@ -279,6 +279,76 @@ void bind_triangulation(nb::module_ &m) {
             "None if the set is not simultaneously flippable.");
 
     // ---- validation ------------------------------------------------------
+    // --- the domain: what the mesh covers, as a shape would answer ---
+    //
+    // The domain is the polygon for the polygon constructors and the convex
+    // hull otherwise. These give exactly the answers the shape predicates of
+    // the same name give for that region as a Polygon, boundary and all -- a
+    // segment running along a boundary edge is contained and met, but neither
+    // interior-contained nor interior-intersecting. They work on the mesh, so
+    // the cost follows the triangles the query meets rather than the size of
+    // the boundary. They ask a different question from has(), which is about
+    // being a *cell* of the mesh rather than about how the domain covers a
+    // shape geometrically.
+    PGL_BIND_ALL_DOMAIN_PREDICATES(cls, Triangulation);
+
+    // --- derived structures ---
+    cls.def("asGraph", [](const Triangulation &t) { return t.asGraph(); },
+            "The 1-skeleton as a Graph: its vertices are the numVertices() stored points "
+            "and its edges the numEdges() edges of the visible mesh. A point identifies a "
+            "vertex here, so the graph is keyed by the points themselves. A vertex with "
+            "no in-domain edge -- one duplicated or collinear with every other point -- "
+            "comes back isolated; the ghost vertex closing the mesh at infinity is "
+            "internal and is not one of them.");
+    cls.def("voronoiDiagram", [](const Triangulation &t) { return t.voronoiDiagram(); },
+            "The unbounded Arrangement dual to this triangulation. The triangulation must "
+            "be non-empty and its real triangles must form the Delaunay triangulation of "
+            "all its vertices. Each face is labelled with the point that generated its "
+            "Voronoi cell, so diagram.label(diagram.locateFace(q)) is the site nearest to "
+            "q; on a Voronoi edge or vertex locateFace() picks one tied site by its "
+            "infinitesimal-perturbation rule, and locateCell() plus the incident faces "
+            "recovers all of them. Exact: the vertices are rational.");
+    cls.def("convexPartition", [](const Triangulation &t) { return t.convexPartition(); },
+            "Cut the domain into Convex pieces with pairwise disjoint interiors, each the "
+            "union of one or more triangles, using at most four times the fewest pieces "
+            "possible. A constrained edge is never deleted, so the constraints the "
+            "triangulation was built with shape the partition.");
+    cls.def("convexCovering", [](const Triangulation &t) { return t.convexCovering(); },
+            "Cover the domain with Convex pieces grown one per triangle and then greedily "
+            "selected and thinned. The pieces may overlap, are not guaranteed minimum, "
+            "and never cross a constrained edge.");
+
+    // --- visibility ---
+    //
+    // Sight is stopped by the boundary of the domain *and by every constrained
+    // edge*, which is what makes `polygon.triangulation(walls).visibilityGraph()`
+    // visibility inside the polygon among the segment obstacles `walls`. All of
+    // these run a triangular expansion over the mesh, at a cost proportional to
+    // the part of the domain a vertex actually sees.
+    cls.def("visibilityGraph", [](const Triangulation &t) { return t.visibilityGraph(); },
+            "The graph on the mesh's vertices joining two of them when the segment "
+            "between them stays in the domain and crosses no constrained edge, even if "
+            "it touches the boundary along the way.");
+    cls.def("clearVisibilityGraph", [](const Triangulation &t) { return t.clearVisibilityGraph(); },
+            "The strict reading: the segment must meet no boundary and no constrained "
+            "edge except at its two ends. Always a subgraph of visibilityGraph().");
+    cls.def("reducedVisibilityGraph", [](const Triangulation &t) { return t.reducedVisibilityGraph(); },
+            "The subgraph of visibilityGraph() a shortest path can bend along: the "
+            "boundary and wall edges plus the bitangents between reflex corners. Route "
+            "between arbitrary points by adding them joined to visibleVertices().");
+    cls.def("visibleVertices", [](const Triangulation &t, const Point &q) { return t.visibleVertices(q); },
+            nb::arg("query"),
+            "The mesh's vertices visible from the query point, counterclockwise around it "
+            "from the lexicographically smallest -- sortAround()'s order.");
+    cls.def("clearlyVisibleVertices", [](const Triangulation &t, const Point &q) { return t.clearlyVisibleVertices(q); },
+            nb::arg("query"), "The strict counterpart of visibleVertices(): a subset of it.");
+    cls.def("regularizedVisiblePolygon", [](const Triangulation &t, const Point &q) { return t.regularizedVisiblePolygon(q); },
+            nb::arg("query"),
+            "The region visible from the query point, as a Polygon: star-shaped about it "
+            "and hence simply connected, however many holes or walls the domain has. "
+            "Regularized, so a sightline grazing along a wall or slipping through a "
+            "vertex contributes nothing -- what comes back always bounds area.");
+
     cls.def("checkInvariants", [](const Triangulation &t) { return t.checkInvariants(); },
             "Check the structural invariants (orientation + neighbor symmetry); "
             "intended for debugging/assertions.");

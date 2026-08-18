@@ -52,6 +52,20 @@ void bind_polygon(nb::module_ &m) {
             "trusted is set, the vertices are normalized to canonical form (CCW, "
             "lexicographically smallest vertex first); normalization does not "
             "check simplicity -- use isSimple() to verify.");
+    // The same constructor spelled as a flat coordinate list, mirroring pgl's
+    // initializer_list<Number> one: Polygon([0,0, 4,0, 4,4]) instead of
+    // Polygon([Point(0,0), Point(4,0), Point(4,4)]). Registered after the point
+    // overload, which is what disambiguates the empty list (both match it;
+    // either builds the same empty polygon). The two never collide otherwise: a
+    // Point has no numerator/denominator so it is not a coordinate, and a number
+    // is not a Point.
+    cls.def("__init__",
+            [](Polygon *self, const std::vector<Num> &coords, bool trusted) {
+                new (self) Polygon(pointsFromCoords(coords), trusted);
+            },
+            nb::arg("coords"), nb::arg("trusted") = false,
+            "Create a polygon from a flat coordinate list of its boundary "
+            "vertices, read in (x, y) pairs: Polygon([0,0, 4,0, 4,4]).");
 
     cls.def("vertices", [](const Polygon &p) { return p.vertices(); }, "Vertices in canonical boundary order.");
     cls.def("edges", [](const Polygon &p) { return p.edges(); }, "Boundary edges as segments.");
@@ -66,6 +80,12 @@ void bind_polygon(nb::module_ &m) {
             "Whether the boundary does not touch or cross itself.");
     cls.def("asPolygonWithHoles", [](const Polygon &p) { return p.asPolygonWithHoles(); },
             "The same polygon as a hole-free PolygonWithHoles region.");
+    cls.def("asPolygonSet", [](const Polygon &p) { return p.asPolygonSet(); },
+            "The same polygon as a one-component PolygonSet.");
+    cls.def("empty", [](const Polygon &p) { return p.empty(); },
+            "Whether the polygon covers no point at all: a polygon with no vertex, "
+            "which is the empty set. Distinct from isDegenerate(), which is a polygon "
+            "with vertices but no area.");
     // A polygon is star-shaped when some point sees all of it; the set of such
     // points is its kernel, the intersection of the inner half-planes of its
     // edges -- hence a HalfplaneIntersection, and None when there is no such
@@ -110,11 +130,11 @@ void bind_polygon(nb::module_ &m) {
     // counterparts (mutate, return None), mirroring Convex.
     PGL_BIND_TRANSFORMS(cls, Polygon);
     PGL_BIND_BOOLEANS(cls, Polygon);
-    // Only the region operand pulls in the region-valued intersection; the
-    // other four keep the general one bound above.
-    PGL_PRED(cls, Polygon, intersection, ::pypgl::PolygonWithHoles);
-    PGL_BIND_REGION_MINKOWSKI(cls, Polygon);
-    PGL_BIND_POLYLINE_OPERAND(cls, Polygon);
+    // The regularized intersection needs a shape that can hold an answer with
+    // a hole, which a simple polygon is not: so it is available exactly when
+    // the other operand is a region or a set of them.
+    PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Polygon);
+    PGL_BIND_MINKOWSKI_REGION(cls, Polygon);
     PGL_BIND_DEGENERACY(cls, Polygon);
     cls.def("rotate90", [](Polygon &p, int k) { p.rotate90(k); }, nb::arg("k") = 1,
             "Rotate the polygon in place by 90*k degrees about the origin.");
@@ -156,16 +176,64 @@ void bind_polygon(nb::module_ &m) {
     // common.h), but it does get the full distanceL1/distanceLInf cross
     // product like every other non-Disk shape.
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, Polygon);
+    PGL_BIND_ALL_SAME_POINT_SET(cls, Polygon);
 
-    cls.def("intersection", [](const Polygon &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const Halfplane &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const Triangle &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const Rectangle &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const Convex &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Polygon &a, const Polygon &b) { return a.intersection(b); }, nb::arg("other"));
+    // The literal intersection against every shape but a Disk. Against a 2D
+    // operand the one-dimensional pieces come back as Polyline objects, since
+    // pgl gained that class -- a stretch shared by two boundaries is a
+    // Polyline, even when it is a single segment.
+    PGL_BIND_INTERSECTION_AREA(cls, Polygon);
+
+
+    // --- visibility (implementation/visibilitygraph.hpp) ---
+    //
+    // All of these triangulate the polygon once and then run a *triangular
+    // expansion* per vertex or query point: a traversal of the mesh carrying a
+    // cone of still-unobstructed directions that every crossed diagonal clips,
+    // at a cost proportional to the part of the polygon that vertex actually
+    // sees. Sight is stopped by the boundary.
+    cls.def("visibilityGraph", [](const Polygon &a) { return a.visibilityGraph(); },
+            "The graph on the polygon's vertices joining two of them when the segment "
+            "between them stays inside, even if it touches the boundary along the way.");
+    cls.def("clearVisibilityGraph", [](const Polygon &a) { return a.clearVisibilityGraph(); },
+            "The strict reading of visibilityGraph(): the segment must not meet the "
+            "boundary except at its two ends. Always a subgraph of visibilityGraph(); a "
+            "degenerate polygon, having no interior, comes back with no edges at all.");
+    cls.def("reducedVisibilityGraph", [](const Polygon &a) { return a.reducedVisibilityGraph(); },
+            "The subgraph of visibilityGraph() a shortest path can bend along: the edges "
+            "tangent to the obstacles at both ends, which is the boundary edges plus the "
+            "bitangents between reflex corners. Routing between two arbitrary points "
+            "means adding them joined to everything visibleVertices() reports.");
+    cls.def("visibleVertices", [](const Polygon &a, const Point &q) { return a.visibleVertices(q); },
+            nb::arg("query"),
+            "The polygon's vertices visible from the query point, under "
+            "visibilityGraph()'s convention. Counterclockwise around the query point, "
+            "starting from the lexicographically smallest -- the order sortAround() "
+            "gives. This is what joins a query point to reducedVisibilityGraph().");
+    cls.def("clearlyVisibleVertices", [](const Polygon &a, const Point &q) { return a.clearlyVisibleVertices(q); },
+            nb::arg("query"),
+            "The strict counterpart of visibleVertices(), under clearVisibilityGraph()'s "
+            "convention: always a subset of it, in the same order.");
+    cls.def("regularizedVisiblePolygon", [](const Polygon &a, const Point &q) { return a.regularizedVisiblePolygon(q); },
+            nb::arg("query"),
+            "The region visible from the query point, as a Polygon: every point reached "
+            "by a segment that stays inside. It is star-shaped about the query point and "
+            "hence simply connected, so one Polygon holds it however many holes the "
+            "polygon has. *Regularized* means the closure of the interior, so a sightline "
+            "grazing along a wall or slipping through a vertex contributes nothing: what "
+            "comes back always bounds area. Its vertices are the polygon's own plus the "
+            "*window* ends where a sightline past a reflex corner lands on a farther "
+            "edge -- ray-edge intersections, and exactly the coordinates that need "
+            "division, which stays exact here.");
+
+    // --- convex decomposition (both shorthands for the triangulation's) ---
+    cls.def("convexPartition", [](const Polygon &p) { return p.convexPartition(); },
+            "Cut the polygon into Convex pieces with pairwise disjoint interiors whose "
+            "union is the polygon, using at most four times the fewest pieces possible. "
+            "A convex polygon comes back as a single piece.");
+    cls.def("convexCovering", [](const Polygon &p) { return p.convexCovering(); },
+            "Cover the polygon with Convex pieces, which may overlap. Irredundant but "
+            "not necessarily minimum: it builds the full-visibility subgraph of the "
+            "constrained Delaunay triangles, groups them by a clique cover, and takes "
+            "the hull of each clique.");
 }

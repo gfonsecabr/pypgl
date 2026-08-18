@@ -32,7 +32,7 @@ void bind_segment(nb::module_ &m) {
 
     PGL_BIND_OPERATORS(cls, Segment);
     PGL_BIND_TRANSFORMS(cls, Segment);
-    PGL_BIND_CONVEX_MINKOWSKI(cls, Segment);
+    PGL_BIND_MINKOWSKI_CONVEX(cls, Segment);
     PGL_BIND_VERTEX_QUERIES(cls, Segment);
     PGL_BIND_INDEXING(cls, Segment);
     PGL_BIND_LINE_HELPERS(cls, Segment);
@@ -44,14 +44,12 @@ void bind_segment(nb::module_ &m) {
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Segment);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, Segment);
     PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Segment);
+    PGL_BIND_ALL_SAME_POINT_SET(cls, Segment);
 
-    cls.def("intersection", [](const Segment &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Segment &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"),
-            "Intersection of two segments: None, a Point, or a Segment.");
-    cls.def("intersection", [](const Segment &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Segment &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Segment &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Segment &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
+    // Against a 0D/1D shape the result is connected (None, a Point or a
+    // Segment); against a chain or a non-convex region it can come apart, and
+    // is then a list of those same pieces.
+    PGL_BIND_INTERSECTION_LINEAR(cls, Segment);
 }
 
 void bind_oriented_segment(nb::module_ &m) {
@@ -88,7 +86,7 @@ void bind_oriented_segment(nb::module_ &m) {
 
     PGL_BIND_OPERATORS(cls, OrientedSegment);
     PGL_BIND_TRANSFORMS(cls, OrientedSegment);
-    PGL_BIND_CONVEX_MINKOWSKI(cls, OrientedSegment);
+    PGL_BIND_MINKOWSKI_CONVEX(cls, OrientedSegment);
     PGL_BIND_VERTEX_QUERIES(cls, OrientedSegment);
     PGL_BIND_INDEXING(cls, OrientedSegment);
     PGL_BIND_LINE_HELPERS(cls, OrientedSegment);
@@ -101,11 +99,9 @@ void bind_oriented_segment(nb::module_ &m) {
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, OrientedSegment);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, OrientedSegment);
     PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, OrientedSegment);
+    PGL_BIND_ALL_SAME_POINT_SET(cls, OrientedSegment);
 
-    cls.def("intersection", [](const OrientedSegment &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const OrientedSegment &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const OrientedSegment &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const OrientedSegment &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const OrientedSegment &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const OrientedSegment &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
+    // An intersection is a point set, so an orientation plays no part in it:
+    // these give exactly what the same unoriented segment would.
+    PGL_BIND_INTERSECTION_LINEAR(cls, OrientedSegment);
 }

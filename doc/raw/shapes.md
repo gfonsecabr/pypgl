@@ -38,11 +38,20 @@ The following shapes are supported by Pangolin:
 - [`Polygon`](#polygon) Simple polygon.
 - [`Convex`](#convex) Convex polygon.
 - [`PolygonWithHoles`](#polygon-with-holes) Simple polygon minus a set of disjoint polygonal holes.
+- [`PolygonSet`](#polygon-set) A set of regions with pairwise disjoint interiors.
 - [`HalfplaneIntersection`](#halfplane-intersection) Intersection of half-planes; convex but possibly unbounded or empty.
 
 
 There are many [predicates](shape_methods.md#predicates) and [other methods](shape_methods.md) supported by all shapes, such as `intersects`, `contains`, `squaredDistance`, `distanceL1`, translation, and scaling.
 Shapes may be degenerate, for example when some of their defining points are equal. Degenerate shapes may safely be constructed, and are often constructed by the default constructor that sets all points to the origin. See [Degeneracies](#degeneracies) for what they then mean.
+
+Every shape can be built straight from coordinates, with no `Point` per vertex. The fixed-size shapes take them as arguments — `pgl.Segment(1, 2, 3, 4)`, `pgl.Triangle(0, 0, 8, 0, 4, 8)` — and the four variable-size ones ([`Polyline`](#polyline), [`MonotoneChain`](#monotonechain), [`Polygon`](#polygon) and [`Convex`](#convex)) take one flat list, read in `(x, y)` pairs:
+
+```python
+pgl.Polygon([0, 0, 8, 0, 8, 8, 4, 4, 0, 8])   # same as the list of five Points
+```
+
+A sequence of `Point` is accepted just as well, which is what a computed vertex list usually is; a coordinate list of odd length raises a `ValueError`. Coordinates are exact everywhere: `int`, `fractions.Fraction`, or `"a/b"` strings, never `float`.
 
 All shapes contain their boundaries (that is, they are closed in the topological sense). The boundary of a shape is the *manifold boundary*, that is:
 
@@ -339,10 +348,10 @@ The class `Polyline` represents an open polygonal chain: a sequence of vertices 
 The constructor keeps the vertex order you give it, canonicalizing only the *direction* (the sequence is reversed when the reversal compares lexicographically smaller), so a polyline equals its own reverse but not a different traversal of the same vertices:
 
 ```python
-p = pgl.Polyline([pgl.Point(0, 0), pgl.Point(2, 2), pgl.Point(2, 0)])
+p = pgl.Polyline([0, 0, 2, 2, 2, 0])
 print(p)
 # Output: Polyline[(0,0),(2,2),(2,0)]
-print(p == pgl.Polyline([pgl.Point(2, 0), pgl.Point(2, 2), pgl.Point(0, 0)]))
+print(p == pgl.Polyline([2, 0, 2, 2, 0, 0]))
 # Output: True  (the same chain, traversed backwards)
 ```
 
@@ -368,7 +377,7 @@ The class `MonotoneChain` represents a weakly x-monotone polygonal chain. Its ve
 Consecutive vertices may share an x-coordinate, producing a vertical edge — that is what makes it only *weakly* monotone.
 
 ```python
-c = pgl.MonotoneChain([pgl.Point(2, 2), pgl.Point(0, 0), pgl.Point(1, 3)])
+c = pgl.MonotoneChain([2, 2, 0, 0, 1, 3])
 print(c)
 # Output: MonotoneChain[(0,0),(1,3),(2,2)]  # sorted, whatever the input order
 print(c.isStrictlyMonotone())
@@ -537,7 +546,12 @@ A polygon `P` has methods such as:
 - `P.getStarShapedKernel()`: Returns the *kernel* — every point that sees the whole polygon — as a [`HalfplaneIntersection`](#halfplane-intersection), or `None` when the polygon is not star-shaped. For a convex polygon the kernel is the polygon itself.
 - `P.asPolygonWithHoles()`: Returns the polygon as a hole-free [`PolygonWithHoles`](#polygon-with-holes) region.
 
-A `Polygon` also carries the [boolean operations](shape_methods.md#boolean-operations) `difference`, `unionWith` and `symmetricDifference`, and the region-returning [Minkowski sum](shape_methods.md#minkowski-sum); all of them answer in a list of regions.
+A `Polygon` also carries the [boolean operations](shape_methods.md#boolean-operations) `difference`, `regularizedUnion` and `symmetricDifference` — each answering with a [`PolygonSet`](#polygon-set) — and the region-returning [Minkowski sum](shape_methods.md#minkowski-sum). It has `regularizedIntersection` only against a shape that can hold the answer, a `PolygonWithHoles` or a `PolygonSet`.
+
+- `P.empty()`: Returns true if the polygon has no vertex at all, which is the empty set. Distinct from `isDegenerate()`, which is a polygon with vertices but no area.
+- `P.convexPartition()`: Cuts the polygon into [`Convex`](#convex) pieces with pairwise disjoint interiors whose union is the polygon, using at most four times the fewest pieces possible. Shorthand for `P.triangulation().convexPartition()`.
+- `P.convexCovering()`: Covers the polygon with `Convex` pieces, which may overlap. Irredundant but not necessarily minimum.
+- `P.visibilityGraph()`, `P.clearVisibilityGraph()`, `P.reducedVisibilityGraph()`, `P.visibleVertices(q)`, `P.clearlyVisibleVertices(q)`, `P.regularizedVisiblePolygon(q)`: [Visibility](algorithms.md#visibility) inside the polygon.
 
 `P` is not convex in general, so it has neither a Hausdorff distance nor
 `verticesContain` (use `P.index(point) is not None` for the latter).
@@ -553,7 +567,7 @@ A convex polygon `c` has methods such as:
 
 - `c.isDegenerate()`: Returns true if the convex polygon has null area.
 - `c.centroid()`: Returns the centroid.
-- `c.insert(point)` / `c.insert(points)` / `c.insert(shape)`: Enlarges the hull in place so that it contains the given point, points, or shape. A shape must expose its vertices, so a `Disk` and the unbounded shapes raise a `TypeError` — in C++ they are a compile error. (They have to be refused explicitly here: every pypgl shape is iterable over its defining points, so without the guard `c.insert(disk)` would quietly insert the disk's three *boundary* points, whose hull the disk bulges straight past.)
+- `c.insert(point)` / `c.insert(points)` / `c.insert(shape)`: Enlarges the hull in place so that it contains the given point, points, or shape. A shape must have vertices to take the hull of, so a `Disk` and the unbounded shapes raise a `TypeError`. (They are refused explicitly rather than by omission: every shape is iterable over its defining points, so without the guard `c.insert(disk)` would quietly insert the disk's three *boundary* points, whose hull the disk bulges straight past.)
 - `c.upperHull()` / `c.lowerHull()`: Return the upper and lower boundary chains as a [`MonotoneChain`](#monotonechain). Both run between the leftmost and rightmost vertices, and together they cover the boundary.
 
 It knows how to convert itself to:
@@ -586,15 +600,16 @@ interiors — their boundaries may meet. The boundary of $A$ is the boundary of 
 together with the boundary of every hole. Note that $A$ is connected but its
 interior may not be.
 
-This is the one shape whose intersections can keep holes, and that is what it
-exists for: removing a shape from the middle of another leaves a hole, and no
-other shape can say so. Every [boolean operation](shape_methods.md#boolean-operations)
-and every non-convex [Minkowski sum](shape_methods.md#minkowski-sum) therefore
-returns a *list* of these.
+This is the shape whose intersections can keep holes, and that is what it exists
+for: removing a shape from the middle of another leaves a hole, and no other
+shape but a [`PolygonSet`](#polygon-set) — which is made of these — can say so.
+Every [boolean operation](shape_methods.md#boolean-operations) answers with a set
+of them, and a non-convex [Minkowski sum](shape_methods.md#minkowski-sum) with
+one of them or with a set.
 
 ```python
-outer = pgl.Polygon([pgl.Point(0,0), pgl.Point(10,0), pgl.Point(10,10), pgl.Point(0,10)])
-hole = pgl.Polygon([pgl.Point(4,4), pgl.Point(6,4), pgl.Point(6,6), pgl.Point(4,6)])
+outer = pgl.Polygon([0,0, 10,0, 10,10, 0,10])
+hole = pgl.Polygon([4,4, 6,4, 6,6, 4,6])
 region = pgl.PolygonWithHoles(outer, [hole])
 print(region.area(), region.holeCount(), region.vertexCount())
 # Output: 96 1 8
@@ -618,11 +633,13 @@ A region `A` has methods such as:
 - `A.vertexCount()`: The total number of vertices over all rings.
 - `A.vertices()` / `A.edges()`: The vertices and boundary edges of every ring, outer boundary first.
 - `A.orientedEdges()`: The boundary edges directed so the region lies to the left: the outer ring counterclockwise as stored, the hole rings **reversed**.
-- `A.isEmpty()`: Returns true if the region has no outer boundary at all.
+- `A.empty()`: Returns true if the region has no outer boundary at all, and hence covers no point.
 - `A.isSimple()`: Returns true if every ring is simple. A per-ring check only: it says nothing about how the rings sit relative to one another.
 - `A.isValid()`: Tests the whole structural contract above.
 - `A.isRegular()`: Returns true if the region is the closure of its own interior. Since the contract constrains interiors only, a valid region may pinch shut along a whole stretch of edge — a **slit**, region material with no area on either side of it, as when a hole shares an edge with another hole or with the outer boundary. A region with area is regular exactly when it has no slit. Pinching at an isolated *point* is not a slit: the interior still reaches the point from every side.
-- `A.regularized()`: Returns $\mathrm{closure}(A^\circ)$ — the region without its slits — as a list of regions, the same regularization every boolean operation applies to its own result. Dropping the slits can disconnect what they were holding together, which is why the result is a set: a region whose slits are its only connective tissue comes back as several pieces, and one with no area comes back empty.
+- `A.regularized()`: Returns $\mathrm{closure}(A^\circ)$ — the region without its slits — as a [`PolygonSet`](#polygon-set), the same regularization every boolean operation applies to its own result. Dropping the slits can disconnect what they were holding together, which is why the result is a set: a region whose slits are its only connective tissue comes back as several components, and one with no area comes back empty.
+- `A.convexPartition()` / `A.convexCovering()`: Cut or cover the part of the region that has area with [`Convex`](#convex) pieces. The holes are where there is no piece, and a slit, having no area, appears in none of them.
+- `A.visibilityGraph()` and the rest of the [visibility](algorithms.md#visibility) family: sight is stopped by the outer boundary and by every hole.
 - `A.twiceArea()` / `A.area()`: Twice the area exactly and without division, and the area itself.
 - `A.centroid()`: The area-weighted centroid, the holes entering with negative weight. When the net area is zero the centroid of the vertex set is returned instead.
 - `A.verticesCentroid()`: The centroid of the vertex set over all rings.
@@ -630,12 +647,71 @@ A region `A` has methods such as:
 - `A.triangulation()` / `A.triangulation(segments)`: The constrained Delaunay [triangulation](data_structures.md#triangulation) of the region. Every ring becomes constrained edges and the hole interiors are left out of the domain, so the in-domain triangles cover exactly the part of the region that has area — a slit, having none, carries no triangle.
 - `A.diameter()` / `A.bbox()`: The holes lie inside the outer boundary and cannot contribute, so both are the outer polygon's.
 
-In Python, `len(A)`, `A[i]` and iteration run over the region's **vertices**,
-flattened across the rings with the outer boundary first, so a region reads like
-every other pypgl shape. (C++ iterates the *holes* instead, and gives the region
-`vertexCount()` rather than `size()`.) The holes stay reachable through
-`holeCount()`, `hole(i)` and `holes()`, and `point in A` is point containment as
-everywhere else.
+`len(A)`, `A[i]` and iteration run over the region's **vertices**, flattened
+across the rings with the outer boundary first, so a region reads like every
+other shape. The holes stay reachable through `holeCount()`, `hole(i)` and
+`holes()`, and `point in A` is point containment as everywhere else.
+
+- Other methods:
+
+
+### Polygon Set
+
+The class `PolygonSet` represents a set of
+[`PolygonWithHoles`](#polygon-with-holes) components with pairwise disjoint
+interiors. The point set is simply their union:
+
+$$A = A_0 \cup A_1 \cup \dots$$
+
+This is the shape that **closes** the regularized
+[boolean operations](shape_methods.md#boolean-operations). A difference, a union
+or a symmetric difference of two regions can come apart into several pieces, and
+an island stranded inside a hole of the answer is a piece like any other — so
+before this shape existed those operations had to answer with a bare list, which
+could not be fed back in, compared, hashed, drawn or measured.
+
+```python
+square = pgl.Polygon([0,0, 10,0, 10,10, 0,10])
+holed  = square.difference(pgl.Rectangle(pgl.Point(3,3), pgl.Point(7,7)))
+again  = holed.difference(pgl.Rectangle(pgl.Point(0,0), pgl.Point(2,2)))
+merged = again.regularizedUnion(holed)
+```
+
+It is also the only pypgl shape whose point set **need not be connected**, and
+its components are deliberately **not nested**: a component stranded inside
+another's hole is stored beside it, not within it.
+
+The components are kept in canonical (sorted) order, so equality, ordering and
+hashing do not depend on the order they were supplied in; components of zero area
+cover nothing that survives and are dropped, and duplicates are erased. As with
+`Polygon` and `PolygonWithHoles`, structural validity — every component valid,
+component interiors pairwise disjoint, and no two components sharing a stretch of
+edge — is a documented precondition rather than an enforced invariant, and
+`isValid()` checks it on demand.
+
+A set `A` has methods such as:
+
+- `A.componentCount()` / `A.component(i)` / `A.components()`: The components, in canonical order.
+- `A.addComponent(r)` / `A.eraseComponent(i)` / `A.eraseComponent(r)`: Add or remove a component in place; the last returns whether it found one.
+- `A.empty()`: Returns true if the set has no components at all.
+- `A.isConnected()`: Returns true if the set is connected as a point set. Two components that never touch are two pieces; the empty set is connected by convention, having nothing to come apart.
+- `A.isPinched()`: Returns true if two components touch each other anywhere. `False` is the cheap exact case: components that stay apart make every relation fold componentwise.
+- `A.isRegular()` / `A.regularized()`: A set is regular exactly when every component is, since no slit can run between two components. `regularized()` returns a `PolygonSet`, so the regularization is idempotent in the type system and not only in the mathematics.
+- `A.isValid()` / `A.isSimple()`: The structural contract above, and the per-ring simplicity check.
+- `A.holeCount()` / `A.hasHoles()` / `A.vertexCount()` / `A.vertices()` / `A.edges()` / `A.orientedEdges()`: Counted and collected over every ring of every component.
+- `A.area()` / `A.twiceArea()` / `A.centroid()` / `A.verticesCentroid()` / `A.pointInside()` / `A.diameter()` / `A.bbox()`: The components have disjoint interiors, so the area is simply their sum; the diameter may join two different components.
+- `A.triangulation()` / `A.convexPartition()` / `A.convexCovering()`: The gaps between components are left out of the domain, exactly as a region's holes are.
+
+`len(A)`, `A[i]` and iteration run over the set's **vertices**, flattened across
+every ring of every component, so a set reads like every other shape — the same
+choice [`PolygonWithHoles`](#polygon-with-holes) makes. The components stay
+reachable through `componentCount()`, `component(i)` and `components()`, and
+`point in A` is point containment as everywhere else.
+
+Like `Convex`, `Polygon` and `PolygonWithHoles`, a set is **mutable and therefore
+unhashable**. It can be stored in a [`ShapeTree`](data_structures.md#shape-tree)
+and drawn on a [canvas](canvas.md), where it is drawn as one shape however many
+pieces it came apart into.
 
 - Other methods:
 
@@ -668,22 +744,22 @@ k.intersection(pgl.Rectangle(pgl.Point(2,2), pgl.Point(9,9))).area()
 A half-plane intersection `k` has methods such as:
 
 - `k.insert(h)`: Intersects the region with one more half-plane, in place. Returns `False` when the half-plane is discarded — because it is redundant, or undefined (a degenerate half-plane bounds no side, so it carries no constraint). When it empties the region, the region switches to a sticky empty state; otherwise it is stored and the stored half-planes it makes redundant are removed.
-- `k.isEmpty()`, `k.isPlane()`, `k.isBounded()`, `k.isDegenerate()`: State queries. A degenerate region has empty interior — a line, ray, segment, or point built from touching constraints — and remains fully supported by the predicates.
+- `k.empty()`, `k.isPlane()`, `k.isBounded()`, `k.isDegenerate()`: State queries. A degenerate region has empty interior — a line, ray, segment, or point built from touching constraints — and remains fully supported by the predicates.
 - `k.isUndefined()`: Always `False`: `insert` ignores undefined half-planes, so every region is well defined.
 - `k.isHalfplane()` / `k.getIfHalfplane()`: Whether the region is exactly one closed half-plane, and that half-plane. Exact, no division.
 - `k.isLine()` / `k.getIfLine()`: Whether the region is exactly one line, and that line. Needs no coordinate arithmetic: a degenerate region is a point, segment, ray, or line, and only the line has no vertex.
 - `k.isRay()` / `k.getIfRay()`: Whether the region is a ray, and that ray.
 - `k.isPoint()` / `k.getIfPoint()` and `k.isSegment()` / `k.getIfSegment()`: The remaining degenerate cases. The tests are exact whatever the region's own coordinate type, so a point whose coordinates are not integral is still recognized.
-- Together with `isEmpty` and `isPlane` these name every region a half-plane intersection can be, except a full-dimensional one other than a half-plane.
+- Together with `empty` and `isPlane` these name every region a half-plane intersection can be, except a full-dimensional one other than a half-plane.
 - `k.vertexCount()`, `k.vertex(i)`, `k.vertices()`: The implicit corners, counterclockwise for a bounded region, and exact.
 - `k.edge(i)`: The boundary contribution of half-plane `i`: a [`Segment`](#segment) when both neighbouring vertices exist, a [`Ray`](#ray) when only one does, and the whole boundary [`Line`](#line) otherwise.
 - `k.halfplanes()`: The stored half-planes, in boundary order.
 - `k.bbox()`, `k.asConvex()`, `k.area()`, `k.twiceArea()`, `k.centroid()`: Raise when the region is empty or unbounded — none of them exists then.
 - `k.intersection(other)`: Intersecting with a `Halfplane`, `Rectangle`, `Triangle`, `Convex`, or another `HalfplaneIntersection` returns another `HalfplaneIntersection`, so the type is closed under these and the result is exact, with no coordinate divisions. Against the 0D/1D shapes it returns the usual concrete piece.
 
-In Python, `len(k)`, `k[i]` and iteration run over the **half-planes**, which is
-what pgl indexes too; the corners are reached through `vertexCount()`,
-`vertex(i)` and `vertices()`. `point in k` is point containment as everywhere
+`len(k)`, `k[i]` and iteration run over the **half-planes**, which are what the
+region stores; the corners are reached through `vertexCount()`, `vertex(i)` and
+`vertices()`. `point in k` is point containment as everywhere
 else.
 
 Equality compares the stored half-planes. For full-dimensional regions the

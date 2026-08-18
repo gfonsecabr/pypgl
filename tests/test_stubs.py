@@ -44,7 +44,10 @@ def test_stub_declares_every_public_class():
     for name in (
         "Point", "Segment", "OrientedSegment", "Line", "OrientedLine", "Ray",
         "Halfplane", "Triangle", "Rectangle", "Convex", "MonotoneChain",
-        "Polyline", "Polygon", "Disk", "Triangulation", "ShapeTree", "Canvas",
+        "Polyline", "Polygon", "PolygonWithHoles", "PolygonSet",
+        "HalfplaneIntersection", "Disk", "Triangulation", "ShapeTree",
+        "IntervalTree", "IntervalTreeY", "Graph", "Arrangement",
+        "ArrangementGraph", "VertexId", "HalfedgeId", "FaceId", "Canvas",
         "Transformation",
     ):
         assert name in classes, f"{name} missing from stub"
@@ -56,7 +59,8 @@ def test_stub_declares_every_public_function():
         "findIntersections", "findCrossings", "bruteForceIntersections",
         "bruteForceCrossings", "detectIntersections", "detectCrossings",
         "convexHull", "convexHullExtended", "sortAround", "hilbertSort",
-        "polyominoes", "polyominoesUpTo",
+        "polyominoes", "polyominoesUpTo", "smallestEnclosingDisk", "closestPair",
+        "regularizedUnionOf",
     ):
         assert name in functions, f"{name} missing from stub"
 
@@ -86,15 +90,27 @@ def test_canvas_has_no_point_sugar():
     assert "__contains__" not in methods
 
 
-def test_triangulation_has_no_point_sugar():
-    # Triangulation is not a fixed-extent shape (no contains(Point)/index/get),
-    # so it opts out of the sugar every other bound class gets.
-    cls = _classes(ast.parse(_STUB.read_text()))["Triangulation"]
+@pytest.mark.parametrize("cls_name", ["Triangulation", "Arrangement", "VertexId"])
+def test_non_shapes_have_no_point_sugar(cls_name):
+    # None of these is a fixed-extent shape (no contains(Point)/index/get), so
+    # they opt out of the sugar every shape gets.
+    cls = _classes(ast.parse(_STUB.read_text()))[cls_name]
     methods = {n.name for n in cls.body if isinstance(n, ast.FunctionDef)}
     assert "__getitem__" not in methods
     assert "__contains__" not in methods
     assert "__len__" not in methods
     assert "__iter__" not in methods
+
+
+@pytest.mark.parametrize("cls_name", ["Graph", "IntervalTree", "ShapeTree"])
+def test_containers_keep_their_own_container_methods(cls_name):
+    # These bind __len__/__iter__/__contains__ themselves, over what they hold
+    # (stored shapes, or vertices) rather than over points, so the generic shape
+    # sugar must not have been layered on top of them.
+    cls = _classes(ast.parse(_STUB.read_text()))[cls_name]
+    methods = {n.name for n in cls.body if isinstance(n, ast.FunctionDef)}
+    assert {"__len__", "__iter__", "__contains__"} <= methods
+    assert "__getitem__" not in methods
 
 
 def test_point_indexing_returns_fraction():

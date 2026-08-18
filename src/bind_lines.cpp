@@ -30,7 +30,11 @@ void bind_lines(nb::module_ &m) {
         cls.def("asHalfplaneIntersection", [](const Line &l) { return l.asHalfplaneIntersection(); },
                 "The same line as a (degenerate) HalfplaneIntersection, two opposite constraints.");
         PGL_BIND_IS_UNDEFINED(cls, Line);
-        PGL_BIND_TRANSLATION_MINKOWSKI(cls, Line);
+        // A line sums with every convex shape, bounded or not: the answer is
+        // again an intersection of half-planes (a line, a slab, a half-plane,
+        // or the whole plane), so it comes back as a HalfplaneIntersection --
+        // except for the Point pair, which is the line translated.
+        PGL_BIND_MINKOWSKI_UNBOUNDED(cls, Line);
         PGL_BIND_XY_AT(cls, Line);
         PGL_BIND_HALFPLANES(cls, Line);
         PGL_BIND_COLLINEAR(cls, Line);
@@ -38,12 +42,12 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_ALL_PREDICATES(cls, Line);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Line);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Line);
+        PGL_BIND_ALL_SAME_POINT_SET(cls, Line);
 
-        cls.def("intersection", [](const Line &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Line &a, const Line &b) { return a.intersection(b); }, nb::arg("other"),
-                "Intersection of two lines: None, a Point, or a Line.");
-        cls.def("intersection", [](const Line &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Line &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
+        // Two lines meet in None, a Point or a Line; a bounded shape clips the
+        // line to a Point or a Segment, and a chain or a non-convex region to
+        // a list of those.
+        PGL_BIND_INTERSECTION_LINEAR(cls, Line);
     }
 
     // --- OrientedLine ---
@@ -68,7 +72,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_INDEXING(cls, OrientedLine);
         PGL_BIND_LINE_HELPERS(cls, OrientedLine);
         PGL_BIND_IS_UNDEFINED(cls, OrientedLine);
-        PGL_BIND_TRANSLATION_MINKOWSKI(cls, OrientedLine);
+        PGL_BIND_MINKOWSKI_UNBOUNDED(cls, OrientedLine);
         PGL_BIND_XY_AT(cls, OrientedLine);
         PGL_BIND_HALFPLANES(cls, OrientedLine);
         PGL_BIND_ORIENTED_HELPERS(cls, OrientedLine);
@@ -77,10 +81,8 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_ALL_PREDICATES(cls, OrientedLine);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, OrientedLine);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, OrientedLine);
-
-        cls.def("intersection", [](const OrientedLine &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const OrientedLine &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const OrientedLine &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
+        PGL_BIND_ALL_SAME_POINT_SET(cls, OrientedLine);
+        PGL_BIND_INTERSECTION_LINEAR(cls, OrientedLine);
     }
 
     // --- Ray ---
@@ -106,7 +108,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_INDEXING(cls, Ray);
         PGL_BIND_LINE_HELPERS(cls, Ray);
         PGL_BIND_IS_UNDEFINED(cls, Ray);
-        PGL_BIND_TRANSLATION_MINKOWSKI(cls, Ray);
+        PGL_BIND_MINKOWSKI_UNBOUNDED(cls, Ray);
         PGL_BIND_XY_AT(cls, Ray);
         PGL_BIND_HALFPLANES(cls, Ray);
         PGL_BIND_ORIENTED_HELPERS(cls, Ray);
@@ -115,14 +117,11 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_ALL_PREDICATES(cls, Ray);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Ray);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Ray);
+        PGL_BIND_ALL_SAME_POINT_SET(cls, Ray);
 
-        cls.def("intersection", [](const Ray &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Ray &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Ray &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Ray &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Ray &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Ray &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"),
-                "Intersection of two rays: None, a Point, a Segment, or a Ray.");
+        // Two rays meet in None, a Point, a Segment or a Ray -- the four ways
+        // two half-infinite pieces of a line can overlap.
+        PGL_BIND_INTERSECTION_LINEAR(cls, Ray);
     }
 
     // --- Halfplane ---
@@ -146,16 +145,12 @@ void bind_lines(nb::module_ &m) {
         // and division-free, whether the result is a wedge, a strip, a nested
         // half-plane, a line, or the empty set. Against the 0D/1D shapes the
         // result is the usual optional/variant of concrete pieces instead.
-        cls.def("intersection", [](const Halfplane &a, const Halfplane &b) { return a.intersection(b); },
-                nb::arg("other"),
-                "The intersection with another half-plane, as a HalfplaneIntersection. "
-                "Exact: no coordinate divisions are involved.");
-        cls.def("intersection", [](const Halfplane &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Halfplane &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Halfplane &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Halfplane &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Halfplane &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
-        cls.def("intersection", [](const Halfplane &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
+        // Intersecting two half-planes gives a HalfplaneIntersection -- exact
+        // and division-free, whether the result is a wedge, a strip, a nested
+        // half-plane, a line, or the empty set. Against the 0D/1D shapes the
+        // result is the usual optional/variant of concrete pieces instead, and
+        // against a non-convex region a list of them.
+        PGL_BIND_INTERSECTION_AREA(cls, Halfplane);
         cls.def("asOrientedLine", [](const Halfplane &h) { return h.asOrientedLine(); },
                 "Boundary line, directed so the half-plane lies to its left.");
 
@@ -167,9 +162,32 @@ void bind_lines(nb::module_ &m) {
         // slope/isVertical/isHorizontal/isDegenerate all describe the boundary line.
         PGL_BIND_LINE_HELPERS(cls, Halfplane);
         PGL_BIND_IS_UNDEFINED(cls, Halfplane);
-        PGL_BIND_TRANSLATION_MINKOWSKI(cls, Halfplane);
+        // The one shape that sums with all seventeen. A half-plane absorbs
+        // whatever bounded shape is added to it and comes back a half-plane,
+        // just pushed out to where the summand's farthest point reaches; with
+        // another unbounded convex shape it gives a HalfplaneIntersection.
+        PGL_BIND_MINKOWSKI_CONVEX(cls, Halfplane);
+        // The Disk is the seventeenth, and needs the result type spelled out:
+        // pgl's default there is `double`, which pypgl does not instantiate.
+        // Asking for ERational keeps the answer exact and makes pgl raise for a
+        // disk built from three boundary points, whose radius is generally
+        // irrational (see bind_disk.cpp for the same pair the other way round).
+        cls.def("minkowskiSum",
+                [](const Halfplane &h, const Disk &d) { return h.minkowskiSum<Num>(d); },
+                nb::arg("other"),
+                "The half-plane pushed out by the disk's radius. Requires a disk built "
+                "from a center and a radius; raises for one whose radius is irrational.");
+        cls.def("__add__",
+                [](const Halfplane &h, const Disk &d) { return h.minkowskiSum<Num>(d); },
+                nb::is_operator());
         PGL_BIND_ALL_PREDICATES(cls, Halfplane);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Halfplane);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Halfplane);
+        PGL_BIND_ALL_SAME_POINT_SET(cls, Halfplane);
+        // The regularized intersection is available exactly when the other
+        // operand can hold the answer, which for a half-plane means a region
+        // or a set of them. `difference` the other way round (region minus
+        // half-plane) lives on the region.
+        PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Halfplane);
     }
 }

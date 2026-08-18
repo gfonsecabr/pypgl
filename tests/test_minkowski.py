@@ -1,12 +1,15 @@
 """The Minkowski sum, A (+) B = {a + b : a in A, b in B}, spelled either
 ``a.minkowskiSum(b)`` or ``a + b``.
 
-Two overload sets answer, and which one does is a question about the *pair*
-rather than about the receiver. A pair of bounded convex shapes sums to a single
-shape (a Convex, or a Rectangle when both are rectangles), and adding a Point is
-the translation that ``shape + point`` has always meant. A non-convex operand
-needs a set of regions, because sliding a shape around the inside of a C sweeps
-material that closes over a hole neither operand has.
+Every summable pair gets the tightest type that can hold its answer, and which
+type that is depends on the *pair* rather than on the receiver. Adding a Point
+is the translation ``shape + point`` has always meant. Two bounded convex shapes
+sum to a Convex (a Rectangle when both are rectangles). An unbounded convex
+operand gives a HalfplaneIntersection, or a Halfplane when one operand already
+is one. A non-convex operand needs a region, because sliding a shape around the
+inside of a C sweeps material that closes over a hole neither operand has -- a
+PolygonWithHoles when the answer is guaranteed connected, and a PolygonSet when
+it is not.
 """
 
 from fractions import Fraction
@@ -24,6 +27,7 @@ from pypgl import (
     Point,
     Polygon,
     PolygonWithHoles,
+    PolygonSet,
     Polyline,
     Ray,
     Rectangle,
@@ -120,22 +124,24 @@ def test_the_convex_sum_is_commutative():
 
 def test_a_summand_can_plug_a_concavity_and_strand_a_cavity():
     # Growing the C by two units seals its two-unit cut, which strands the
-    # cavity it was holding open as a hole.
+    # cavity it was holding open as a hole. One operand is a body -- the closure
+    # of a connected non-empty interior -- so the answer is guaranteed connected
+    # and comes back as a single PolygonWithHoles rather than as a set.
     plugged = _c_shape().minkowskiSum(Rectangle(Point(0, 0), Point(2, 2)))
-    assert len(plugged) == 1
-    assert plugged[0].holeCount() == 1
-    assert plugged[0].outer().bbox() == Rectangle(Point(0, 0), Point(10, 10))
-    assert plugged[0].hole(0).bbox() == Rectangle(Point(4, 4), Point(6, 6))
+    assert isinstance(plugged, PolygonWithHoles)
+    assert plugged.holeCount() == 1
+    assert plugged.outer().bbox() == Rectangle(Point(0, 0), Point(10, 10))
+    assert plugged.hole(0).bbox() == Rectangle(Point(4, 4), Point(6, 6))
 
 
 def test_a_segment_summand_seals_a_cut_just_as_a_wider_one_does():
     # It is the *receiver's* concavity, not the summand's size, that calls for a
     # region: a segment has no area at all and still closes the cut.
     plugged = _c_shape().minkowskiSum(Segment(Point(0, 0), Point(0, 2)))
-    assert len(plugged) == 1
-    assert plugged[0].holeCount() == 1
-    assert plugged[0].outer().bbox() == Rectangle(Point(0, 0), Point(8, 10))
-    assert plugged[0].hole(0).bbox() == Rectangle(Point(2, 4), Point(6, 6))
+    assert isinstance(plugged, PolygonWithHoles)
+    assert plugged.holeCount() == 1
+    assert plugged.outer().bbox() == Rectangle(Point(0, 0), Point(8, 10))
+    assert plugged.hole(0).bbox() == Rectangle(Point(2, 4), Point(6, 6))
 
 
 def test_an_oriented_segment_summand_answers_identically():
@@ -150,10 +156,10 @@ def test_a_closed_polyline_sweeps_a_frame_around_its_cavity():
         [Point(0, 0), Point(8, 0), Point(8, 8), Point(0, 8), Point(0, 0)]
     )
     frame = square.minkowskiSum(Rectangle(Point(0, 0), Point(1, 1)))
-    assert len(frame) == 1
-    assert frame[0].holeCount() == 1
-    assert frame[0].outer().bbox() == Rectangle(Point(0, 0), Point(9, 9))
-    assert frame[0].hole(0).bbox() == Rectangle(Point(1, 1), Point(8, 8))
+    assert isinstance(frame, PolygonWithHoles)
+    assert frame.holeCount() == 1
+    assert frame.outer().bbox() == Rectangle(Point(0, 0), Point(9, 9))
+    assert frame.hole(0).bbox() == Rectangle(Point(1, 1), Point(8, 8))
 
 
 def test_a_flat_summand_leaves_a_chain_nothing_to_keep():
@@ -163,7 +169,7 @@ def test_a_flat_summand_leaves_a_chain_nothing_to_keep():
     square = Polyline(
         [Point(0, 0), Point(8, 0), Point(8, 8), Point(0, 8), Point(0, 0)]
     )
-    assert square.minkowskiSum(Rectangle(Point(3, 3), Point(3, 3))) == []
+    assert square.minkowskiSum(Rectangle(Point(3, 3), Point(3, 3))).empty()
 
 
 def test_a_parallel_segment_summand_can_disconnect_the_result():
@@ -174,10 +180,10 @@ def test_a_parallel_segment_summand_can_disconnect_the_result():
     square = Polyline(
         [Point(0, 0), Point(8, 0), Point(8, 8), Point(0, 8), Point(0, 0)]
     )
-    assert len(square.minkowskiSum(Segment(Point(0, 0), Point(2, 1)))) == 1
+    assert square.minkowskiSum(Segment(Point(0, 0), Point(2, 1))).componentCount() == 1
     bands = square.minkowskiSum(Segment(Point(0, 0), Point(0, 3)))
-    assert len(bands) == 2
-    assert {piece.bbox() for piece in bands} == {
+    assert bands.componentCount() == 2
+    assert {piece.bbox() for piece in bands.components()} == {
         Rectangle(Point(0, 0), Point(8, 3)),
         Rectangle(Point(0, 8), Point(8, 11)),
     }
@@ -225,8 +231,7 @@ def test_two_integer_operands_can_still_cross_off_the_lattice():
             Point(4, 2), Point(2, 2), Point(2, 6), Point(0, 6),
         ]
     )
-    pieces = u.minkowskiSum(Triangle(Point(-2, -1), Point(2, 0), Point(0, 2)))
-    corners = [v for piece in pieces for v in piece.vertices()]
+    corners = u.minkowskiSum(Triangle(Point(-2, -1), Point(2, 0), Point(0, 2))).vertices()
     assert any(
         v.x().denominator != 1 or v.y().denominator != 1 for v in corners
     ), "expected a vertex off the integer lattice"
@@ -234,37 +239,80 @@ def test_two_integer_operands_can_still_cross_off_the_lattice():
 
 # --- pairs that are deliberately not bound ----------------------------------
 
+# --- unbounded convex operands: again an intersection of half-planes --------
+
 @pytest.mark.parametrize(
-    "other",
+    "other, expected",
     [
-        Disk(Point(0, 0), 1),
-        Line(Point(0, 0), Point(1, 1)),
-        Ray(Point(0, 0), Point(1, 1)),
-        Halfplane(Point(0, 0), Point(1, 1)),
-        HalfplaneIntersection(Rectangle(Point(0, 0), Point(1, 1))),
+        (Line(Point(0, 0), Point(1, 1)), HalfplaneIntersection),
+        (Ray(Point(0, 0), Point(1, 1)), HalfplaneIntersection),
+        (HalfplaneIntersection(Rectangle(Point(0, 0), Point(1, 1))), HalfplaneIntersection),
+        # A half-plane absorbs whatever bounded shape is added to it: the answer
+        # is the same half-plane, pushed out to where the summand reaches.
+        (Halfplane(Point(0, 0), Point(1, 1)), Halfplane),
     ],
 )
-def test_unsupported_pairs_raise_rather_than_approximate(other):
-    # A Disk sums to a rounded shape and an unbounded operand to an unbounded
-    # region, and no pgl type represents either. In C++ that is a compile error;
-    # here it is a TypeError, which is the runtime equivalent.
+def test_an_unbounded_convex_operand_stays_convex(other, expected):
+    triangle = Triangle(Point(0, 0), Point(1, 0), Point(0, 1))
+    assert isinstance(triangle.minkowskiSum(other), expected)
+
+
+def test_a_halfplane_is_only_pushed_out():
+    up = Halfplane(Point(0, 0), Point(1, 0))                      # y >= 0
+    assert up.minkowskiSum(Rectangle(Point(2, 3), Point(5, 7))) == Halfplane(
+        Point(0, 3), Point(1, 3)
+    )
+
+
+def test_two_disks_sum_to_a_disk_when_both_carry_a_radius():
+    # The one curved sum in the library, and the one pypgl has to ask for
+    # explicitly: pgl's default result type there is double, which pypgl does
+    # not instantiate, so the binding requests ERational and pgl raises for a
+    # disk whose radius is irrational.
+    a, b = Disk(Point(0, 0), 3), Disk(Point(4, 1), 2)
+    summed = a.minkowskiSum(b)
+    assert isinstance(summed, Disk)
+    assert summed.center() == Point(4, 1)
+    assert summed.radius() == 5
+    three_points = Disk(Point(0, 0), Point(3, 1), Point(1, 3))
+    with pytest.raises(Exception):
+        three_points.minkowskiSum(a)
+
+
+def test_a_disk_still_has_no_sum_with_a_polygon():
+    # Every other Disk pair would need a shape with a curved boundary, so it is
+    # not bound at all: a TypeError, the runtime equivalent of pgl's compile
+    # error.
     with pytest.raises(TypeError):
-        Triangle(Point(0, 0), Point(1, 0), Point(0, 1)).minkowskiSum(other)
+        Triangle(Point(0, 0), Point(1, 0), Point(0, 1)).minkowskiSum(Disk(Point(0, 0), 1))
+    with pytest.raises(TypeError):
+        Disk(Point(0, 0), 1).minkowskiSum(Rectangle(Point(0, 0), Point(1, 1)))
 
 
-def test_a_monotone_chain_sums_only_with_a_point():
-    # A chain's one summable pair is the translation. Anything wider needs
-    # asPolyline(), rather than giving the chain an overload set that would lose
-    # its defining sorted structure.
+def test_an_unbounded_operand_rejects_a_non_convex_one():
+    # The sum would be an unbounded non-convex region, which no pgl shape
+    # represents.
+    with pytest.raises(TypeError):
+        Line(Point(0, 0), Point(1, 1)).minkowskiSum(_c_shape())
+
+
+def test_a_monotone_chain_sums_into_a_single_polygon():
+    # Dragging a convex body along an x-monotone chain sweeps material that
+    # cannot close over a hole, so this pair gets the tightest region type of
+    # all: a plain Polygon.
     chain = MonotoneChain([Point(0, 0), Point(2, 2), Point(4, 0)])
     assert chain.minkowskiSum(Point(3, 4)) == chain + Point(3, 4)
-    with pytest.raises(TypeError):
-        chain.minkowskiSum(Rectangle(Point(0, 0), Point(1, 1)))
-    assert isinstance(chain.asPolyline(), Polyline)
-    assert chain.asPolyline().minkowskiSum(Rectangle(Point(0, 0), Point(1, 1)))
+    swept = chain.minkowskiSum(Rectangle(Point(0, 0), Point(1, 1)))
+    assert isinstance(swept, Polygon)
+    assert swept.bbox() == Rectangle(Point(0, 0), Point(5, 3))
 
 
-def test_polyline_plus_polyline_is_not_a_pair():
+def test_two_chains_sum_to_a_set_of_regions():
+    # Neither operand is a body, so nothing guarantees the answer is connected
+    # and it comes back as a PolygonSet.
     a = Polyline([Point(0, 0), Point(2, 2)])
-    with pytest.raises(TypeError):
-        a.minkowskiSum(Polyline([Point(0, 0), Point(1, 1)]))
+    summed = a.minkowskiSum(Polyline([Point(0, 0), Point(1, 1)]))
+    assert isinstance(summed, PolygonSet)
+    # Both chains run along the same direction, so the swept material has no
+    # area and regularization drops all of it.
+    assert summed.empty()

@@ -99,6 +99,15 @@ void bind_canvas(nb::module_ &m) {
     cls.def("borders", [](pgl::Canvas &c, bool enabled) -> pgl::Canvas & { return c.borders(enabled); },
             nb::arg("enabled") = true, nb::rv_policy::reference_internal,
             "Enable or disable a thin frame around the whole drawing.");
+    // Framing by hand instead of by the drawing's own bounding box -- what an
+    // arrangement whose far-away crossings would shrink everything else needs,
+    // or a drawing whose box is stretched by the two points defining a line.
+    cls.def("view", [](pgl::Canvas &c, const Rectangle &window) -> pgl::Canvas & { return c.view(window); },
+            nb::arg("window"), nb::rv_policy::reference_internal,
+            "Fit the export to an explicit rectangle of the plane rather than to the "
+            "drawing's bounding box; geometry outside it falls outside the image. "
+            "Calling it again replaces the window, and scale() and margin() still apply "
+            "on top of it.");
 
     // --- Style commands (fluent; affect only shapes drawn afterwards) ---
     CANVAS_STYLE(cls, stroke, pgl::stroke, "Set the current stroke color (any SVG paint string).");
@@ -131,10 +140,45 @@ void bind_canvas(nb::module_ &m) {
     // against the outer ring). A half-plane intersection is clipped to the
     // visible viewport, and only its real boundary edges are stroked.
     CANVAS_DRAW(cls, PolygonWithHoles);
+    // A set of regions is drawn the same way, with one subpath per ring of
+    // every component -- so a boolean result draws as one shape however many
+    // pieces it came apart into.
+    CANVAS_DRAW(cls, PolygonSet);
     CANVAS_DRAW(cls, HalfplaneIntersection);
     CANVAS_DRAW(cls, Disk);
     CANVAS_DRAW(cls, Triangulation);
     CANVAS_DRAW(cls, ShapeTree);
+
+    // draw(collection) draws every element in order, each with the current
+    // style, so a whole construction can be handed over at once:
+    // canvas.draw(polygon.edges()), canvas.draw(triangulation.triangles()),
+    // canvas.draw([tri, disk, point]). The elements go back through the bound
+    // `draw` on the Python object, so a collection may mix shape types, may
+    // hold None, and may nest (a list of lists draws flattened).
+    //
+    // Registered after every typed overload and before the None fallback:
+    // every bound shape is iterable in the Python layer (__iter__ over its
+    // defining points), so a Point handed here would otherwise be drawn as its
+    // two coordinates rather than as itself. A str is iterable too and would
+    // recurse forever (a one-character string iterates to itself), so it is
+    // passed on to the fallback, which reports it as the type error it is.
+    cls.def("draw",
+            [](nb::object self, nb::iterable shapes) -> nb::object {
+                if (nb::isinstance<nb::str>(shapes) || nb::isinstance<nb::bytes>(shapes))
+                    throw nb::next_overload();
+                nb::object draw = self.attr("draw");
+                for (nb::handle shape : shapes)
+                    draw(shape);
+                return self;
+            },
+            nb::arg("shapes"),
+            // The lambda returns the canvas's own Python object, so the fluent
+            // chain works exactly as with the typed overloads; nb::sig says so
+            // in the stub, which would otherwise promise a bare `object`.
+            nb::sig("def draw(self, shapes: collections.abc.Iterable) -> Canvas"),
+            "Draw every shape in a collection, in order, each with the current "
+            "style, and return the canvas. Elements may be of mixed types, may be "
+            "None, and may themselves be collections.");
 
     // draw(None) is a no-op that still returns the canvas, so the result of a
     // construction (e.g. an `intersection` that may be empty -> None) can be

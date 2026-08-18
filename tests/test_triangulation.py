@@ -412,3 +412,111 @@ def test_repr_svg():
     t = Triangulation(_square_points())
     svg = t._repr_svg_()
     assert "<svg" in svg
+
+
+# --- the domain: what the mesh covers ---------------------------------------
+
+def test_domain_predicates_answer_for_the_region_the_mesh_covers():
+    # The domain is the polygon for a polygon constructor, so these give the
+    # same answers the polygon's own predicates give -- decided on the mesh, at
+    # a cost that follows the triangles the query meets.
+    square = pypgl.Polygon(
+        [Point(0, 0), Point(10, 0), Point(10, 10), Point(0, 10)]
+    )
+    mesh = square.triangulation()
+    inside = Segment(2, 2, 8, 8)
+    assert mesh.contains(inside) == square.contains(inside)
+    assert mesh.intersects(inside) == square.intersects(inside)
+    assert mesh.interiorContains(inside) == square.interiorContains(inside)
+    assert mesh.interiorsIntersect(inside) == square.interiorsIntersect(inside)
+    assert not mesh.contains(Segment(2, 2, 20, 20))
+
+
+def test_a_boundary_edge_is_contained_but_not_interior_contained():
+    square = pypgl.Polygon(
+        [Point(0, 0), Point(10, 0), Point(10, 10), Point(0, 10)]
+    )
+    mesh = square.triangulation()
+    along = Segment(0, 0, 10, 0)
+    assert mesh.contains(along) and mesh.intersects(along)
+    assert not mesh.interiorContains(along) and not mesh.interiorsIntersect(along)
+
+
+def test_an_unbounded_query_is_never_contained_in_a_bounded_domain():
+    mesh = pypgl.Polygon(
+        [Point(0, 0), Point(10, 0), Point(10, 10), Point(0, 10)]
+    ).triangulation()
+    line = pypgl.Line(Point(0, 5), Point(1, 5))
+    assert not mesh.contains(line)
+    assert mesh.intersects(line)
+
+
+def test_the_domain_question_is_not_the_membership_question():
+    # has() asks whether a triangle or segment is a *cell* of the mesh;
+    # contains() asks how the domain covers it geometrically.
+    mesh = pypgl.Polygon(
+        [Point(0, 0), Point(4, 0), Point(4, 4), Point(0, 4)]
+    ).triangulation()
+    tiny = Segment(1, 1, 2, 1)
+    assert mesh.contains(tiny)
+    assert not mesh.has(tiny)
+
+
+# --- convex decomposition ---------------------------------------------------
+
+def test_a_convex_partition_covers_the_domain_with_disjoint_pieces():
+    u = pypgl.Polygon(
+        [
+            Point(0, 0), Point(6, 0), Point(6, 6), Point(4, 6),
+            Point(4, 2), Point(2, 2), Point(2, 6), Point(0, 6),
+        ]
+    )
+    pieces = u.convexPartition()
+    assert len(pieces) >= 2                       # a U is not convex
+    assert sum(piece.area() for piece in pieces) == u.area()
+    assert all(isinstance(piece, pypgl.Convex) for piece in pieces)
+    # It is shorthand for the triangulation's, so the two agree in count.
+    assert len(u.triangulation().convexPartition()) == len(pieces)
+
+
+def test_a_convex_polygon_comes_back_as_one_piece():
+    square = pypgl.Polygon(
+        [Point(0, 0), Point(4, 0), Point(4, 4), Point(0, 4)]
+    )
+    assert len(square.convexPartition()) == 1
+
+
+def test_a_convex_covering_may_overlap_but_still_covers():
+    u = pypgl.Polygon(
+        [
+            Point(0, 0), Point(6, 0), Point(6, 6), Point(4, 6),
+            Point(4, 2), Point(2, 2), Point(2, 6), Point(0, 6),
+        ]
+    )
+    pieces = u.convexCovering()
+    assert all(isinstance(piece, pypgl.Convex) for piece in pieces)
+    assert sum(piece.area() for piece in pieces) >= u.area()
+    assert all(u.contains(piece) for piece in pieces)
+
+
+def test_a_region_decomposes_without_covering_its_holes():
+    region = pypgl.PolygonWithHoles(
+        pypgl.Polygon([Point(0, 0), Point(10, 0), Point(10, 10), Point(0, 10)]),
+        [pypgl.Polygon([Point(4, 4), Point(6, 4), Point(6, 6), Point(4, 6)])],
+    )
+    pieces = region.convexPartition()
+    assert sum(piece.area() for piece in pieces) == region.area() == 96
+    assert all(not piece.contains(Point(5, 5)) for piece in pieces)
+
+
+def test_a_constrained_edge_shapes_the_partition():
+    square = pypgl.Polygon(
+        [Point(0, 0), Point(10, 0), Point(10, 10), Point(0, 10)]
+    )
+    # Strictly inside: a constraint segment is assumed to lie in the polygon's
+    # interior, and one touching the boundary is outside pgl's contract.
+    wall = Segment(5, 2, 5, 8)
+    pieces = square.triangulation([wall]).convexPartition()
+    # A constrained edge is never deleted, so the square cannot come back whole.
+    assert len(pieces) >= 2
+    assert sum(piece.area() for piece in pieces) == 100

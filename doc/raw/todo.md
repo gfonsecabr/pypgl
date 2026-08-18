@@ -15,27 +15,32 @@
 
 ## Missing Features
 
-These are gaps in the underlying C++ library, so they are missing here too:
+These operations are not implemented yet:
 
-- `intersection` between two 2-dimensional shapes among `Triangle`, `Rectangle`, and `Convex`.
-- `intersection` of a chain (`Polyline`, `MonotoneChain`) with a `Disk` or a `Polygon`.
-- `minkowskiSum` of two chains (`polyline + polyline`), and of a `MonotoneChain` receiver — convert with `asPolyline()` for the latter.
-- `distanceL1` / `distanceLInf` to and from a `Disk`, which pgl implements only against a `Point` so far.
-- Hausdorff distance for the non-convex shapes (`Polygon`, `PolygonWithHoles`, `Polyline`, `MonotoneChain`), for `Disk`, and for the possibly-unbounded `HalfplaneIntersection`.
+- `intersection` of a chain (`Polyline`, `MonotoneChain`) with a `Disk`, and of
+  any shape with a `Disk` other than a `Point`.
+- `minkowskiSum` of a `Disk` with anything but a `Point`, another `Disk` or a
+  `Halfplane`, and of an unbounded shape with a non-convex one.
+- `distanceL1` / `distanceLInf` to and from a `Disk`, which is implemented only
+  against a `Point` so far.
+- Hausdorff distance for the non-convex shapes (`Polygon`, `PolygonWithHoles`,
+  `PolygonSet`, `Polyline`, `MonotoneChain`), for `Disk`, and for the
+  possibly-unbounded `HalfplaneIntersection`.
 
-The 1-dimensional chains that used to be listed here are now implemented: an
-arbitrary, possibly self-intersecting chain is [`Polyline`](shapes.md#polyline),
-and the x-monotone one (formerly called `PolyFunction`) is
-[`MonotoneChain`](shapes.md#monotonechain). Two 2-dimensional shapes have since
-joined them: [`PolygonWithHoles`](shapes.md#polygon-with-holes), which is what
-the [boolean operations](shape_methods.md#boolean-operations) and the non-convex
-[Minkowski sum](shape_methods.md#minkowski-sum) return, and
-[`HalfplaneIntersection`](shapes.md#halfplane-intersection).
+Several entries that used to be here have since arrived: the two chains
+[`Polyline`](shapes.md#polyline) and [`MonotoneChain`](shapes.md#monotonechain),
+the two regions [`PolygonWithHoles`](shapes.md#polygon-with-holes) and
+[`PolygonSet`](shapes.md#polygon-set), the convex
+[`HalfplaneIntersection`](shapes.md#halfplane-intersection), the full
+two-dimensional [`intersection`](shape_methods.md#intersection) grid, the
+Minkowski sums of the chains and of the unbounded shapes, and
+[`regularizedUnionOf`](algorithms.md#boolean-operations-and-minkowski-sum) over a
+range of any of the six bounded region types.
 
 ## Deliberately Not Exposed
 
-A few things exist in the C++ library but are left out of the Python API on
-purpose, and are not expected to arrive:
+A few things are left out of the Python API on purpose, and are not expected to
+arrive:
 
 - **Other number types.** Only the exact arbitrary-precision rational
   instantiation is bound, which is what keeps the API (and the binary) small.
@@ -53,7 +58,7 @@ purpose, and are not expected to arrive:
 
 ### Grid
 
-### Arrangement
-
-### Graph
+[`Arrangement`](data_structures.md#arrangement) and
+[`Graph`](data_structures.md#graph) used to be listed here; both are now bound,
+along with [`IntervalTree`](data_structures.md#interval-tree).
 

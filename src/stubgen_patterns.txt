@@ -16,15 +16,33 @@ Point\.__suffix__:
     def __iter__(self) -> Iterator[fractions.Fraction]: ...
     def __contains__(self, point: Point) -> bool: ...
 
-# Canvas, Triangulation, ShapeTree, and Transformation have no point sugar
-# (none of them is a fixed-extent shape -- see pypgl/__init__.py); shield them
-# from the generic shape rule below (an empty replacement suppresses any
-# addition).
+# Canvas, Triangulation, ShapeTree, IntervalTree, Graph, Arrangement, the three
+# arrangement handle types, and Transformation have no point sugar (none of them
+# is a fixed-extent shape -- see pypgl/__init__.py); shield them from the generic
+# shape rule below (an empty replacement suppresses any addition). The container
+# ones bind their own __len__/__iter__/__contains__ in C++, over what they
+# actually hold.
 Canvas\.__suffix__:
 
 Triangulation\.__suffix__:
 
 ShapeTree\.__suffix__:
+
+IntervalTree\.__suffix__:
+
+IntervalTreeY\.__suffix__:
+
+Graph\.__suffix__:
+
+ArrangementGraph\.__suffix__:
+
+Arrangement\.__suffix__:
+
+VertexId\.__suffix__:
+
+HalfedgeId\.__suffix__:
+
+FaceId\.__suffix__:
 
 Transformation\.__suffix__:
 

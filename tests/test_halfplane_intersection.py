@@ -54,7 +54,7 @@ def test_default_is_the_whole_plane_not_the_empty_set():
     # constraints constrains nothing.
     k = HalfplaneIntersection()
     assert k.isPlane()
-    assert not k.isEmpty()
+    assert not k.empty()
     assert not k.isBounded()
     assert len(k) == 0
     assert Point(10**6, -(10**6)) in k
@@ -127,10 +127,10 @@ def test_insert_reports_a_degenerate_halfplane():
 def test_insert_can_empty_the_region_stickily():
     k = HalfplaneIntersection(_upper())
     k.insert(Halfplane(Point(0, -1), Point(-1, -1)))  # y <= -1
-    assert k.isEmpty()
+    assert k.empty()
     # Once empty, it stays empty.
     k.insert(_upper())
-    assert k.isEmpty()
+    assert k.empty()
 
 
 def test_insert_removes_the_constraints_it_makes_redundant():
@@ -143,7 +143,7 @@ def test_insert_removes_the_constraints_it_makes_redundant():
 
 def test_a_bounded_region_is_none_of_the_named_cases():
     k = _unit_square()
-    for name in ("isEmpty", "isPlane", "isHalfplane", "isLine", "isRay",
+    for name in ("empty", "isPlane", "isHalfplane", "isLine", "isRay",
                  "isPoint", "isSegment", "isDegenerate"):
         assert getattr(k, name)() is False, name
     assert k.isBounded()
@@ -287,7 +287,7 @@ def test_intersection_narrows_as_expected():
 
 def test_disjoint_intersection_is_the_empty_region():
     k = _unit_square().intersection(Rectangle(Point(50, 50), Point(60, 60)))
-    assert k.isEmpty()
+    assert k.empty()
 
 
 def test_two_halfplanes_intersect_into_a_region():

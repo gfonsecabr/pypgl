@@ -126,8 +126,12 @@ canvas.stroke("sienna").fill("gold").fillOpacity("0.22").draw(rectangle)
 `canvas.draw(shape)` adds a shape using the current style and returns the canvas,
 so draws chain. Every bound shape can be drawn: `Point`, `Segment`,
 `OrientedSegment`, `Line`, `OrientedLine`, `Ray`, `Halfplane`, `Triangle`,
-`Rectangle`, `Convex`, `MonotoneChain`, `Polyline`, `Polygon`, and `Disk` — plus
-`Triangulation` and `ShapeTree`. Results of constructions such as
+`Rectangle`, `Convex`, `MonotoneChain`, `Polyline`, `Polygon`,
+`PolygonWithHoles`, `PolygonSet`, `HalfplaneIntersection`, and `Disk` — plus
+`Triangulation` and `ShapeTree`. A region or a set of regions is drawn as one
+shape with a closed subpath per ring, so its holes are punched out of the fill
+rather than painted over, and a boolean result draws as one shape however many
+pieces it came apart into. Results of constructions such as
 `intersection` are concrete shapes too, so they can be drawn directly. Drawing
 `None` (which an empty `intersection` returns) is a no-op that still returns the
 canvas, so no `None` guard is needed.
@@ -138,6 +142,23 @@ canvas.draw(pgl.Triangle(-1, -1, 0, 2, 1, -2)) \
       .draw(pgl.Disk(pgl.Point(0, 0), 2)) \
       .draw(pgl.Point(0, 0))
 ```
+
+`draw` also takes a *collection* of shapes and draws them one by one, in order,
+each with the style active at the call — so whatever a construction hands back
+goes over in one line:
+
+```python
+polygon = pgl.Polygon([0, 0, 8, 0, 8, 8, 4, 4, 0, 8])
+
+canvas = pgl.Canvas()
+canvas.stroke("royalblue").draw(polygon.edges())          # every edge
+canvas.stroke("crimson").draw(polygon.vertices())         # every vertex
+canvas.stroke("teal").draw(polygon.triangulation().triangles())
+```
+
+Any iterable works — a list, a tuple, a generator expression — and its elements
+may be of mixed types, may be `None`, and may themselves be collections (a list
+of lists draws flattened).
 
 ### Configuration
 
@@ -152,6 +173,7 @@ defaults. Each returns the canvas, so they chain:
 | `size(width, height)` | Convenience wrapper for setting width and height together. |
 | `margin(pixels)` | Reserves blank space around the fitted drawing, giving the geometry more breathing room inside the image. Must be non-negative. |
 | `borders(enabled=True)` | Enables or disables a thin rectangular frame around the whole drawing. Especially helpful when debugging clipping and margins. |
+| `view(rectangle)` | Fits the export to an explicit window of the plane instead of to the drawing's bounding box, so whatever falls outside it falls outside the image. This is how to frame a drawing whose interesting part is not its bounding box — an arrangement whose far-away crossings would shrink everything else, or a drawing stretched by the two points defining a line. Calling it again replaces the window, and `scale` and `margin` still apply on top of it. |
 
 The invalid-argument checks raise a Python exception, so e.g. `canvas.width(0)`
 raises rather than producing a broken image.
@@ -189,8 +211,8 @@ pgl.Triangle(-1, -1, 0, 2, 1, -2)        # displays the triangle
 ```
 
 A shape is drawn on a one-shot canvas whose side length is `pypgl.REPR_SVG_SIZE`
-pixels (500 by default, half pgl's 1000×1000, so a shape does not dominate the
-cell). Reassign it to scale every inline shape — e.g. `pypgl.REPR_SVG_SIZE = 250`
+pixels (500 by default, smaller than a canvas's own 800×800, so a shape does not
+dominate the cell). Reassign it to scale every inline shape — e.g. `pypgl.REPR_SVG_SIZE = 250`
 for half again as small. A canvas you build yourself is unaffected: it honors its
 own `size`.
 

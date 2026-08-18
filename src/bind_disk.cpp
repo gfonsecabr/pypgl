@@ -88,7 +88,25 @@ void bind_disk(nb::module_ &m) {
     // no circle passes through, while two distinct ones admit infinitely many --
     // are the undefined case.
     PGL_BIND_DEGENERACY_POINT(cls, Disk);
+    // The Point pair is the translation. The other two summable pairs -- with
+    // another Disk and with a Halfplane -- are the library's only curved sums,
+    // and both need the result type spelled out: pgl defaults them to `double`,
+    // which pypgl does not instantiate. Asking for ERational keeps them exact
+    // and makes pgl raise for a disk built from three boundary points, whose
+    // radius is generally irrational and so has no exact sum.
     PGL_BIND_TRANSLATION_MINKOWSKI(cls, Disk);
+    cls.def("minkowskiSum", [](const Disk &a, const Disk &b) { return a.minkowskiSum<Num>(b); },
+            nb::arg("other"),
+            "The disk centered at the sum of the centers with the sum of the radii. "
+            "Requires both disks to carry an exact radius; raises otherwise.");
+    cls.def("__add__", [](const Disk &a, const Disk &b) { return a.minkowskiSum<Num>(b); },
+            nb::is_operator());
+    cls.def("minkowskiSum", [](const Disk &d, const Halfplane &h) { return d.minkowskiSum<Num>(h); },
+            nb::arg("other"),
+            "The half-plane pushed out by the disk's radius. Requires an exact radius; "
+            "raises otherwise.");
+    cls.def("__add__", [](const Disk &d, const Halfplane &h) { return d.minkowskiSum<Num>(h); },
+            nb::is_operator());
     cls.def("bbox", [](const Disk &d) { return d.bbox(); },
             "Exact axis-aligned bounding box (a Rectangle); tight when built from a center and radius.");
 
@@ -121,6 +139,10 @@ void bind_disk(nb::module_ &m) {
     cls.def("distanceL1", [](const Disk &d, const Point &p) { return d.distanceL1(p); }, nb::arg("other"));
     cls.def("distanceLInf", [](const Disk &d, const Point &p) { return d.distanceLInf(p); }, nb::arg("other"));
 
+    PGL_BIND_ALL_SAME_POINT_SET(cls, Disk);
+
+    // A Point is the one shape pgl clips against a circle: every other pair
+    // would need a curved piece no shape represents.
     cls.def("intersection", [](const Disk &a, const Point &b) { return a.intersection(b); }, nb::arg("other"),
             "Exact intersection with a point: the point if contained, else None.");
 }

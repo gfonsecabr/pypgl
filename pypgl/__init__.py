@@ -22,10 +22,19 @@ from ._pgl import (
     Polyline,
     Polygon,
     PolygonWithHoles,
+    PolygonSet,
     HalfplaneIntersection,
     Disk,
     Triangulation,
     ShapeTree,
+    IntervalTree,
+    IntervalTreeY,
+    Graph,
+    Arrangement,
+    ArrangementGraph,
+    VertexId,
+    HalfedgeId,
+    FaceId,
     Canvas,
     Transformation,
     findIntersections,
@@ -36,6 +45,9 @@ from ._pgl import (
     detectCrossings,
     convexHull,
     convexHullExtended,
+    smallestEnclosingDisk,
+    closestPair,
+    regularizedUnionOf,
     sortAround,
     hilbertSort,
     polyominoes,
@@ -64,10 +76,19 @@ __all__ = [
     "Polyline",
     "Polygon",
     "PolygonWithHoles",
+    "PolygonSet",
     "HalfplaneIntersection",
     "Disk",
     "Triangulation",
     "ShapeTree",
+    "IntervalTree",
+    "IntervalTreeY",
+    "Graph",
+    "Arrangement",
+    "ArrangementGraph",
+    "VertexId",
+    "HalfedgeId",
+    "FaceId",
     "Canvas",
     "Transformation",
     "findIntersections",
@@ -78,6 +99,9 @@ __all__ = [
     "detectCrossings",
     "convexHull",
     "convexHullExtended",
+    "smallestEnclosingDisk",
+    "closestPair",
+    "regularizedUnionOf",
     "sortAround",
     "hilbertSort",
     "polyominoes",
@@ -89,13 +113,14 @@ __all__ = [
 
 # --- Pythonic sugar added in the thin Python layer (cheap here, not in C++) ---
 #
-# Triangulation and ShapeTree are deliberately absent from every loop below:
-# unlike the fixed-extent shapes, neither has contains(Point)/pointInside/
-# index/get to hang `in` or indexing off of -- ShapeTree's own has()/
-# __contains__/__len__/__iter__ (bound directly in bind_shapetree.cpp) already
-# give it container semantics (membership, not point-in-shape). Both do get
-# _repr_svg_ further down, since Canvas.draw() accepts them like any other
-# shape.
+# Triangulation, ShapeTree, IntervalTree, Graph and Arrangement are deliberately
+# absent from every loop below: unlike the fixed-extent shapes, none of them has
+# contains(Point)/pointInside/index/get to hang `in` or indexing off of. The
+# container ones bind their own has()/__contains__/__len__/__iter__ in C++, over
+# what they actually hold -- stored shapes for the two trees, vertices for a
+# graph -- which is membership, not point-in-shape. Triangulation and ShapeTree
+# do get _repr_svg_ further down, since Canvas.draw() accepts them like any
+# other shape; the rest are not drawable.
 
 def _shape_contains(self, item):
     """``point in shape`` maps to ``shape.contains(point)``.
@@ -123,6 +148,7 @@ for _cls in (
     Polyline,
     Polygon,
     PolygonWithHoles,
+    PolygonSet,
     HalfplaneIntersection,
     Disk,
 ):
@@ -184,6 +210,15 @@ PolygonWithHoles.__len__ = lambda self: self.vertexCount()
 PolygonWithHoles.__getitem__ = lambda self, index: self.vertices()[index % self.vertexCount()]
 PolygonWithHoles.__iter__ = lambda self: iter(self.vertices())
 
+# PolygonSet is the same story one level up: C++ iterates its *components*, the
+# regions it is made of, and gives it no size()/get() either. Python flattens
+# the vertices of every ring of every component, so a set reads like every other
+# pypgl shape; componentCount() / component(i) / components() reach the
+# components, and holes stay reachable through each of those.
+PolygonSet.__len__ = lambda self: self.vertexCount()
+PolygonSet.__getitem__ = lambda self, index: self.vertices()[index % self.vertexCount()]
+PolygonSet.__iter__ = lambda self: iter(self.vertices())
+
 
 # --- Inline SVG rendering in Jupyter / IPython ---
 #
@@ -192,8 +227,8 @@ PolygonWithHoles.__iter__ = lambda self: iter(self.vertices())
 # usability win for a geometry library in a notebook.
 
 #: Side length, in pixels, of the one-shot canvas used to render a single shape
-#: inline in a notebook. Half of pgl's 1000x1000 default so a shape does not
-#: dominate the cell. Reassign ``pypgl.REPR_SVG_SIZE = ...`` to change it; a
+#: inline in a notebook. Smaller than the Canvas default (800x800) so a shape
+#: does not dominate the cell. Reassign ``pypgl.REPR_SVG_SIZE = ...`` to change it; a
 #: Canvas you build yourself is unaffected (it honors its own ``size``).
 REPR_SVG_SIZE = 500
 
@@ -219,6 +254,7 @@ for _cls in (
     Polyline,
     Polygon,
     PolygonWithHoles,
+    PolygonSet,
     HalfplaneIntersection,
     Disk,
     # Triangulation and ShapeTree are not "shapes" (see the loops above), but

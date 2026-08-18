@@ -29,7 +29,7 @@ using namespace pypgl;
 // the predicates. isUndefined() is always False: insert() ignores undefined
 // half-planes, so every region is well defined. The isHalfplane/isLine/isRay/
 // isPoint/isSegment family names each of those cases, with getIf* returning the
-// shape itself; together with isEmpty and isPlane they name every region except
+// shape itself; together with empty and isPlane they name every region except
 // a full-dimensional one that is not a single half-plane.
 
 void bind_halfplane_intersection(nb::module_ &m) {
@@ -82,8 +82,9 @@ void bind_halfplane_intersection(nb::module_ &m) {
             "The stored half-planes, in boundary order.");
 
     // --- what kind of region this is ---
-    cls.def("isEmpty", [](const HalfplaneIntersection &k) { return k.isEmpty(); },
-            "Whether the region is the empty set.");
+    cls.def("empty", [](const HalfplaneIntersection &k) { return k.empty(); },
+            "Whether the region is the empty set. (Upstream renamed this from "
+            "isEmpty(): every shape with an empty state now spells the test empty().)");
     cls.def("isPlane", [](const HalfplaneIntersection &k) { return k.isPlane(); },
             "Whether the region is the whole plane (no constraint at all).");
     cls.def("isBounded", [](const HalfplaneIntersection &k) { return k.isBounded(); },
@@ -115,7 +116,12 @@ void bind_halfplane_intersection(nb::module_ &m) {
     // coordinates are not representable in it is still recognized; the getIf*
     // pair divides, which stays exact here since pypgl is all ERational.
     PGL_BIND_DEGENERACY(cls, HalfplaneIntersection);
-    PGL_BIND_TRANSLATION_MINKOWSKI(cls, HalfplaneIntersection);
+    // Every sum of two convex shapes is convex, and one with an unbounded
+    // operand is again an intersection of half-planes -- so this region sums
+    // with all of them and gives back its own type. A non-convex operand is
+    // refused: its sum would be an unbounded non-convex region, which no pgl
+    // shape represents.
+    PGL_BIND_MINKOWSKI_UNBOUNDED(cls, HalfplaneIntersection);
 
     // --- the implicit corners ---
     cls.def("vertexCount", [](const HalfplaneIntersection &k) { return k.vertexCount(); },
@@ -149,48 +155,21 @@ void bind_halfplane_intersection(nb::module_ &m) {
             "An exact point strictly inside the region.");
 
     // --- intersection ---
-    // Against the five shapes whose intersection with a convex region is again
-    // one, the result is another HalfplaneIntersection -- the type is closed
-    // under these, and exactly so, with no coordinate divisions. Against the
-    // 0D/1D shapes it is the usual optional/variant of concrete pieces.
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const HalfplaneIntersection &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const Halfplane &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const Rectangle &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const Triangle &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const Convex &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const Point &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const Segment &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const OrientedSegment &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const Line &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const OrientedLine &o) { return k.intersection(o); },
-            nb::arg("other"));
-    cls.def("intersection",
-            [](const HalfplaneIntersection &k, const Ray &o) { return k.intersection(o); },
-            nb::arg("other"));
+    // Against a convex shape the result is again a HalfplaneIntersection --
+    // the type is closed under these, and exactly so, with no coordinate
+    // divisions. Against the 0D/1D shapes it is the usual optional/variant of
+    // concrete pieces, and against a non-convex region a list of them. The two
+    // chains are the pair pgl does not implement in either direction.
+    PGL_BIND_INTERSECTION_HALFPLANES(cls, HalfplaneIntersection);
+    // The regularized intersection needs a shape that can hold an answer with
+    // a hole on one side, which a convex region never is.
+    PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, HalfplaneIntersection);
 
     // --- the shared matrices ---
     PGL_BIND_ALL_PREDICATES(cls, HalfplaneIntersection);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, HalfplaneIntersection);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, HalfplaneIntersection);
+    PGL_BIND_ALL_SAME_POINT_SET(cls, HalfplaneIntersection);
     // No Hausdorff family: the region may be unbounded, so the distance to or
     // from it is generally infinite. pgl defines it only for the six bounded
     // convex shapes.

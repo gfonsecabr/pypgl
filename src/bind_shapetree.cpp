@@ -137,6 +137,16 @@ void bind_shapetree(nb::module_ &m) {
             "distance, or None if the tree is empty. Same branch-and-bound "
             "traversal as nearestNeighbor, minimizing a different metric.");
 
+    cls.def("kNearestNeighbors",
+            [](const ShapeTree &t, const AnyShape &query, int k) {
+                return t.kNearestNeighbors<Num>(query, k);
+            },
+            nb::arg("query"), nb::arg("k"),
+            "The k stored shapes nearest to query (exact squared distance), nearest "
+            "first. Fewer come back when the tree holds fewer; a non-positive k or an "
+            "empty tree gives an empty list. Unlike nearestNeighbor there is no None "
+            "case: an empty answer is simply an empty list.");
+
     // ---- structure ----------------------------------------------------------
     cls.def("boundingBoxes", [](const ShapeTree &t) { return t.boundingBoxes(); },
             "Every node's subtree bounding box, in pre-order (empty tree -> empty list).");

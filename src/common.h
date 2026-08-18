@@ -52,8 +52,16 @@ using PolygonWithHoles = pgl::EPolygonWithHoles;    // pgl::PolygonWithHoles<EPo
 // its half-planes, which is exactly why pypgl's single ERational instantiation
 // suits it: the constructive accessors stay exact.
 using HalfplaneIntersection = pgl::EHalfplaneIntersection;
+// A set of PolygonWithHoles components with pairwise disjoint interiors
+// (shape/polygonset.hpp), whose point set is simply their union. This is what
+// closes the regularized boolean operations: a difference, a union or a
+// symmetric difference of two regions can come apart into several pieces, and
+// an island stranded inside a hole of the answer is a piece like any other. As
+// a shape rather than a list, such a result can be fed straight back in,
+// compared, hashed, drawn, transformed and measured.
+using PolygonSet = pgl::EPolygonSet;               // pgl::PolygonSet<EPoint>
 
-// Type-erased wrapper over one of the sixteen shapes above (shape/shape.hpp).
+// Type-erased wrapper over one of the seventeen shapes above (shape/shape.hpp).
 // Only used as ShapeTree's element/query type (bind_shapetree.cpp) -- see the
 // casters.h caster for pgl::Shape<EPoint>, which is what keeps this wrapper
 // itself unbound and invisible from Python.
@@ -90,6 +98,27 @@ inline int orientationSign(std::partial_ordering o) {
     if (o == std::partial_ordering::less) return -1;
     if (o == std::partial_ordering::greater) return 1;
     return 0;
+}
+
+// A flat coordinate list -> the points it spells, consumed in (x, y) pairs:
+// [x0, y0, x1, y1, ...]. This is the Python spelling of pgl's
+// `std::initializer_list<NumberType>` constructors (Convex, Polygon,
+// MonotoneChain, Polyline all have one), which let C++ write
+// `Polygon{0,0, 4,0, 4,4}` without naming a Point per vertex.
+//
+// pgl states the even-count requirement as an assert(), which the release build
+// pypgl ships compiles out, so it is checked here and reported as a ValueError
+// rather than silently dropping the odd trailing value.
+inline std::vector<Point> pointsFromCoords(const std::vector<Num> &coords) {
+    if (coords.size() % 2 != 0)
+        throw nb::value_error(
+            "expected an even number of coordinates: a flat list is read in "
+            "(x, y) pairs, one per vertex");
+    std::vector<Point> points;
+    points.reserve(coords.size() / 2);
+    for (std::size_t i = 0; i + 1 < coords.size(); i += 2)
+        points.emplace_back(coords[i], coords[i + 1]);
+    return points;
 }
 
 // repr, ordering, equality, and (optionally) hashing — uniform across all
@@ -359,7 +388,36 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_SQDIST(cls, SelfT, ::pypgl::Polygon);                    \
     PGL_SQDIST(cls, SelfT, ::pypgl::PolygonWithHoles);           \
     PGL_SQDIST(cls, SelfT, ::pypgl::HalfplaneIntersection);      \
+    PGL_SQDIST(cls, SelfT, ::pypgl::PolygonSet);                 \
     PGL_SQDIST(cls, SelfT, ::pypgl::Disk)
+
+// samePointSet of SelfT against every bound shape (all seventeen, including
+// itself): whether the two shapes are the same set of points, which is what
+// `a.contains(b) and b.contains(a)` says but decided directly and usually
+// faster. It is *not* `==`: equality compares representations of one type, so
+// it cannot compare across types at all, and even within one it can disagree --
+// a Polygon carrying a redundant vertex in the middle of an edge covers the
+// same points as one without it, yet the two are unequal. Every pair is
+// implemented (pgl's implementation/samepointset.hpp specializes all of them),
+// so this macro is called on every shape with every shape.
+#define PGL_BIND_ALL_SAME_POINT_SET(cls, SelfT)                  \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Point);          \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Segment);        \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::OrientedSegment); \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Line);           \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::OrientedLine);   \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Ray);            \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Halfplane);      \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Triangle);       \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Rectangle);      \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Convex);         \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::MonotoneChain);  \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Polyline);       \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Polygon);        \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::PolygonWithHoles); \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::HalfplaneIntersection); \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::PolygonSet);     \
+    PGL_PRED(cls, SelfT, samePointSet, ::pypgl::Disk)
 
 // Bind the seven predicates of SelfT against every bound shape (all sixteen,
 // including itself), so the full pair matrix is exposed. Every pgl shape
@@ -384,6 +442,7 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Polygon);        \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::PolygonWithHoles); \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::HalfplaneIntersection); \
+    PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::PolygonSet);     \
     PGL_BIND_PREDICATES(cls, SelfT, ::pypgl::Disk)
 
 // distanceL1/distanceLInf of SelfT against every *non-Disk* bound shape (all
@@ -408,6 +467,7 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Polygon);           \
     PGL_PRED(cls, SelfT, distanceL1, ::pypgl::PolygonWithHoles);  \
     PGL_PRED(cls, SelfT, distanceL1, ::pypgl::HalfplaneIntersection); \
+    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::PolygonSet);        \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Point);           \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Segment);         \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::OrientedSegment); \
@@ -422,7 +482,8 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Polyline);        \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Polygon);         \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::PolygonWithHoles); \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::HalfplaneIntersection)
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::HalfplaneIntersection); \
+    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::PolygonSet)
 
 // squaredHausdorffDistance / hausdorffDistanceL1 / hausdorffDistanceLInf of
 // SelfT against the six shapes pgl currently implements it for: Point,
@@ -458,92 +519,217 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Triangle);           \
     PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Convex)
 
+
 // -----------------------------------------------------------------------------
-// Regularized boolean operations (algorithm/booleans.hpp)
+// The general intersection (implementation/intersection.hpp)
 //
-// difference / unionWith / symmetricDifference are defined on Polygon and
-// PolygonWithHoles, against the five bounded shapes with area. "unionWith"
-// rather than "union" because union is a keyword in C++, and pypgl mirrors the
-// C++ name. All four return a *list* of PolygonWithHoles.
+// `a.intersection(b)` is the literal point set A n B, with no regularization:
+// every piece is kept, whatever its dimension. What comes back therefore
+// depends on the pair, and nanobind's optional/variant casters turn each form
+// into the obvious Python one:
 //
-// Every one of them returns the **regularized** result -- the closure of the
-// operation applied to the *interiors*. Lower-dimensional leftovers are dropped:
-// a stretch of boundary the operands share without either covering it, an
-// isolated contact point, and a slit, which has no area to begin with. Without
-// that the answer would not be a set of regions at all. It also means material
+//   * a pair whose intersection is guaranteed connected returns
+//     optional<variant<...>>  ->  the concrete shape, or None when disjoint;
+//   * a pair that can come apart returns vector<variant<...>>  ->  a list of
+//     concrete shapes (empty when disjoint), mixing dimensions freely: two
+//     polygons can meet in a point, a Polyline and a Polygon all at once;
+//   * two half-plane intersections (and the shapes that convert to one) return
+//     a HalfplaneIntersection directly, since that class has an empty state and
+//     needs no optional.
+//
+// Every shape but Disk takes part: pgl implements no clipping against a circle,
+// so a Disk's only intersection is with a Point (both orders), bound by hand.
+//
+// The operand sets differ slightly by receiver, which is why there are four
+// macros rather than one -- see each one's comment for what it leaves out.
+
+#define PGL_ISECT(cls, SelfT, OtherT) PGL_PRED(cls, SelfT, intersection, OtherT)
+
+// The fourteen operands every non-Disk receiver below accepts.
+#define PGL_BIND_INTERSECTION_COMMON(cls, SelfT)            \
+    PGL_ISECT(cls, SelfT, ::pypgl::Point);                  \
+    PGL_ISECT(cls, SelfT, ::pypgl::Segment);                \
+    PGL_ISECT(cls, SelfT, ::pypgl::OrientedSegment);        \
+    PGL_ISECT(cls, SelfT, ::pypgl::Line);                   \
+    PGL_ISECT(cls, SelfT, ::pypgl::OrientedLine);           \
+    PGL_ISECT(cls, SelfT, ::pypgl::Ray);                    \
+    PGL_ISECT(cls, SelfT, ::pypgl::Halfplane);              \
+    PGL_ISECT(cls, SelfT, ::pypgl::Triangle);               \
+    PGL_ISECT(cls, SelfT, ::pypgl::Rectangle);              \
+    PGL_ISECT(cls, SelfT, ::pypgl::Convex);                 \
+    PGL_ISECT(cls, SelfT, ::pypgl::MonotoneChain);          \
+    PGL_ISECT(cls, SelfT, ::pypgl::Polyline);               \
+    PGL_ISECT(cls, SelfT, ::pypgl::Polygon);                \
+    PGL_ISECT(cls, SelfT, ::pypgl::PolygonWithHoles)
+
+// The 0D/1D receivers -- Segment, OrientedSegment, Line, OrientedLine, Ray --
+// and the four 2D ones that are convex or simple: everything but a PolygonSet,
+// whose intersection is only defined against the shapes that can hold an
+// arbitrary set of regions back (see PGL_BIND_INTERSECTION_SET).
+#define PGL_BIND_INTERSECTION_LINEAR(cls, SelfT)            \
+    PGL_BIND_INTERSECTION_COMMON(cls, SelfT);               \
+    PGL_ISECT(cls, SelfT, ::pypgl::HalfplaneIntersection)
+
+// The 2D receivers whose intersection with a set of regions is defined:
+// Halfplane, Triangle, Rectangle, Convex, Polygon and PolygonWithHoles.
+#define PGL_BIND_INTERSECTION_AREA(cls, SelfT)              \
+    PGL_BIND_INTERSECTION_LINEAR(cls, SelfT);               \
+    PGL_ISECT(cls, SelfT, ::pypgl::PolygonSet)
+
+// A chain receiver (MonotoneChain, Polyline) takes the common fourteen and no
+// more: pgl clips a chain against no half-plane intersection and against no
+// set of regions.
+#define PGL_BIND_INTERSECTION_CHAIN(cls, SelfT)             \
+    PGL_BIND_INTERSECTION_COMMON(cls, SelfT)
+
+// A HalfplaneIntersection receiver: the common fourteen minus the two chains
+// (the pair pgl does not implement in either direction), plus itself and a set.
+#define PGL_BIND_INTERSECTION_HALFPLANES(cls, SelfT)        \
+    PGL_ISECT(cls, SelfT, ::pypgl::Point);                  \
+    PGL_ISECT(cls, SelfT, ::pypgl::Segment);                \
+    PGL_ISECT(cls, SelfT, ::pypgl::OrientedSegment);        \
+    PGL_ISECT(cls, SelfT, ::pypgl::Line);                   \
+    PGL_ISECT(cls, SelfT, ::pypgl::OrientedLine);           \
+    PGL_ISECT(cls, SelfT, ::pypgl::Ray);                    \
+    PGL_ISECT(cls, SelfT, ::pypgl::Halfplane);              \
+    PGL_ISECT(cls, SelfT, ::pypgl::Triangle);               \
+    PGL_ISECT(cls, SelfT, ::pypgl::Rectangle);              \
+    PGL_ISECT(cls, SelfT, ::pypgl::Convex);                 \
+    PGL_ISECT(cls, SelfT, ::pypgl::Polygon);                \
+    PGL_ISECT(cls, SelfT, ::pypgl::PolygonWithHoles);       \
+    PGL_ISECT(cls, SelfT, ::pypgl::HalfplaneIntersection);  \
+    PGL_ISECT(cls, SelfT, ::pypgl::PolygonSet)
+
+// A PolygonSet receiver: only the shapes with area, since the components a set
+// is made of are regions. A lower-dimensional operand is not refused by
+// omission alone -- write it on the left (`segment.intersection(a_set)` is not
+// defined either), so a caller wanting it clips against the components.
+#define PGL_BIND_INTERSECTION_SET(cls, SelfT)               \
+    PGL_ISECT(cls, SelfT, ::pypgl::Halfplane);              \
+    PGL_ISECT(cls, SelfT, ::pypgl::Triangle);               \
+    PGL_ISECT(cls, SelfT, ::pypgl::Rectangle);              \
+    PGL_ISECT(cls, SelfT, ::pypgl::Convex);                 \
+    PGL_ISECT(cls, SelfT, ::pypgl::Polygon);                \
+    PGL_ISECT(cls, SelfT, ::pypgl::PolygonWithHoles);       \
+    PGL_ISECT(cls, SelfT, ::pypgl::HalfplaneIntersection);  \
+    PGL_ISECT(cls, SelfT, ::pypgl::PolygonSet)
+
+// -----------------------------------------------------------------------------
+// Regularized boolean operations (implementation/booleans.hpp)
+//
+// The four operations that treat their operands as *solids* rather than as
+// point sets:
+//
+//   a.regularizedIntersection(b)   closure(A° n B°)
+//   a.regularizedUnion(b)          closure(A° u B°)
+//   a.difference(b)                closure(A° \ B)
+//   a.symmetricDifference(b)       closure((A° \ B) u (B° \ A))
+//
+// Every one of them is **regularized** -- the closure of the operation applied
+// to the *interiors*. Lower-dimensional leftovers are dropped: a stretch of
+// boundary the operands share without either covering it, an isolated contact
+// point, and a slit, which has no area to begin with. It also means material
 // with no area never *joins* anything, so two shapes meeting at a single point
-// come back as two pieces. In particular `a.unionWith(a)` is not `a` but
-// `a.regularized()`: idempotence holds up to regularization and no further.
+// come back as one PolygonSet with two components. In particular
+// `a.regularizedUnion(a)` is not `a` but `a.regularized()`: idempotence holds
+// up to regularization and no further.
 //
-// The pieces have pairwise disjoint interiors and their union is the result.
-// They are **not** nested: an island stranded inside a hole of the result comes
-// back as a piece of its own, since pgl has no PolygonSet.
+// All four return a PolygonSet (never a bare list, as they did before pgl had
+// that shape), which is what makes them closed: a result feeds straight back
+// in. Its components are not nested -- an island stranded inside a hole of the
+// answer is a component of its own.
 //
-// `intersection` is the odd one out and appears twice in the library. The
-// general one (bound per shape, returning points/segments/polygons through an
-// optional and a variant) is defined for every pair; the region-valued one is
-// pulled in by a PolygonWithHoles operand, whichever side it is written on. That
-// split is not an oversight: no component of the intersection of two *polygons*
-// can have a hole, since every other pgl shape has a connected complement, so a
-// closed curve in A n B bounds a disk in each operand and hence in the
-// intersection. A region's hole interiors are components of their own, which is
-// exactly what breaks that argument -- so a region's intersection genuinely
-// needs a region.
+// The grids are not square, and mirror pgl's exactly. The six bounded region
+// types are Triangle, Rectangle, Convex, Polygon, PolygonWithHoles and
+// PolygonSet.
+//
+//   * regularizedUnion / symmetricDifference: every pair among the six.
+//   * difference: any of the six as receiver, and as argument any of the six
+//     plus Halfplane and HalfplaneIntersection -- A \ B stays bounded however
+//     big B is. It is the one operation that is not symmetric, so which side a
+//     shape is written on decides what is removed from what, and an unbounded
+//     shape may only be the argument.
+//   * regularizedIntersection: a PolygonWithHoles or a PolygonSet must take
+//     part, since only those two can hold an answer with a hole or with several
+//     pieces. So `rectangle.regularizedIntersection(triangle)` is the one gap
+//     worth knowing -- it raises where the other three answer, and
+//     `rect.asPolygonWithHoles().regularizedIntersection(tri)` reaches it. The
+//     unregularized `intersection` above is defined for that pair as it stands.
+//
+// Every pair outside the grids is simply not bound, so it raises a Python
+// TypeError -- the runtime equivalent of pgl's compile error. (pgl's own
+// runtime Shape wrapper throws std::logic_error there instead, since it cannot
+// know the pair until it runs.)
 
-// One boolean operation of SelfT against the five bounded shapes with area.
-#define PGL_BIND_BOOLEAN(cls, SelfT, NAME)                        \
-    PGL_PRED(cls, SelfT, NAME, ::pypgl::Polygon);                 \
-    PGL_PRED(cls, SelfT, NAME, ::pypgl::PolygonWithHoles);        \
-    PGL_PRED(cls, SelfT, NAME, ::pypgl::Convex);                  \
-    PGL_PRED(cls, SelfT, NAME, ::pypgl::Triangle);                \
-    PGL_PRED(cls, SelfT, NAME, ::pypgl::Rectangle)
+// One boolean operation of SelfT against the six bounded region types.
+#define PGL_BIND_BOOLEAN(cls, SelfT, NAME)                  \
+    PGL_PRED(cls, SelfT, NAME, ::pypgl::Triangle);          \
+    PGL_PRED(cls, SelfT, NAME, ::pypgl::Rectangle);         \
+    PGL_PRED(cls, SelfT, NAME, ::pypgl::Convex);            \
+    PGL_PRED(cls, SelfT, NAME, ::pypgl::Polygon);           \
+    PGL_PRED(cls, SelfT, NAME, ::pypgl::PolygonWithHoles);  \
+    PGL_PRED(cls, SelfT, NAME, ::pypgl::PolygonSet)
 
-// The three always-region-valued booleans, for a Polygon or PolygonWithHoles
-// receiver -- the two shapes that can represent the answer. `intersection` is
-// bound separately, since how much of it is region-valued differs between them.
-#define PGL_BIND_BOOLEANS(cls, SelfT)                             \
-    PGL_BIND_BOOLEAN(cls, SelfT, difference);                     \
-    PGL_BIND_BOOLEAN(cls, SelfT, unionWith);                      \
-    PGL_BIND_BOOLEAN(cls, SelfT, symmetricDifference)
+// The three operations every one of the six bounded region types has, whatever
+// it is: the two symmetric ones over the six, and the difference, which also
+// takes the two unbounded convex shapes as its argument.
+#define PGL_BIND_BOOLEANS(cls, SelfT)                       \
+    PGL_BIND_BOOLEAN(cls, SelfT, regularizedUnion);         \
+    PGL_BIND_BOOLEAN(cls, SelfT, symmetricDifference);      \
+    PGL_BIND_BOOLEAN(cls, SelfT, difference);               \
+    PGL_PRED(cls, SelfT, difference, ::pypgl::Halfplane);   \
+    PGL_PRED(cls, SelfT, difference, ::pypgl::HalfplaneIntersection)
 
-// The forwarding half, for a Convex / Triangle / Rectangle receiver: the three
-// symmetric operations are implemented once per unordered pair, on the operand
-// that can represent the answer, so `triangle.unionWith(polygon)` and
-// `polygon.unionWith(triangle)` are the same call. `difference` is not
-// symmetric and forwards nowhere, so it is absent here.
-#define PGL_BIND_FORWARDED_BOOLEANS(cls, SelfT)                   \
-    PGL_PRED(cls, SelfT, unionWith, ::pypgl::Polygon);            \
-    PGL_PRED(cls, SelfT, unionWith, ::pypgl::PolygonWithHoles);   \
-    PGL_PRED(cls, SelfT, symmetricDifference, ::pypgl::Polygon);  \
-    PGL_PRED(cls, SelfT, symmetricDifference, ::pypgl::PolygonWithHoles); \
-    PGL_PRED(cls, SelfT, intersection, ::pypgl::PolygonWithHoles)
+// The regularized intersection for a receiver that can hold the answer: a
+// PolygonWithHoles or a PolygonSet. Same argument grid as `difference`.
+#define PGL_BIND_REGULARIZED_INTERSECTION(cls, SelfT)                        \
+    PGL_BIND_BOOLEAN(cls, SelfT, regularizedIntersection);                   \
+    PGL_PRED(cls, SelfT, regularizedIntersection, ::pypgl::Halfplane);       \
+    PGL_PRED(cls, SelfT, regularizedIntersection, ::pypgl::HalfplaneIntersection)
+
+// The other half of the regularized intersection, for the receivers that
+// cannot hold the answer themselves (Halfplane, Triangle, Rectangle, Convex,
+// Polygon, HalfplaneIntersection): the operation is available exactly when the
+// *other* operand is one of the two shapes that can.
+#define PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, SelfT)                \
+    PGL_PRED(cls, SelfT, regularizedIntersection, ::pypgl::PolygonWithHoles); \
+    PGL_PRED(cls, SelfT, regularizedIntersection, ::pypgl::PolygonSet)
 
 // -----------------------------------------------------------------------------
-// Minkowski sum (algorithm/minkowskisum.hpp)
+// Minkowski sum (implementation/minkowskisum.hpp)
 //
 // A (+) B = {a + b : a in A, b in B}, written `a.minkowskiSum(b)` or `a + b`.
 //
-// Adding a Point is a translation -- the reading `shape + point` has always had
-// -- and returns the other operand's own type. Two bounded convex shapes
-// (Point, Segment, OrientedSegment, Rectangle, Triangle, Convex) sum to a
-// Convex, or to a Rectangle when both are rectangles, the one non-trivial pair
-// closed under the sum. Every vertex of such a result is a sum of two input
-// vertices, so those are exact.
+// pgl gives every summable pair the tightest type that can hold its answer, and
+// pypgl mirrors that exactly rather than flattening everything to one return
+// type:
 //
-// A non-convex operand is where the sum needs a region: sliding a shape around
-// the inside of a C sweeps out material that closes over a hole neither operand
-// has. Polygon, PolygonWithHoles and Polyline therefore carry a second
-// minkowskiSum against seven operands, returning a list of regions like the
-// booleans above. Which overload set answers is a question about the *pair*, not
-// about the receiver: `rectangle.minkowskiSum(polygon)` is
-// `polygon.minkowskiSum(rectangle)`, while `rectangle.minkowskiSum(triangle)` is
-// still the single-shape sum.
+//   * a Point summand is a translation and gives back the other operand's own
+//     type, for every shape there is;
+//   * two bounded convex polygonal shapes give a Convex -- a Rectangle when
+//     both are rectangles, the one pair closed under the sum. Every vertex of
+//     such a result is a sum of two input vertices, so it stays exact;
+//   * a MonotoneChain with a non-degenerate bounded convex shape gives a
+//     Polygon: dragging a convex body along an x-monotone chain sweeps a region
+//     that cannot enclose a hole;
+//   * a sum involving an unbounded convex operand (Line, OrientedLine, Ray,
+//     HalfplaneIntersection) is again an intersection of half-planes, so it
+//     gives a HalfplaneIntersection. A Halfplane absorbs every bounded operand
+//     and comes back a Halfplane -- just pushed out;
+//   * a bounded sum with a non-convex operand generally needs a
+//     PolygonWithHoles: sliding a shape around the inside of a C sweeps
+//     material that closes over a hole neither operand has. When the answer is
+//     not guaranteed connected -- a chain summed with a chain, or anything
+//     summed with a PolygonSet -- it is a PolygonSet;
+//   * two disks sum to a Disk (the one curved sum in the library) and a Disk
+//     with a Halfplane to a Halfplane. Both are bound by hand rather than
+//     through these macros: pgl's default result type there is `double`, which
+//     pypgl does not instantiate, so they request ERational explicitly and
+//     raise for a disk whose radius is irrational (see bind_disk.cpp).
 //
-// The remaining pairs are deliberately not bound, so they raise a Python
-// TypeError -- the runtime equivalent of pgl's compile error. A Disk sums to a
-// rounded shape and an unbounded operand (Line, Ray, Halfplane,
-// HalfplaneIntersection) to an unbounded region, and no pgl type represents
-// either. Since hull(A (+) B) = hull(A) (+) hull(B), a caller who wants the
+// The remaining pairs -- a Disk with anything else, an unbounded operand with a
+// non-convex one -- are deliberately not bound, so they raise a Python
+// TypeError. Since hull(A (+) B) = hull(A) (+) hull(B), a caller who wants the
 // convex approximation can ask for it by summing the hulls.
 
 // `a + b` for one summable pair.
@@ -551,79 +737,113 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     cls.def("__add__", [](const SelfT &a, const OtherT &b) { return a.minkowskiSum(b); }, \
             nb::is_operator())
 
-// The Minkowski sum of SelfT with every bounded convex shape -- the whole set of
-// pairs whose sum fits in a single shape. Called on each of those six shapes.
-// The Point pair is the translation, whose `+` each shape already binds itself
-// (PGL_BIND_OPERATORS, or its own __add__ when it is mutable), so only the named
-// method is added for it here.
-#define PGL_BIND_CONVEX_MINKOWSKI(cls, SelfT)                     \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Point);           \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Segment);         \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::OrientedSegment); \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Rectangle);       \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Triangle);        \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Convex);          \
-    PGL_ADD(cls, SelfT, ::pypgl::Segment);                        \
-    PGL_ADD(cls, SelfT, ::pypgl::OrientedSegment);                \
-    PGL_ADD(cls, SelfT, ::pypgl::Rectangle);                      \
-    PGL_ADD(cls, SelfT, ::pypgl::Triangle);                       \
-    PGL_ADD(cls, SelfT, ::pypgl::Convex);                         \
-    PGL_BIND_NONCONVEX_OPERANDS(cls, SelfT)
+// Both spellings of one summable pair.
+#define PGL_MINK(cls, SelfT, OtherT)                       \
+    PGL_PRED(cls, SelfT, minkowskiSum, OtherT);            \
+    PGL_ADD(cls, SelfT, OtherT)
 
-// The other half of "which overload set answers is a question about the pair,
-// not about the receiver": a convex shape written on the *left* of a non-convex
-// operand forwards to it, through pgl's rank-based forwarder, so
-// `rectangle.minkowskiSum(polygon)` is `polygon.minkowskiSum(rectangle)` and
-// gives back the same set of regions. For a Point receiver the same three pairs
-// are instead the translation -- either operand being a Point makes the sum
-// representable in a single shape -- so the return type differs there, though
-// the binding is spelled the same.
-#define PGL_BIND_NONCONVEX_OPERANDS(cls, SelfT)                   \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Polygon);         \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::PolygonWithHoles); \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Polyline);        \
-    PGL_ADD(cls, SelfT, ::pypgl::Polygon);                        \
-    PGL_ADD(cls, SelfT, ::pypgl::PolygonWithHoles);               \
-    PGL_ADD(cls, SelfT, ::pypgl::Polyline)
+// A bounded convex polygonal receiver -- Point, Segment, OrientedSegment,
+// Triangle, Rectangle, Convex -- which sums with every shape but a Disk. (A
+// Point additionally sums with one, since that sum is its translation; a
+// Halfplane also takes every one of these operands and adds the Disk itself.)
+// The Point *operand* gets only the named spelling here: `shape + point` is
+// bound by each shape itself, through PGL_BIND_OPERATORS for the immutable ones
+// and its own __add__ for the mutable ones.
+#define PGL_BIND_MINKOWSKI_CONVEX(cls, SelfT)              \
+    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Point);    \
+    PGL_MINK(cls, SelfT, ::pypgl::Segment);                \
+    PGL_MINK(cls, SelfT, ::pypgl::OrientedSegment);        \
+    PGL_MINK(cls, SelfT, ::pypgl::Line);                   \
+    PGL_MINK(cls, SelfT, ::pypgl::OrientedLine);           \
+    PGL_MINK(cls, SelfT, ::pypgl::Ray);                    \
+    PGL_MINK(cls, SelfT, ::pypgl::Halfplane);              \
+    PGL_MINK(cls, SelfT, ::pypgl::Triangle);               \
+    PGL_MINK(cls, SelfT, ::pypgl::Rectangle);              \
+    PGL_MINK(cls, SelfT, ::pypgl::Convex);                 \
+    PGL_MINK(cls, SelfT, ::pypgl::MonotoneChain);          \
+    PGL_MINK(cls, SelfT, ::pypgl::Polyline);               \
+    PGL_MINK(cls, SelfT, ::pypgl::Polygon);                \
+    PGL_MINK(cls, SelfT, ::pypgl::PolygonWithHoles);       \
+    PGL_MINK(cls, SelfT, ::pypgl::HalfplaneIntersection);  \
+    PGL_MINK(cls, SelfT, ::pypgl::PolygonSet)
 
-// The region-returning Minkowski sum, for a Polygon, PolygonWithHoles or
-// Polyline receiver, against the seven operands pgl implements: the five bounded
-// shapes with area to sweep, plus Segment and OrientedSegment, which have none.
-// A Segment is the thinnest operand of the set and the one that shows plainest
-// that it is the *receiver's* concavity, not the summand's size, that calls for
-// a region: dragging a non-convex shape along one sweeps a band that closes a
-// cut exactly as a wider summand does. An OrientedSegment answers identically --
-// an orientation is not part of a point set.
-#define PGL_BIND_REGION_MINKOWSKI(cls, SelfT)                     \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Point);           \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Polygon);         \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::PolygonWithHoles); \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Convex);          \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Triangle);        \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Rectangle);       \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Segment);         \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::OrientedSegment); \
-    PGL_ADD(cls, SelfT, ::pypgl::Polygon);                        \
-    PGL_ADD(cls, SelfT, ::pypgl::PolygonWithHoles);               \
-    PGL_ADD(cls, SelfT, ::pypgl::Convex);                         \
-    PGL_ADD(cls, SelfT, ::pypgl::Triangle);                       \
-    PGL_ADD(cls, SelfT, ::pypgl::Rectangle);                      \
-    PGL_ADD(cls, SelfT, ::pypgl::Segment);                        \
-    PGL_ADD(cls, SelfT, ::pypgl::OrientedSegment)
+// An unbounded convex receiver -- Line, OrientedLine, Ray,
+// HalfplaneIntersection. Every sum is again an intersection of half-planes, so
+// only convex operands are accepted: a non-convex one would need an unbounded
+// region, which no pgl shape represents.
+#define PGL_BIND_MINKOWSKI_UNBOUNDED(cls, SelfT)           \
+    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Point);    \
+    PGL_MINK(cls, SelfT, ::pypgl::Segment);                \
+    PGL_MINK(cls, SelfT, ::pypgl::OrientedSegment);        \
+    PGL_MINK(cls, SelfT, ::pypgl::Line);                   \
+    PGL_MINK(cls, SelfT, ::pypgl::OrientedLine);           \
+    PGL_MINK(cls, SelfT, ::pypgl::Ray);                    \
+    PGL_MINK(cls, SelfT, ::pypgl::Halfplane);              \
+    PGL_MINK(cls, SelfT, ::pypgl::Triangle);               \
+    PGL_MINK(cls, SelfT, ::pypgl::Rectangle);              \
+    PGL_MINK(cls, SelfT, ::pypgl::Convex);                 \
+    PGL_MINK(cls, SelfT, ::pypgl::HalfplaneIntersection)
 
-// The Polyline operand, for the two region receivers only -- Polygon and
-// PolygonWithHoles, which PGL_BIND_REGION_MINKOWSKI is also called on. Polyline
-// itself does not take it: `polyline + polyline` is not a pair, and pgl asks a
-// caller who wants it to sum the edges of one against the other.
-#define PGL_BIND_POLYLINE_OPERAND(cls, SelfT)                     \
-    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Polyline);        \
-    PGL_ADD(cls, SelfT, ::pypgl::Polyline)
+// A bounded receiver that is not convex, or not a single region: MonotoneChain,
+// Polyline, Polygon, PolygonWithHoles, PolygonSet. It sums with every bounded
+// operand (a Halfplane too, which simply absorbs it), and with no unbounded
+// convex one: pgl asks for a convex operand there, which these are not.
+#define PGL_BIND_MINKOWSKI_REGION(cls, SelfT)              \
+    PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Point);    \
+    PGL_MINK(cls, SelfT, ::pypgl::Segment);                \
+    PGL_MINK(cls, SelfT, ::pypgl::OrientedSegment);        \
+    PGL_MINK(cls, SelfT, ::pypgl::Halfplane);              \
+    PGL_MINK(cls, SelfT, ::pypgl::Triangle);               \
+    PGL_MINK(cls, SelfT, ::pypgl::Rectangle);              \
+    PGL_MINK(cls, SelfT, ::pypgl::Convex);                 \
+    PGL_MINK(cls, SelfT, ::pypgl::MonotoneChain);          \
+    PGL_MINK(cls, SelfT, ::pypgl::Polyline);               \
+    PGL_MINK(cls, SelfT, ::pypgl::Polygon);                \
+    PGL_MINK(cls, SelfT, ::pypgl::PolygonWithHoles);       \
+    PGL_MINK(cls, SelfT, ::pypgl::PolygonSet)
 
-// The named `minkowskiSum` for the shapes whose *only* summable pair is with a
-// Point -- the unbounded ones, Disk, and MonotoneChain, whose sums with anything
-// else are a compile error in C++ (see PGL_BIND_CONVEX_MINKOWSKI for the pairs
-// that are not). `shape + point` already works on every one of them through
-// their own `__add__`; this is what keeps the *method* spelling available too,
-// so `a.minkowskiSum(point)` does not depend on which shape `a` is.
-#define PGL_BIND_TRANSLATION_MINKOWSKI(cls, SelfT)                \
+// The named `minkowskiSum` for a receiver whose only *macro-bound* pair is the
+// translation by a Point: the Disk, whose two other sums (with a Disk and with
+// a Halfplane) each need an explicit result type and are bound by hand.
+// `disk + point` already works through PGL_BIND_OPERATORS; this keeps the
+// method spelling available too, so `a.minkowskiSum(point)` does not depend on
+// which shape `a` is.
+#define PGL_BIND_TRANSLATION_MINKOWSKI(cls, SelfT)         \
     PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Point)
+
+// -----------------------------------------------------------------------------
+// A triangulation's domain predicates (algorithm/triangulation.hpp)
+//
+// The four predicates a Triangulation answers about the region it covers -- the
+// polygon for the polygon constructors, the convex hull otherwise. They give
+// exactly what the shape predicates of the same name give for that region as a
+// Polygon, but decided on the mesh, so the cost follows the triangles the query
+// shape meets rather than the size of the boundary. Every shape is a valid
+// query: an unbounded one is never contained in the bounded domain, and the
+// four are `contains` / `interiorContains` / `intersects` / `interiorsIntersect`
+// only -- pgl gives a triangulation no boundaryContains / separates / crosses,
+// so this is a smaller family than PGL_BIND_ALL_PREDICATES.
+#define PGL_DOMAIN_PREDICATES(cls, SelfT, OtherT)      \
+    PGL_PRED(cls, SelfT, contains, OtherT);            \
+    PGL_PRED(cls, SelfT, interiorContains, OtherT);    \
+    PGL_PRED(cls, SelfT, intersects, OtherT);          \
+    PGL_PRED(cls, SelfT, interiorsIntersect, OtherT)
+
+#define PGL_BIND_ALL_DOMAIN_PREDICATES(cls, SelfT)                   \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Point);               \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Segment);             \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::OrientedSegment);     \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Line);                \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::OrientedLine);        \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Ray);                 \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Halfplane);           \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Triangle);            \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Rectangle);           \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Convex);              \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::MonotoneChain);       \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Polyline);            \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Polygon);             \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::PolygonWithHoles);    \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::HalfplaneIntersection); \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::PolygonSet);          \
+    PGL_DOMAIN_PREDICATES(cls, SelfT, ::pypgl::Disk)

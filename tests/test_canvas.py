@@ -63,9 +63,9 @@ def _is_valid_svg(text):
 
 def test_empty_canvas_is_valid_svg():
     root = _is_valid_svg(Canvas().toSVG())
-    # Default viewport is 1000x1000.
-    assert root.attrib["width"] == "1000"
-    assert root.attrib["height"] == "1000"
+    # Default viewport is 800x800 (upstream shrank it from 1000x1000).
+    assert root.attrib["width"] == "800"
+    assert root.attrib["height"] == "800"
 
 
 def test_size_sets_viewport():
@@ -161,6 +161,62 @@ def test_draw_empty_intersection_directly():
 def test_draw_rejects_non_shape():
     with pytest.raises(TypeError):
         Canvas().draw(5)
+
+
+def test_draw_collection_matches_drawing_one_by_one():
+    shapes = [Point(1, 2), Segment(0, 0, 4, 3), Triangle(0, 0, 4, 0, 0, 4)]
+    one_by_one = Canvas()
+    for shape in shapes:
+        one_by_one.draw(shape)
+    assert Canvas().draw(shapes).toSVG() == one_by_one.toSVG()
+
+
+def test_draw_collection_is_fluent():
+    c = Canvas()
+    assert c.draw([Point(0, 0), Point(1, 1)]) is c
+    assert c.draw([]) is c
+
+
+def test_draw_collection_takes_any_iterable():
+    shapes = [Point(1, 2), Point(3, 4)]
+    expected = Canvas().draw(shapes).toSVG()
+    assert Canvas().draw(tuple(shapes)).toSVG() == expected
+    assert Canvas().draw(p for p in shapes).toSVG() == expected
+
+
+def test_draw_collection_of_construction_results():
+    # The common case: everything a construction hands back is drawable at once.
+    polygon = Polygon([0, 0, 4, 0, 4, 4, 0, 4])
+    one_by_one = Canvas()
+    for edge in polygon.edges():
+        one_by_one.draw(edge)
+    assert Canvas().draw(polygon.edges()).toSVG() == one_by_one.toSVG()
+
+
+def test_draw_collection_may_mix_types_none_and_nesting():
+    flat = Canvas().draw(Point(0, 0)).draw(Segment(0, 0, 4, 3)).toSVG()
+    nested = Canvas().draw([Point(0, 0), None, [Segment(0, 0, 4, 3)]]).toSVG()
+    assert nested == flat
+
+
+def test_draw_collection_captures_the_current_style():
+    # Every element of the collection is drawn with the style active at the call,
+    # exactly as if each had been passed to draw() separately.
+    c = Canvas().stroke("red").draw([Point(0, 0), Point(4, 4)]).toSVG()
+    assert c.count('stroke="red"') >= 2
+
+
+def test_a_shape_is_drawn_as_itself_not_as_its_points():
+    # Every shape is iterable over its defining points, so the typed overloads
+    # have to win over the collection one.
+    assert "<polygon" in Canvas().draw(Triangle(0, 0, 4, 0, 0, 4)).toSVG()
+    assert "<circle" in Canvas().draw(Point(1, 1)).toSVG()
+
+
+@pytest.mark.parametrize("value", ["red", b"red"])
+def test_draw_rejects_strings_despite_being_iterable(value):
+    with pytest.raises(TypeError):
+        Canvas().draw(value)
 
 
 def test_point_renders_as_circle():
@@ -262,7 +318,7 @@ def test_every_shape_has_inline_svg(shape):
 
 
 def test_inline_shape_size_defaults_to_repr_svg_size():
-    # Shapes render on a one-shot canvas half pgl's 1000x1000 default.
+    # Shapes render on a one-shot canvas smaller than pgl's 800x800 default.
     assert pypgl.REPR_SVG_SIZE == 500
     root = _is_valid_svg(Point(0, 0)._repr_svg_())
     assert root.attrib["width"] == "500"

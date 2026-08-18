@@ -13,13 +13,12 @@ using namespace pypgl;
 // precondition rather than an enforced invariant -- the constructor does not
 // check it, and isValid() tests the whole thing on demand.
 //
-// This is the one shape whose intersections can keep holes, and that is what it
+// This is the shape whose intersections can keep holes, and that is what it
 // exists for: removing a shape from the middle of another leaves a hole, and no
-// other pgl shape can say so. Hence every boolean operation (difference /
-// unionWith / symmetricDifference / intersection) and every non-convex Minkowski
-// sum returns a *list* of these -- see the boolean-operation and Minkowski-sum
-// sections of common.h for both families, and for why they return a list rather
-// than a single region.
+// other pgl shape but a PolygonSet (which is made of these) can say so. Every
+// regularized boolean operation answers with a PolygonSet of them -- see the
+// boolean-operation section of common.h for the grids and for why the answer
+// needs a set rather than a single region.
 //
 // Storage mirrors Convex/Polygon (rings plus a lazy translation, so translating
 // is O(1)) and it is likewise bound **mutable** -- addHole/eraseHole and the
@@ -90,8 +89,10 @@ void bind_region(nb::module_ &m) {
             "outer ring counterclockwise as stored, the hole rings reversed (clockwise).");
 
     // --- structure ---
-    cls.def("isEmpty", [](const PolygonWithHoles &a) { return a.isEmpty(); },
-            "Whether the region has no outer boundary at all.");
+    cls.def("empty", [](const PolygonWithHoles &a) { return a.empty(); },
+            "Whether the region has no outer boundary at all, and hence covers no "
+            "point. (Upstream renamed this from isEmpty(): every shape with an empty "
+            "state now spells the test empty(), the standard container spelling.)");
     cls.def("isDegenerate", [](const PolygonWithHoles &a) { return a.isDegenerate(); },
             "Whether the region has zero area.");
     // PolygonWithHoles has isPoint/isSegment but no getIfPoint/getIfSegment
@@ -116,11 +117,11 @@ void bind_region(nb::module_ &m) {
             "with area is regular exactly when it has no slit. Pinching at an isolated "
             "point is not a slit: the interior still reaches it from every side.");
     cls.def("regularized", [](const PolygonWithHoles &a) { return a.regularized(); },
-            "The region without its slits, closure(interior), as a list of regions -- the "
+            "The region without its slits, closure(interior), as a PolygonSet -- the "
             "same regularization every boolean operation applies to its own result. "
             "Dropping the slits can disconnect what they were holding together, which is "
-            "why this is a list: a region whose slits are its only connective tissue comes "
-            "back as several pieces, and a region with no area comes back empty. An "
+            "why this is a set: a region whose slits are its only connective tissue comes "
+            "back as several components, and a region with no area comes back empty. An "
             "already-regular region is returned unchanged, vertex for vertex.");
 
     // --- measures ---
@@ -143,6 +144,62 @@ void bind_region(nb::module_ &m) {
     cls.def("bbox", [](const PolygonWithHoles &a) { return a.bbox(); },
             "Exact axis-aligned bounding box (a Rectangle); the outer polygon's.");
 
+    cls.def("asPolygonSet", [](const PolygonWithHoles &a) { return a.asPolygonSet(); },
+            "The same region as a one-component PolygonSet.");
+
+
+    // --- visibility (implementation/visibilitygraph.hpp) ---
+    //
+    // All of these triangulate the region once and then run a *triangular
+    // expansion* per vertex or query point: a traversal of the mesh carrying a
+    // cone of still-unobstructed directions that every crossed diagonal clips,
+    // at a cost proportional to the part of the region that vertex actually
+    // sees. Sight is stopped by the boundary of the region, holes included.
+    cls.def("visibilityGraph", [](const PolygonWithHoles &a) { return a.visibilityGraph(); },
+            "The graph on the region's vertices joining two of them when the segment "
+            "between them stays inside, even if it touches the boundary along the way.");
+    cls.def("clearVisibilityGraph", [](const PolygonWithHoles &a) { return a.clearVisibilityGraph(); },
+            "The strict reading of visibilityGraph(): the segment must not meet the "
+            "boundary except at its two ends. Always a subgraph of visibilityGraph(); a "
+            "degenerate region, having no interior, comes back with no edges at all.");
+    cls.def("reducedVisibilityGraph", [](const PolygonWithHoles &a) { return a.reducedVisibilityGraph(); },
+            "The subgraph of visibilityGraph() a shortest path can bend along: the edges "
+            "tangent to the obstacles at both ends, which is the boundary edges plus the "
+            "bitangents between reflex corners. Routing between two arbitrary points "
+            "means adding them joined to everything visibleVertices() reports.");
+    cls.def("visibleVertices", [](const PolygonWithHoles &a, const Point &q) { return a.visibleVertices(q); },
+            nb::arg("query"),
+            "The region's vertices visible from the query point, under "
+            "visibilityGraph()'s convention. Counterclockwise around the query point, "
+            "starting from the lexicographically smallest -- the order sortAround() "
+            "gives. This is what joins a query point to reducedVisibilityGraph().");
+    cls.def("clearlyVisibleVertices", [](const PolygonWithHoles &a, const Point &q) { return a.clearlyVisibleVertices(q); },
+            nb::arg("query"),
+            "The strict counterpart of visibleVertices(), under clearVisibilityGraph()'s "
+            "convention: always a subset of it, in the same order.");
+    cls.def("regularizedVisiblePolygon", [](const PolygonWithHoles &a, const Point &q) { return a.regularizedVisiblePolygon(q); },
+            nb::arg("query"),
+            "The region visible from the query point, as a Polygon: every point reached "
+            "by a segment that stays inside. It is star-shaped about the query point and "
+            "hence simply connected, so one Polygon holds it however many holes the "
+            "region has. *Regularized* means the closure of the interior, so a sightline "
+            "grazing along a wall or slipping through a vertex contributes nothing: what "
+            "comes back always bounds area. Its vertices are the region's own plus the "
+            "*window* ends where a sightline past a reflex corner lands on a farther "
+            "edge -- ray-edge intersections, and exactly the coordinates that need "
+            "division, which stays exact here.");
+
+    // --- convex decomposition (shorthands for the triangulation's) ---
+    cls.def("convexPartition", [](const PolygonWithHoles &a) { return a.convexPartition(); },
+            "Cut the region into Convex pieces with pairwise disjoint interiors whose "
+            "union is the part of the region that has area, using at most four times "
+            "the fewest pieces possible. The holes are where there is no piece, and a "
+            "slit, having no area, appears in none of them.");
+    cls.def("convexCovering", [](const PolygonWithHoles &a) { return a.convexCovering(); },
+            "Cover the region's area with Convex pieces, which may overlap. "
+            "Irredundant but not necessarily minimum; leaves holes and slits "
+            "uncovered.");
+
     // --- triangulation ---
     // Every ring becomes constrained edges and the hole interiors are left out
     // of the domain, so the in-domain triangles cover exactly the part of the
@@ -160,17 +217,23 @@ void bind_region(nb::module_ &m) {
             "constraint segments, which are assumed to lie in the region.");
 
     // --- boolean operations and the Minkowski sum (both defined in common.h) ---
-    // On a region, every intersection is region-valued: it is the one shape
-    // whose intersections can keep holes, which is what it exists for.
+    // A region is one of the two shapes that can hold a regularized
+    // intersection (a PolygonSet is the other), so unlike the convex shapes it
+    // gets all four operations, not three.
     PGL_BIND_BOOLEANS(cls, PolygonWithHoles);
-    PGL_BIND_BOOLEAN(cls, PolygonWithHoles, intersection);
-    PGL_BIND_REGION_MINKOWSKI(cls, PolygonWithHoles);
-    PGL_BIND_POLYLINE_OPERAND(cls, PolygonWithHoles);
+    PGL_BIND_REGULARIZED_INTERSECTION(cls, PolygonWithHoles);
+    PGL_BIND_MINKOWSKI_REGION(cls, PolygonWithHoles);
+
+    // The literal intersection, which keeps every piece whatever its
+    // dimension: a list of Point / Polyline / PolygonWithHoles against a shape
+    // with area, of Point / Segment against a lower-dimensional one.
+    PGL_BIND_INTERSECTION_AREA(cls, PolygonWithHoles);
 
     // --- the shared matrices ---
     PGL_BIND_ALL_PREDICATES(cls, PolygonWithHoles);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, PolygonWithHoles);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, PolygonWithHoles);
+    PGL_BIND_ALL_SAME_POINT_SET(cls, PolygonWithHoles);
     // No Hausdorff family: pgl defines it only for the six bounded convex
     // shapes, and a region is neither convex nor (with holes) simply connected.
 
@@ -193,7 +256,7 @@ void bind_region(nb::module_ &m) {
 
     // In-place translation/scaling, as on the other mutable shapes. The
     // value-returning `+` by a Point is just below: it is the Point special case
-    // of the Minkowski sum, whose named method PGL_BIND_REGION_MINKOWSKI binds.
+    // of the Minkowski sum, whose named method PGL_BIND_MINKOWSKI_REGION binds.
     cls.def("__iadd__", [](PolygonWithHoles &a, const Point &p) { a += p; return &a; },
             nb::rv_policy::none, nb::is_operator());
     cls.def("__isub__", [](PolygonWithHoles &a, const Point &p) { a -= p; return &a; },
@@ -203,7 +266,7 @@ void bind_region(nb::module_ &m) {
     cls.def("__itruediv__", [](PolygonWithHoles &a, const Num &k) { a /= k; return &a; },
             nb::rv_policy::none, nb::is_operator());
     // Translation by a Point, the Point special case of the Minkowski sum that
-    // PGL_BIND_REGION_MINKOWSKI binds the named method for. Spelled out here
+    // PGL_BIND_MINKOWSKI_REGION binds the named method for. Spelled out here
     // rather than in the macro, because every shape's `+ Point` is bound by that
     // shape itself (PGL_BIND_OPERATORS for the immutable ones, their own
     // __add__ for the mutable ones).

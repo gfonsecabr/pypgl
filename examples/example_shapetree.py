@@ -49,18 +49,16 @@ def draw(filename, tree, query, contained, intersecting=()):
     canvas.stroke("#1100ff").fill("#1100ff").fillOpacity(".5")
     canvas.draw(query)
 
-    # Iterating a ShapeTree yields its stored shapes.
+    # Drawing a collection draws its elements one by one, and iterating a
+    # ShapeTree yields the shapes it stores.
     canvas.stroke("#10b305").fill("#10b305").fillOpacity(".5")
-    for shape in tree:
-        canvas.draw(shape)
+    canvas.draw(tree.shapes())
 
     canvas.stroke("#ff0000").fill("#ff0000").fillOpacity(".5")
-    for shape in contained:
-        canvas.draw(shape)
+    canvas.draw(contained)
 
     canvas.stroke("#ffff00").fill("#ffff00").fillOpacity(".3")
-    for shape in intersecting:
-        canvas.draw(shape)
+    canvas.draw(intersecting)
 
     canvas.writeSVG(filename)
 

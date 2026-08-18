@@ -45,10 +45,11 @@ void bind_point(nb::module_ &m) {
     cls.def("asHalfplaneIntersection", [](const Point &p) { return p.asHalfplaneIntersection(); },
             "The same point as a (degenerate) HalfplaneIntersection.");
     PGL_BIND_TRANSFORMS(cls, Point);
-    // A Point is the smallest bounded convex shape, so it takes the whole
-    // convex Minkowski matrix: summing with a point is a translation, and
-    // summing with any other bounded convex shape is that shape translated.
-    PGL_BIND_CONVEX_MINKOWSKI(cls, Point);
+    // Every Minkowski sum with a Point is a translation, so a Point is the one
+    // shape that sums with all seventeen -- the sixteen the convex matrix
+    // covers, plus the Disk, whose translate is again a Disk.
+    PGL_BIND_MINKOWSKI_CONVEX(cls, Point);
+    PGL_MINK(cls, Point, Disk);
 
     // A Point indexes over its two coordinates (so get(i) yields a coordinate,
     // not a Point). size() is 2.
@@ -57,20 +58,14 @@ void bind_point(nb::module_ &m) {
     bind_value_semantics<Point>(cls);
 
     PGL_BIND_ALL_PREDICATES(cls, Point);
+    PGL_BIND_ALL_SAME_POINT_SET(cls, Point);
 
     // A point intersected with any shape is either that point or empty, so the
     // result is always std::optional<Point> — safe to bind against every shape.
-    cls.def("intersection", [](const Point &a, const Point &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const Segment &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const OrientedSegment &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const Line &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const OrientedLine &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const Ray &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const Halfplane &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const Triangle &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const Rectangle &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const Convex &b) { return a.intersection(b); }, nb::arg("other"));
-    cls.def("intersection", [](const Point &a, const Polygon &b) { return a.intersection(b); }, nb::arg("other"));
+    // The Disk is bound here and nowhere else: a point is the only shape pgl
+    // clips against a circle.
+    PGL_BIND_INTERSECTION_LINEAR(cls, Point);
+    cls.def("intersection", [](const Point &a, const Disk &b) { return a.intersection(b); }, nb::arg("other"));
 
     cls.def("distance", [](const Point &a, const Point &b) { return a.distance(b); },
             nb::arg("other"), "Approximate Euclidean (L2) distance (float).");
