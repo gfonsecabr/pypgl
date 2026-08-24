@@ -165,7 +165,8 @@ PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](d
 
 ## Installation
 
-`pypgl` requires **Python 3.9 or newer**.
+`pypgl` requires **Python 3.10 or newer**. (Up to 0.6.0 the floor was 3.9;
+nanobind, the binding library, no longer supports it.)
 
 ### From PyPI
 
@@ -173,7 +174,7 @@ PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](d
 pip install pypgl
 ```
 
-Pre-built wheels are published for CPython 3.9–3.14 on Linux (`manylinux_2_28`,
+Pre-built wheels are published for CPython 3.10–3.14 on Linux (`manylinux_2_28`,
 x86_64), macOS (Apple Silicon), and Windows, so most users need no compiler.
 
 ### From source

@@ -38,7 +38,7 @@ module, with the Python-layer sugar re-added via
 
 **Wheels CI done** (milestone 4): `cibuildwheel` is configured in
 [pyproject.toml](pyproject.toml) and run by
-[.github/workflows/wheels.yml](.github/workflows/wheels.yml) — CPython 3.9–3.14 on
+[.github/workflows/wheels.yml](.github/workflows/wheels.yml) — CPython 3.10–3.14 on
 `manylinux_2_28` (GCC 12 for C++20), macOS arm64 (`macos-15`), and Windows, plus
 sdist. macOS x86_64 (`macos-13`) was dropped — GitHub is retiring the Intel
 runners, so the jobs sat queued for hours and timed out. pgl has no native deps,
@@ -840,6 +840,23 @@ rather than a hash-table walk, so the same lines come out in a different documen
 order. Every pre-existing figure is byte-identical, which stays the check worth
 repeating. [examples/README.md](examples/README.md)'s gallery is three columns
 now, with one-line descriptions, following upstream.
+
+**The Python floor is the binding library's floor** (0.7.0, found by the release
+run): nanobind 3.0.0, released 2026-08-22, refuses Python < 3.10 — at CMake
+configure time, before a line is compiled, so the `cp39` wheel fails first in
+the matrix and takes all three platform jobs with it. `pyproject.toml` asks for
+`nanobind>=2.0`, so CI's isolated build env picks up the new major while a local
+venv keeps whatever it pinned (2.13.0 here) — which is exactly why this passed
+locally and failed in CI, and why a green `main` run is the release gate. So
+`cp39` is out of the matrix, `requires-python` is `>=3.10`, and the wheel count
+drops from 18 to 15. Python 3.9 reached end-of-life in October 2025 and its
+users can stay on 0.6.0.
+
+**The nanobind floor stays at `>=2.0`, deliberately**: pypgl builds clean
+against both 2.13.0 and 3.0.0, all 980 tests pass on each, and the two emit a
+**byte-identical `_pgl.pyi`** — so there is nothing to adopt and no reason to
+force the new major on anyone building from the sdist. Worth re-checking that
+stub equality rather than assuming it at the next nanobind major.
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).

@@ -9,7 +9,7 @@ description = "Python bindings for the Pangolin (pgl) exact geometry library"
 # README.md is the user-facing front page rendered on PyPI; pypgl.md is the
 # internal design contract and is intentionally not shipped as the description.
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "Guilherme D. da Fonseca" }]
 dependencies = []
@@ -22,7 +22,6 @@ classifiers = [
   "Operating System :: Microsoft :: Windows",
   "Programming Language :: C++",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -62,7 +61,14 @@ sdist.exclude = [".ipynb_checkpoints", "**/*.ipynb", ".pytest_cache",
 # pattern is deliberately cp314-*, not cp314t-*, so the free-threaded build is
 # left out: nanobind supports it, but it is a separate ABI and a separate wheel
 # per platform, and nothing has asked for it yet.
-build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
+#
+# cp39 is gone as of 0.7.0: nanobind 3.0.0 (released 2026-08-22) refuses Python
+# < 3.10 outright, failing at CMake configure time before a line is compiled, so
+# the floor is the binding library's and not a choice. Python 3.9 reached
+# end-of-life in October 2025, and 3.9 users can stay on pypgl 0.6.0. The
+# nanobind floor below stays at 2.0 rather than 3.0: pypgl builds against both,
+# and the two produce a byte-identical _pgl.pyi.
+build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
 # Skip PyPy (nanobind targets CPython), 32-bit, and musl (lean matrix to start).
 skip = "pp* *_i686 *-win32 *-musllinux_*"
 build-frontend = "build"
