@@ -841,22 +841,35 @@ order. Every pre-existing figure is byte-identical, which stays the check worth
 repeating. [examples/README.md](examples/README.md)'s gallery is three columns
 now, with one-line descriptions, following upstream.
 
-**The Python floor is the binding library's floor** (0.7.0, found by the release
-run): nanobind 3.0.0, released 2026-08-22, refuses Python < 3.10 — at CMake
-configure time, before a line is compiled, so the `cp39` wheel fails first in
-the matrix and takes all three platform jobs with it. `pyproject.toml` asks for
-`nanobind>=2.0`, so CI's isolated build env picks up the new major while a local
-venv keeps whatever it pinned (2.13.0 here) — which is exactly why this passed
-locally and failed in CI, and why a green `main` run is the release gate. So
-`cp39` is out of the matrix, `requires-python` is `>=3.10`, and the wheel count
-drops from 18 to 15. Python 3.9 reached end-of-life in October 2025 and its
-users can stay on 0.6.0.
+**nanobind 3.0.0 broke the release run twice, in two different ways** (0.7.0).
+`pyproject.toml` asked for `nanobind>=2.0`, so CI's isolated build env picked up
+the major released 2026-08-22 while the local venv kept its pinned 2.13.0 —
+which is exactly why 0.7.0 built clean here and failed in CI, and why a green
+`main` run is the release gate rather than a formality. **A local build proves
+nothing about the build environment CI resolves.** Two distinct failures, in
+this order:
 
-**The nanobind floor stays at `>=2.0`, deliberately**: pypgl builds clean
-against both 2.13.0 and 3.0.0, all 980 tests pass on each, and the two emit a
-**byte-identical `_pgl.pyi`** — so there is nothing to adopt and no reason to
-force the new major on anyone building from the sdist. Worth re-checking that
-stub equality rather than assuming it at the next nanobind major.
+1. **cp39 fails at CMake configure time**, before a line is compiled: nanobind 3
+   refuses Python < 3.10. It is first in the matrix, so it took all three
+   platform jobs down and hid the second failure entirely.
+2. **nanobind 3 does not compile on the Windows runner at all** (clang-cl
+   19.1.5), inside its own `nb_backend_slots.h` on a constexpr in the
+   `NB_SLOT_ALIAS` macro. pypgl's sources are never reached. This only surfaced
+   after cp39 was gone — the first failure was masking it.
+
+So the build is **capped at `nanobind>=2.0,<3`**, restoring the 2.x line the
+green 0.6.0 run used (2.15.0 builds clean here and passes all 980 tests). Lift
+the cap once nanobind fixes the Windows bug. Worth knowing when doing so:
+nanobind 3 builds fine on Linux, passes the whole suite, and emits a
+**byte-identical `_pgl.pyi`** — so there is nothing to adopt beyond the fix, and
+that stub equality is worth re-checking rather than assuming.
+
+**`cp39` stays dropped anyway** — a deliberate choice, not a forced one, since
+the cap holds the build on a 2.x that still supports 3.9. Python 3.9 went
+end-of-life in October 2025, nanobind 3 has dropped it, and re-adding the wheels
+now would only mean dropping them again when the cap lifts. `requires-python` is
+`>=3.10`, so pip holds 3.9 users on 0.6.0 rather than erroring, and a release is
+15 wheels instead of 18.
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).

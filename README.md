@@ -165,8 +165,8 @@ PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](d
 
 ## Installation
 
-`pypgl` requires **Python 3.10 or newer**. (Up to 0.6.0 the floor was 3.9;
-nanobind, the binding library, no longer supports it.)
+`pypgl` requires **Python 3.10 or newer**. Up to 0.6.0 the floor was 3.9, which
+reached end-of-life in October 2025; 3.9 users can stay on that release.
 
 ### From PyPI
 

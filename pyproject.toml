@@ -1,5 +1,11 @@
 [build-system]
-requires = ["scikit-build-core>=0.10", "nanobind>=2.0"]
+# nanobind is capped below 3: nanobind 3.0.0 (2026-08-22) does not compile on
+# the Windows runner's clang-cl, failing inside its own nb_backend_slots.h on a
+# constexpr in the NB_SLOT_ALIAS macro -- pypgl's sources are never reached. It
+# builds and passes the whole suite on Linux, and emits a _pgl.pyi byte-identical
+# to 2.x's, so the cap is purely about that Windows bug: lift it once nanobind
+# ships a fix, and re-check the stub is still identical when doing so.
+requires = ["scikit-build-core>=0.10", "nanobind>=2.0,<3"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -62,12 +68,12 @@ sdist.exclude = [".ipynb_checkpoints", "**/*.ipynb", ".pytest_cache",
 # left out: nanobind supports it, but it is a separate ABI and a separate wheel
 # per platform, and nothing has asked for it yet.
 #
-# cp39 is gone as of 0.7.0: nanobind 3.0.0 (released 2026-08-22) refuses Python
-# < 3.10 outright, failing at CMake configure time before a line is compiled, so
-# the floor is the binding library's and not a choice. Python 3.9 reached
-# end-of-life in October 2025, and 3.9 users can stay on pypgl 0.6.0. The
-# nanobind floor below stays at 2.0 rather than 3.0: pypgl builds against both,
-# and the two produce a byte-identical _pgl.pyi.
+# cp39 is gone as of 0.7.0. This is a deliberate choice and not a forced one --
+# the nanobind cap above holds the build on 2.x, which still supports 3.9 -- but
+# Python 3.9 reached end-of-life in October 2025, nanobind 3 has dropped it, and
+# keeping it would mean re-adding the wheels only to drop them again when the cap
+# lifts. Anyone still on 3.9 can stay on pypgl 0.6.0; requires-python keeps pip
+# from offering them this release.
 build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
 # Skip PyPy (nanobind targets CPython), 32-bit, and musl (lean matrix to start).
 skip = "pp* *_i686 *-win32 *-musllinux_*"
