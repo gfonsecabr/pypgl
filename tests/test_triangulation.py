@@ -462,6 +462,46 @@ def test_the_domain_question_is_not_the_membership_question():
     assert not mesh.has(tiny)
 
 
+def test_domain_predicates_answer_for_compound_region_queries():
+    # A compound region reaches the mesh's own overload for its type. Answering
+    # it by way of the type-erased Shape instead used to recurse straight back
+    # into the erased call and take the interpreter down with it.
+    domain = Polygon([0, 0, 10, 0, 10, 10, 0, 10]).triangulation()
+    region = pypgl.PolygonWithHoles(
+        Polygon([1, 1, 5, 1, 5, 5, 1, 5]), [Polygon([2, 2, 4, 2, 4, 4, 2, 4])]
+    )
+    polygons = pypgl.PolygonSet(
+        [region, pypgl.PolygonWithHoles(Polygon([6, 6, 9, 6, 9, 9, 6, 9]))]
+    )
+    convex = pypgl.HalfplaneIntersection(Rectangle(Point(1, 1), Point(5, 5)))
+
+    for query in (region, polygons, convex):
+        assert domain.contains(query)
+        assert domain.interiorContains(query)
+        assert domain.intersects(query)
+        assert domain.interiorsIntersect(query)
+
+
+def test_the_whole_plane_meets_a_domain_without_being_covered_by_it():
+    # A default-constructed HalfplaneIntersection is the whole plane, so a
+    # bounded domain meets it everywhere and covers none of it.
+    domain = Polygon([0, 0, 10, 0, 10, 10, 0, 10]).triangulation()
+    plane = pypgl.HalfplaneIntersection()
+    assert not domain.contains(plane)
+    assert not domain.interiorContains(plane)
+    assert domain.intersects(plane)
+    assert domain.interiorsIntersect(plane)
+
+
+def test_a_compound_region_reaching_outside_is_not_contained():
+    domain = Polygon([0, 0, 10, 0, 10, 10, 0, 10]).triangulation()
+    straddling = pypgl.PolygonWithHoles(Polygon([5, 5, 20, 5, 20, 20, 5, 20]))
+    assert not domain.contains(straddling)
+    assert not domain.interiorContains(straddling)
+    assert domain.intersects(straddling)
+    assert domain.interiorsIntersect(straddling)
+
+
 # --- convex decomposition ---------------------------------------------------
 
 def test_a_convex_partition_covers_the_domain_with_disjoint_pieces():
