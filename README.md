@@ -136,31 +136,25 @@ canvas.writeSVG("example2.svg")
 
 ## Algorithms and Data Structures
 
-<img align="right" src="https://raw.githubusercontent.com/gfonsecabr/pypgl/main/doc/figures/example_triangulation.svg" width="200"/>
+<img align="right" src="https://raw.githubusercontent.com/gfonsecabr/pgl/main/doc/figures/algds.svg" width="180"/>
 
-PGL includes [fundamental algorithms](doc/algorithms.md) and [data structures](doc/data_structures.md) such as:
+Pangolin includes [fundamental algorithms](doc/algorithms.md):
 
-- Convex hull: `convexHull` / `convexHullExtended`, computed with Graham scan.
-- Line segment intersection: sweep-line and brute-force pair enumeration plus
-  detection predicates, all using rational numbers.
-- Smallest enclosing disk (`smallestEnclosingDisk`) and closest pair of points
-  (`closestPair`), both exact.
-- Visibility: visibility graphs and the visible region from a query point, for a
-  polygon, a region, or a triangulation with walls.
-- Sort points: in place by angle (`sortAround`) or Hilbert order (`hilbertSort`).
-- Polyomino enumeration: free polyominoes as `Polygon` or `PolygonWithHoles`
-  objects.
-- `ShapeTree`: a kd-tree for points, generalized to a mix of any bounded shapes,
-  answering range and nearest-neighbor queries.
-- `IntervalTree`: a mutable one-dimensional index over the shapes' projections,
-  balanced under insertion and removal.
-- `Triangulation`: including Delaunay and constrained Delaunay triangulations for
-  points, polygons and regions, with traversal queries, incremental insertion,
-  convex decomposition and Voronoi duals.
-- `Arrangement`: the exact subdivision of the plane induced by segments, rays and
-  lines, with point location and face extraction.
-- `Graph`: the combinatorial companion of the geometric structures, with
-  connectivity, clique cover, minimum spanning tree and shortest path.
+- **Convex hull** computed with Graham scan.
+- Line segment intersection: **Bentley-Ottmann sweep line** using rational numbers.
+- **Minkowski sum**, **Minkowski erosion** and **boolean operations**.
+- **Visibility** graph and visibility polygon.
+- Find the **closest pair** of points using divide and conquer.
+- Smallest **enclosing disk and rectangle**.
+- Sort points by angle or Hilbert order.
+
+ and [data structures](doc/data_structures.md):
+
+- **Kd-tree** for points and a generalization for other bounded shapes.
+- **Interval tree** to use 1-dimensional queries on projections.
+- **Triangulation** including **Delaunay** and **constrained Delaunay** triangulations for points and polygons.
+- **Arrangement** of lines, line segments, and rays with a **trapezoidal map** for fast point location.
+- Graph class for combinatorial algorithms like **Djikstra** and **Prim** that can be used to compute Euclidean minimum spanning trees and shortest paths among obstacles.
 
 
 ## Installation
