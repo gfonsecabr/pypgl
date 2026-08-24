@@ -19,8 +19,11 @@ These operations are not implemented yet:
 
 - `intersection` of a chain (`Polyline`, `MonotoneChain`) with a `Disk`, and of
   any shape with a `Disk` other than a `Point`.
-- `minkowskiSum` of a `Disk` with anything but a `Point`, another `Disk` or a
-  `Halfplane`, and of an unbounded shape with a non-convex one.
+- `minkowskiSum` and `minkowskiErosion` of a `Disk` with anything but a `Point`,
+  another `Disk` or a `Halfplane`, and of an unbounded shape with a non-convex
+  one. The `Disk`-with-`Halfplane` pair is bound but has no exact answer either
+  way: sliding a boundary by a radius moves it along that boundary's own *unit*
+  normal, which is a square root even when the radius is exact.
 - `distanceL1` / `distanceLInf` to and from a `Disk`, which is implemented only
   against a `Point` so far.
 - Hausdorff distance for the non-convex shapes (`Polygon`, `PolygonWithHoles`,
@@ -33,9 +36,10 @@ the two regions [`PolygonWithHoles`](shapes.md#polygon-with-holes) and
 [`PolygonSet`](shapes.md#polygon-set), the convex
 [`HalfplaneIntersection`](shapes.md#halfplane-intersection), the full
 two-dimensional [`intersection`](shape_methods.md#intersection) grid, the
-Minkowski sums of the chains and of the unbounded shapes, and
-[`regularizedUnionOf`](algorithms.md#boolean-operations-and-minkowski-sum) over a
-range of any of the six bounded region types.
+Minkowski sums of the chains and of the unbounded shapes,
+[`regularizedUnionOf`](algorithms.md#boolean-operations-minkowski-sums-and-erosions)
+over a range of any of the six bounded region types, and the whole
+[`minkowskiErosion`](shape_methods.md#minkowski-erosion) family.
 
 ## Deliberately Not Exposed
 

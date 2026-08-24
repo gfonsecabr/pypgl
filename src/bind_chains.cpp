@@ -108,7 +108,9 @@ namespace {
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, SelfT);                                                                         \
     PGL_BIND_ALL_SAME_POINT_SET(cls, SelfT);                                                                          \
     PGL_BIND_INTERSECTION_CHAIN(cls, SelfT);                                                                          \
-    PGL_BIND_MINKOWSKI_REGION(cls, SelfT)
+    PGL_BIND_MINKOWSKI_REGION(cls, SelfT);                                                                            \
+    PGL_BIND_EROSION_REGION(cls, SelfT);                                                                              \
+    PGL_BIND_CONVEX_HULL(cls, SelfT)
 
 }  // namespace
 

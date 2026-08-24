@@ -128,9 +128,10 @@ redundant.
 Still to do: consider STABLE_ABI to cut the wheel count before the next
 release. (The 2D∩2D `intersection` gap that used to be listed here closed in
 milestone 12. pgl-side gaps that keep pypgl's matrices ragged are tracked in
-[doc/todo.md](doc/todo.md): chain ∩ `Disk`, L1/LInf distance to a `Disk`, and
-Hausdorff distance for the non-convex shapes. The `regularizedUnionOf` range gap
-listed here closed in milestone 13.)
+[doc/todo.md](doc/todo.md): chain ∩ `Disk`, L1/LInf distance to a `Disk`,
+Hausdorff distance for the non-convex shapes, and the `Halfplane`-with-`Disk`
+sum and erosion, which have no exact answer at all — see milestone 16. The
+`regularizedUnionOf` range gap listed here closed in milestone 13.)
 [pypgl.md](pypgl.md) remains the authoritative design contract —
 update it in lockstep if a decision changes.
 
@@ -741,7 +742,104 @@ pre-existing exceptions that are not the edits' doing: the PDF carries a
 creation date, and `example_mindisk.svg` varies run to run because
 `smallestEnclosingDisk` is randomized, so the same disk comes back through a
 different triple of boundary points (the `<title>` tooltip changes, the drawing
-does not).
+does not). (That second exception went away in milestone 16: the algorithm's
+default order is deterministic upstream now, and the example is
+`example_enclosing.py`.)
+
+**A shipped segfault, fixed by a re-pin** (milestone 15, version 0.6.1):
+`.pgl-ref` re-pinned to `fe8b0cb`, 35 upstream commits on from `60c2328`.
+`Triangulation`'s four domain predicates crashed the interpreter for every
+compound region query — `PolygonWithHoles`, `PolygonSet` and
+`HalfplaneIntersection`, twelve combinations in all — because the erased `Shape`
+path recursed straight back into itself instead of reaching the concrete
+overload. pypgl 0.6.0 shipped it: milestone 12 bound the family against all 17
+shapes but tested only the simple ones, so nothing caught it. Fixed upstream
+(pgl `89a9849`) and now covered by three tests in
+[tests/test_triangulation.py](tests/test_triangulation.py). **The lesson is the
+one the probe already taught in a different key**: a matrix bound by a macro is
+only as tested as its rows — bind 17 columns, test at least one of each *kind* of
+column, compound shapes included.
+
+The rest of that re-pin needed no binding change: the red-blue sweep behind
+`Polygon`/`PolygonWithHoles`/`PolygonSet` containment and intersection, a
+`PolygonWithHoles.pointInside` fast path, an amortized-logarithmic
+`IntervalTree.erase` (already bound), and a deterministic default order for
+`smallestEnclosingDisk`.
+
+**Minkowski erosion, `convexHull`, the enclosing shapes and A\*** (milestone 16,
+version 0.7.0): the new API that same re-pin brought, bound in one pass. The
+grid came from a probe (`scratchpad/probe.cpp`, generated and thrown away) that
+instantiated `requires`-guarded calls for all 17×17 pairs and printed each
+demangled return type — the same method milestone 12 used, and still the only
+practical way to get a matrix this size right.
+
+**`minkowskiErosion` mirrors `minkowskiSum` operand for operand**, since pgl
+gates both on `MinkowskiSummableConcept`, so the four new macros in
+[src/common.h](src/common.h) (`PGL_BIND_EROSION_CONVEX` / `_UNBOUNDED` /
+`_REGION` / `PGL_BIND_TRANSLATION_EROSION`) carry the four sum lists verbatim and
+each shape simply calls the erosion macro next to its sum macro. There is **no
+operator spelling**: pgl gives it none, and `-` already means translation by a
+point. What differs is the answer, and two differences are load-bearing:
+
+- **A convex receiver answers a `HalfplaneIntersection` even when it is
+  bounded**, where the sum would have given a `Convex`. Eroding a convex shape
+  is clamping each of its own half-planes by the operand's support function, and
+  that never leaves the form. It also means the operand counts only through its
+  hull, so a non-convex operand and its `convexHull()` erode identically.
+  `Rectangle` ⊖ `Rectangle` is the one pair closed under it, as under the sum.
+- **An erosion disconnects**, so a bounded non-convex receiver answers a
+  `PolygonSet` and never a single `PolygonWithHoles` — a dumbbell eroded by
+  anything wider than its handle is two regions, for operands that are in no way
+  degenerate. This is the one structural difference from the sum.
+
+The `Disk` pairs are hand-bound for the same reason its sums are: `Disk` ⊖ `Disk`
+is a `Disk` or **`None`** when the eroding disk is the larger (the sum always
+answers), and `Disk` ⊖ `Halfplane` is empty — pgl models that with an
+`EmptyShape` pypgl does not bind, so the lambda returns `None`, which is how
+every other empty result already reaches Python. `Point` ⊖ `Disk` is exact and
+macro-free, since "nothing" needs no square root.
+
+**A pre-existing bug this surfaced**: `Halfplane` + `Disk` has *never* worked in
+pypgl, in either direction or either spelling. Sliding a boundary out by a radius
+moves it along that boundary's own **unit** normal, and normalizing is a square
+root even when the radius is exact — so pgl refuses `ERational` outright,
+however the disk was built. The docstrings said "raises for an irrational
+radius", which is wrong; they now say it always raises and why, and
+[doc/raw/todo.md](doc/raw/todo.md) records it as a gap rather than a feature.
+The erosion counterpart behaves identically and is bound anyway, so the refusal
+at least names its reason.
+
+Also bound: **`convexHull()`** on the twelve shapes that have one — the eleven
+bounded ones other than `Disk` (whose hull is itself and is no polygon), plus
+`HalfplaneIntersection`, which raises when unbounded; the four unbounded shapes
+have no `bbox` to begin with — via `PGL_BIND_CONVEX_HULL`. **`Convex`'s two
+smallest enclosing shapes**, which read a convex boundary and so live on that
+class alone: `smallestEnclosingDisk()` (the method form of the free function)
+and `smallestEnclosingRectangle()`, which returns a `HalfplaneIntersection`
+rather than a `Rectangle` because the smallest-**area** one is generally tilted
+and a `Rectangle` is axis-aligned by definition. **`Graph.shortestPath`'s A\*
+overload**, a fifth `lowerBound` argument wrapped in the same `PyWeight` as the
+weight, so an exact bound stays exact; the extra argument is what tells the two
+overloads apart. And **`chainCount()`** on `Polygon`/`PolygonWithHoles`, the
+count the new containment fast paths price themselves on.
+
+Not bound: **the `Triangulation` handle API** (`TriId`/`VertexId`/`getShape`/
+`getId`/`label(TriId)`, the largest single addition in the re-pin) — the user's
+call. Per-triangle labels go with it, being reachable only through a handle.
+Also skipped: `Polygon.containsChainBased` and `sweepContains`, which upstream
+documents as benchmark-only ("reach for `contains` rather than this"), the same
+call as the existing `containsCollinear` skip.
+
+Examples: `example_mindisk.py` became `example_enclosing.py` (both enclosing
+shapes, matching upstream's rename) and `example_motion.py` is new — a polygonal
+robot routed through a room by eroding the room by the robot and running A\* over
+the reduced visibility graph, which is the erosion's headline use. Its printed
+output matches the C++ example's exactly, and its SVG matches too **up to the
+order of the graph edges**: pypgl's `Graph.edges()` is a sorted materialized list
+rather than a hash-table walk, so the same lines come out in a different document
+order. Every pre-existing figure is byte-identical, which stays the check worth
+repeating. [examples/README.md](examples/README.md)'s gallery is three columns
+now, with one-line descriptions, following upstream.
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).

@@ -158,6 +158,43 @@ def test_no_path_gives_an_empty_result():
     assert g.shortestPath(Point(0, 0), Point(7, 7), lambda a, b: 1) == []
 
 
+def test_a_lower_bound_turns_the_search_into_a_star():
+    # The fifth argument is what tells the two overloads apart: an estimate of
+    # what is left to travel, which steers the frontier toward the target
+    # without changing the answer.
+    g = _path_graph()
+    length = lambda a, b: a.distance(b)
+    assert g.shortestPath(Point(0, 0), Point(2, 0), length, length) == \
+           g.shortestPath(Point(0, 0), Point(2, 0), length)
+    # Straight-line distance is admissible here, since no edge is shorter than
+    # the gap it spans. A bound of zero is admissible too and degenerates to
+    # plain Dijkstra.
+    assert g.shortestPath(Point(0, 0), Point(2, 0), length, lambda a, b: 0.0) == [
+        Point(0, 0), Point(1, 0), Point(2, 0),
+    ]
+
+
+def test_a_star_keeps_the_endpoint_conventions():
+    g = _path_graph()
+    g.addVertex(Point(9, 9))
+    weight = lambda a, b: a.distance(b)
+    assert g.shortestPath(Point(0, 0), Point(0, 0), weight, weight) == [Point(0, 0)]
+    assert g.shortestPath(Point(0, 0), Point(9, 9), weight, weight) == []
+    assert g.shortestPath(Point(0, 0), Point(7, 7), weight, weight) == []
+
+
+def test_a_star_weights_may_be_exact_too():
+    # Both callables answer in the same weight type, and PyWeight compares and
+    # adds through the Python protocols -- so an exact bound stays exact.
+    g = _path_graph()
+    path = g.shortestPath(
+        Point(0, 0), Point(2, 0),
+        lambda a, b: abs(a.x() - b.x()) + abs(a.y() - b.y()),
+        lambda a, b: abs(a.x() - b.x()) + abs(a.y() - b.y()),
+    )
+    assert path == [Point(0, 0), Point(1, 0), Point(2, 0)]
+
+
 # --- where graphs come from -------------------------------------------------
 
 def test_a_triangulation_hands_back_its_1_skeleton():

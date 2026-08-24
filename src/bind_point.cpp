@@ -45,11 +45,17 @@ void bind_point(nb::module_ &m) {
     cls.def("asHalfplaneIntersection", [](const Point &p) { return p.asHalfplaneIntersection(); },
             "The same point as a (degenerate) HalfplaneIntersection.");
     PGL_BIND_TRANSFORMS(cls, Point);
+    PGL_BIND_CONVEX_HULL(cls, Point);
     // Every Minkowski sum with a Point is a translation, so a Point is the one
     // shape that sums with all seventeen -- the sixteen the convex matrix
     // covers, plus the Disk, whose translate is again a Disk.
     PGL_BIND_MINKOWSKI_CONVEX(cls, Point);
+    PGL_BIND_EROSION_CONVEX(cls, Point);
     PGL_MINK(cls, Point, Disk);
+    // Eroding a point by anything with area leaves nothing, so this answers the
+    // empty HalfplaneIntersection for every operand but a degenerate one -- which
+    // is exactly what makes the Disk operand exact here, unlike the sum above.
+    PGL_EROSION(cls, Point, Disk);
 
     // A Point indexes over its two coordinates (so get(i) yields a coordinate,
     // not a Point). size() is 2.

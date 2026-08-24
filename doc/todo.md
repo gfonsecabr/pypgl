@@ -21,8 +21,11 @@ These operations are not implemented yet:
 
 - `intersection` of a chain ([`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.")) with a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), and of
   any shape with a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") other than a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.").
-- `minkowskiSum` of a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") with anything but a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."), another [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") or a
-  [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line."), and of an unbounded shape with a non-convex one.
+- `minkowskiSum` and `minkowskiErosion` of a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") with anything but a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."),
+  another [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") or a [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line."), and of an unbounded shape with a non-convex
+  one. The [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.")-with-[`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line.") pair is bound but has no exact answer either
+  way: sliding a boundary by a radius moves it along that boundary's own *unit*
+  normal, which is a square root even when the radius is exact.
 - `distanceL1` / `distanceLInf` to and from a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), which is implemented only
   against a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") so far.
 - Hausdorff distance for the non-convex shapes ([`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes."),
@@ -35,9 +38,10 @@ the two regions [`PolygonWithHoles`](shapes.md#polygon-with-holes) and
 [`PolygonSet`](shapes.md#polygon-set), the convex
 [`HalfplaneIntersection`](shapes.md#halfplane-intersection), the full
 two-dimensional [`intersection`](shape_methods.md#intersection) grid, the
-Minkowski sums of the chains and of the unbounded shapes, and
-[`regularizedUnionOf`](algorithms.md#boolean-operations-and-minkowski-sum) over a
-range of any of the six bounded region types.
+Minkowski sums of the chains and of the unbounded shapes,
+[`regularizedUnionOf`](algorithms.md#boolean-operations-minkowski-sums-and-erosions)
+over a range of any of the six bounded region types, and the whole
+[`minkowskiErosion`](shape_methods.md#minkowski-erosion) family.
 
 ## Deliberately Not Exposed
 

@@ -35,6 +35,7 @@ void bind_lines(nb::module_ &m) {
         // or the whole plane), so it comes back as a HalfplaneIntersection --
         // except for the Point pair, which is the line translated.
         PGL_BIND_MINKOWSKI_UNBOUNDED(cls, Line);
+        PGL_BIND_EROSION_UNBOUNDED(cls, Line);
         PGL_BIND_XY_AT(cls, Line);
         PGL_BIND_HALFPLANES(cls, Line);
         PGL_BIND_COLLINEAR(cls, Line);
@@ -73,6 +74,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_LINE_HELPERS(cls, OrientedLine);
         PGL_BIND_IS_UNDEFINED(cls, OrientedLine);
         PGL_BIND_MINKOWSKI_UNBOUNDED(cls, OrientedLine);
+        PGL_BIND_EROSION_UNBOUNDED(cls, OrientedLine);
         PGL_BIND_XY_AT(cls, OrientedLine);
         PGL_BIND_HALFPLANES(cls, OrientedLine);
         PGL_BIND_ORIENTED_HELPERS(cls, OrientedLine);
@@ -109,6 +111,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_LINE_HELPERS(cls, Ray);
         PGL_BIND_IS_UNDEFINED(cls, Ray);
         PGL_BIND_MINKOWSKI_UNBOUNDED(cls, Ray);
+        PGL_BIND_EROSION_UNBOUNDED(cls, Ray);
         PGL_BIND_XY_AT(cls, Ray);
         PGL_BIND_HALFPLANES(cls, Ray);
         PGL_BIND_ORIENTED_HELPERS(cls, Ray);
@@ -167,19 +170,29 @@ void bind_lines(nb::module_ &m) {
         // just pushed out to where the summand's farthest point reaches; with
         // another unbounded convex shape it gives a HalfplaneIntersection.
         PGL_BIND_MINKOWSKI_CONVEX(cls, Halfplane);
+        PGL_BIND_EROSION_CONVEX(cls, Halfplane);
         // The Disk is the seventeenth, and needs the result type spelled out:
         // pgl's default there is `double`, which pypgl does not instantiate.
-        // Asking for ERational keeps the answer exact and makes pgl raise for a
-        // disk built from three boundary points, whose radius is generally
-        // irrational (see bind_disk.cpp for the same pair the other way round).
+        // Both directions slide the boundary along its own *unit* normal, and
+        // normalizing asks for a square root of the direction vector's length
+        // -- so unlike the Disk-with-Disk pair, an exact radius is not enough
+        // and pgl refuses the exact type outright, however the disk was built.
+        // These stay bound so the refusal names the reason; see bind_disk.cpp
+        // for the same pair the other way round.
         cls.def("minkowskiSum",
                 [](const Halfplane &h, const Disk &d) { return h.minkowskiSum<Num>(d); },
                 nb::arg("other"),
-                "The half-plane pushed out by the disk's radius. Requires a disk built "
-                "from a center and a radius; raises for one whose radius is irrational.");
+                "The half-plane pushed out by the disk's radius. Always raises for "
+                "pypgl's exact coordinates: sliding a boundary by a radius needs its unit "
+                "normal, whose length is a square root even when the radius is exact.");
         cls.def("__add__",
                 [](const Halfplane &h, const Disk &d) { return h.minkowskiSum<Num>(d); },
                 nb::is_operator());
+        cls.def("minkowskiErosion",
+                [](const Halfplane &h, const Disk &d) { return h.minkowskiErosion<Num>(d); },
+                nb::arg("other"),
+                "The half-plane pulled in by the disk's radius -- the translations that "
+                "keep the whole disk inside it. Raises for the same reason its sum does.");
         PGL_BIND_ALL_PREDICATES(cls, Halfplane);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Halfplane);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Halfplane);

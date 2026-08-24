@@ -135,6 +135,10 @@ void bind_polygon(nb::module_ &m) {
     // the other operand is a region or a set of them.
     PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Polygon);
     PGL_BIND_MINKOWSKI_REGION(cls, Polygon);
+    PGL_BIND_EROSION_REGION(cls, Polygon);
+    PGL_BIND_CONVEX_HULL(cls, Polygon);
+    cls.def("chainCount", [](const Polygon &s) { return s.chainCount(); },
+            "Number of lexicographically monotone chains the boundary breaks into -- 2 for a convex ring, more the more the boundary reverses direction in x. It is what the containment and intersection tests cost: they run chain against chain when there are few, and fall back to a plane sweep when there are many.");
     PGL_BIND_DEGENERACY(cls, Polygon);
     cls.def("rotate90", [](Polygon &p, int k) { p.rotate90(k); }, nb::arg("k") = 1,
             "Rotate the polygon in place by 90*k degrees about the origin.");

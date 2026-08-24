@@ -95,6 +95,7 @@ void bind_disk(nb::module_ &m) {
     // and makes pgl raise for a disk built from three boundary points, whose
     // radius is generally irrational and so has no exact sum.
     PGL_BIND_TRANSLATION_MINKOWSKI(cls, Disk);
+    PGL_BIND_TRANSLATION_EROSION(cls, Disk);
     cls.def("minkowskiSum", [](const Disk &a, const Disk &b) { return a.minkowskiSum<Num>(b); },
             nb::arg("other"),
             "The disk centered at the sum of the centers with the sum of the radii. "
@@ -103,10 +104,29 @@ void bind_disk(nb::module_ &m) {
             nb::is_operator());
     cls.def("minkowskiSum", [](const Disk &d, const Halfplane &h) { return d.minkowskiSum<Num>(h); },
             nb::arg("other"),
-            "The half-plane pushed out by the disk's radius. Requires an exact radius; "
-            "raises otherwise.");
+            "The half-plane pushed out by the disk's radius. Always raises for pypgl's "
+            "exact coordinates: sliding a boundary by a radius needs its unit normal, "
+            "whose length is a square root even when the radius is exact (bind_lines.cpp "
+            "carries the same pair the other way round).");
     cls.def("__add__", [](const Disk &d, const Halfplane &h) { return d.minkowskiSum<Num>(h); },
             nb::is_operator());
+    // The two erosions the Disk answers, both needing the same explicit result
+    // type its sums do. Neither has an operator spelling.
+    cls.def("minkowskiErosion",
+            [](const Disk &a, const Disk &b) { return a.minkowskiErosion<Num>(b); },
+            nb::arg("other"),
+            "The disk centered at the difference of the centers with the difference of "
+            "the radii, or None when the eroding disk is the larger and no translation "
+            "fits. Requires both disks to carry an exact radius; raises otherwise.");
+    cls.def("minkowskiErosion",
+            [](const Disk &d, const Halfplane &h) {
+                (void)d.minkowskiErosion<Num>(h);
+                return nb::none();
+            },
+            nb::arg("other"),
+            "None: no translation of a half-plane fits inside a disk, so the erosion is "
+            "empty. pgl answers with a shape for the empty set that pypgl does not bind, "
+            "and None is how every other empty result reaches Python.");
     cls.def("bbox", [](const Disk &d) { return d.bbox(); },
             "Exact axis-aligned bounding box (a Rectangle); tight when built from a center and radius.");
 

@@ -179,6 +179,8 @@ void bind_polygonset(nb::module_ &m) {
     PGL_BIND_BOOLEANS(cls, PolygonSet);
     PGL_BIND_REGULARIZED_INTERSECTION(cls, PolygonSet);
     PGL_BIND_MINKOWSKI_REGION(cls, PolygonSet);
+    PGL_BIND_EROSION_REGION(cls, PolygonSet);
+    PGL_BIND_CONVEX_HULL(cls, PolygonSet);
     PGL_BIND_INTERSECTION_SET(cls, PolygonSet);
 
     // --- the shared matrices ---

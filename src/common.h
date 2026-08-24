@@ -316,6 +316,17 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     cls.def("scaledDownY", [](const SelfT &s, const ::pypgl::Num &k) { return s.scaledDownY(k); }, nb::arg("scalar"), \
             "Return the shape with its y-coordinates divided by scalar.")
 
+// The convex hull, bound on every shape that has a bbox and can be written as
+// the hull of finitely many points -- the eleven bounded ones other than the
+// Disk, plus the HalfplaneIntersection, which raises when it is unbounded.
+// Twelve in all: not the Disk, whose hull is itself and is no polygon, and not
+// the four unbounded shapes, which have no bbox to begin with. The answer is always a Convex, and it is what
+// makes the shapes a Minkowski sum or erosion refuses reachable: eroding by a
+// hull is the convex approximation a caller can always ask for by hand.
+#define PGL_BIND_CONVEX_HULL(cls, SelfT)                                       \
+    cls.def("convexHull", [](const SelfT &s) { return s.convexHull(); },       \
+            "The convex hull of the shape's points, as a Convex.")
+
 // Queries over a shape's defining points, bound on every shape that has them
 // (all but Point, whose `index` takes a coordinate and which has no interior):
 //   pointInside()        — an exact interior point (ResultNumber defaults to
@@ -810,6 +821,112 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
 // which shape `a` is.
 #define PGL_BIND_TRANSLATION_MINKOWSKI(cls, SelfT)         \
     PGL_PRED(cls, SelfT, minkowskiSum, ::pypgl::Point)
+
+// -----------------------------------------------------------------------------
+// Minkowski erosions (implementation/minkowskierosion.hpp)
+//
+// A (-) B = {x : x (+) B is inside A} = the intersection of all A - b, the
+// morphological dual of the sum above. Written `a.minkowskiErosion(b)`; there is
+// no operator spelling, since pgl gives it none and `-` already means
+// translation by a point on every shape that takes one.
+//
+// It is defined for exactly the pairs the sum is, so the four operand lists
+// below are the four above verbatim, and a receiver simply calls the erosion
+// macro next to its sum macro. What differs is the answer:
+//
+//   * a Point operand is again a translation, so every shape erodes by one and
+//     gets its own type back -- the one case that is the sum's mirror image;
+//   * erosion is *not* commutative, and the two operands are read quite
+//     differently: a convex receiver needs nothing but its own half-planes and
+//     the operand's support function, so it answers a HalfplaneIntersection --
+//     for a *bounded* receiver too, where the sum would have given a Convex.
+//     The operand need not be convex there, since a support function only sees
+//     its hull. Two rectangles are the one pair closed under the erosion, as
+//     they are under the sum;
+//   * a Halfplane receiver comes back a Halfplane, pulled in rather than pushed
+//     out, for every bounded operand; an unbounded operand makes it a
+//     HalfplaneIntersection (usually the empty one);
+//   * a bounded non-convex receiver answers a PolygonSet and never a single
+//     PolygonWithHoles, which is the one structural difference from the sum:
+//     an erosion disconnects. A dumbbell eroded by anything wider than its
+//     handle is two regions, for operands that are in no way degenerate;
+//   * a bounded receiver eroded by an unbounded operand is empty, and comes
+//     back as the empty shape of whichever type the row above gives;
+//   * the Disk pairs are bound by hand for the same reason the sums are (pgl
+//     defaults them to `double`): Disk (-) Disk is a Disk or None -- None when
+//     the eroding disk is the larger, where the sum always answers -- and
+//     Disk (-) Halfplane is empty, which pgl models with a shape pypgl does not
+//     bind, so it answers None (see bind_disk.cpp).
+//
+// pgl raises for an operand that covers no point, whose erosion is the whole
+// plane and not a set of bounded regions.
+
+// The named `minkowskiErosion` for one pair. There is no operator counterpart
+// to PGL_MINK here on purpose.
+#define PGL_EROSION(cls, SelfT, OtherT)                        \
+    PGL_PRED(cls, SelfT, minkowskiErosion, OtherT)
+
+// A bounded convex polygonal receiver -- Point, Segment, OrientedSegment,
+// Triangle, Rectangle, Convex -- eroded by every shape but a Disk, matching
+// PGL_BIND_MINKOWSKI_CONVEX operand for operand. (A Point additionally erodes
+// by a Disk, and a Halfplane takes this list plus the Disk itself.)
+#define PGL_BIND_EROSION_CONVEX(cls, SelfT)                    \
+    PGL_EROSION(cls, SelfT, ::pypgl::Point);                   \
+    PGL_EROSION(cls, SelfT, ::pypgl::Segment);                 \
+    PGL_EROSION(cls, SelfT, ::pypgl::OrientedSegment);         \
+    PGL_EROSION(cls, SelfT, ::pypgl::Line);                    \
+    PGL_EROSION(cls, SelfT, ::pypgl::OrientedLine);            \
+    PGL_EROSION(cls, SelfT, ::pypgl::Ray);                     \
+    PGL_EROSION(cls, SelfT, ::pypgl::Halfplane);               \
+    PGL_EROSION(cls, SelfT, ::pypgl::Triangle);                \
+    PGL_EROSION(cls, SelfT, ::pypgl::Rectangle);               \
+    PGL_EROSION(cls, SelfT, ::pypgl::Convex);                  \
+    PGL_EROSION(cls, SelfT, ::pypgl::MonotoneChain);           \
+    PGL_EROSION(cls, SelfT, ::pypgl::Polyline);                \
+    PGL_EROSION(cls, SelfT, ::pypgl::Polygon);                 \
+    PGL_EROSION(cls, SelfT, ::pypgl::PolygonWithHoles);        \
+    PGL_EROSION(cls, SelfT, ::pypgl::HalfplaneIntersection);   \
+    PGL_EROSION(cls, SelfT, ::pypgl::PolygonSet)
+
+// An unbounded convex receiver -- Line, OrientedLine, Ray,
+// HalfplaneIntersection -- which takes only convex operands, exactly as
+// PGL_BIND_MINKOWSKI_UNBOUNDED does.
+#define PGL_BIND_EROSION_UNBOUNDED(cls, SelfT)                 \
+    PGL_EROSION(cls, SelfT, ::pypgl::Point);                   \
+    PGL_EROSION(cls, SelfT, ::pypgl::Segment);                 \
+    PGL_EROSION(cls, SelfT, ::pypgl::OrientedSegment);         \
+    PGL_EROSION(cls, SelfT, ::pypgl::Line);                    \
+    PGL_EROSION(cls, SelfT, ::pypgl::OrientedLine);            \
+    PGL_EROSION(cls, SelfT, ::pypgl::Ray);                     \
+    PGL_EROSION(cls, SelfT, ::pypgl::Halfplane);               \
+    PGL_EROSION(cls, SelfT, ::pypgl::Triangle);                \
+    PGL_EROSION(cls, SelfT, ::pypgl::Rectangle);               \
+    PGL_EROSION(cls, SelfT, ::pypgl::Convex);                  \
+    PGL_EROSION(cls, SelfT, ::pypgl::HalfplaneIntersection)
+
+// A bounded receiver that is not convex, or not a single region: MonotoneChain,
+// Polyline, Polygon, PolygonWithHoles, PolygonSet. Same operands as
+// PGL_BIND_MINKOWSKI_REGION; every answer but the Point translation and the
+// Halfplane is a PolygonSet.
+#define PGL_BIND_EROSION_REGION(cls, SelfT)                    \
+    PGL_EROSION(cls, SelfT, ::pypgl::Point);                   \
+    PGL_EROSION(cls, SelfT, ::pypgl::Segment);                 \
+    PGL_EROSION(cls, SelfT, ::pypgl::OrientedSegment);         \
+    PGL_EROSION(cls, SelfT, ::pypgl::Halfplane);               \
+    PGL_EROSION(cls, SelfT, ::pypgl::Triangle);                \
+    PGL_EROSION(cls, SelfT, ::pypgl::Rectangle);               \
+    PGL_EROSION(cls, SelfT, ::pypgl::Convex);                  \
+    PGL_EROSION(cls, SelfT, ::pypgl::MonotoneChain);           \
+    PGL_EROSION(cls, SelfT, ::pypgl::Polyline);                \
+    PGL_EROSION(cls, SelfT, ::pypgl::Polygon);                 \
+    PGL_EROSION(cls, SelfT, ::pypgl::PolygonWithHoles);        \
+    PGL_EROSION(cls, SelfT, ::pypgl::PolygonSet)
+
+// The Disk's one macro-bound erosion, its translation by a Point. Its other two
+// (by a Disk and by a Halfplane) need an explicit result type and are bound by
+// hand, exactly as its sums are.
+#define PGL_BIND_TRANSLATION_EROSION(cls, SelfT)               \
+    PGL_EROSION(cls, SelfT, ::pypgl::Point)
 
 // -----------------------------------------------------------------------------
 // A triangulation's domain predicates (algorithm/triangulation.hpp)

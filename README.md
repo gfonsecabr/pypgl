@@ -26,6 +26,9 @@ if s.intersects(t):
 # Output: (1,0)--(4,15/2) intersects (0,8)--(7/3,1)
 ```
 
+There are many more [illustrated examples](examples/) that give a good overview of the library's features and syntax.
+
+
 ## Shapes and Predicates
 
 | Family | Shapes |
@@ -86,7 +89,9 @@ The [boolean operations](doc/shape_methods.md#boolean-operations)
 (`regularizedUnion`, `difference`, `symmetricDifference`,
 `regularizedIntersection`) and the
 [Minkowski sum](doc/shape_methods.md#minkowski-sum) are closed over the region
-shapes, so a result feeds straight back in:
+shapes, so a result feeds straight back in. Its dual, the
+[Minkowski erosion](doc/shape_methods.md#minkowski-erosion), answers where a
+shape *fits* inside another:
 
 ```python
 import pypgl as pgl
@@ -210,7 +215,7 @@ instead of the pinned upstream commit:
 - For a brief description, check the documents at the [doc folder](doc/).
 - Runnable scripts live in the [examples folder](examples/) — predicates, canvas
   styling, a shape gallery, `ShapeTree` queries, constrained triangulation,
-  Minkowski sums, minimum spanning trees, visibility, arrangements and Voronoi
-  diagrams.
+  Minkowski sums, enclosing shapes, minimum spanning trees, visibility, robot
+  motion planning, arrangements and Voronoi diagrams.
 - Shapes and canvases render inline in a Jupyter notebook — see [canvas.md](doc/canvas.md#inline-display-in-jupyter).
 - Check the [C++ version](https://github.com/gfonsecabr/pgl).

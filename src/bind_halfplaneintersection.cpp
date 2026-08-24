@@ -122,6 +122,8 @@ void bind_halfplane_intersection(nb::module_ &m) {
     // refused: its sum would be an unbounded non-convex region, which no pgl
     // shape represents.
     PGL_BIND_MINKOWSKI_UNBOUNDED(cls, HalfplaneIntersection);
+    PGL_BIND_EROSION_UNBOUNDED(cls, HalfplaneIntersection);
+    PGL_BIND_CONVEX_HULL(cls, HalfplaneIntersection);
 
     // --- the implicit corners ---
     cls.def("vertexCount", [](const HalfplaneIntersection &k) { return k.vertexCount(); },

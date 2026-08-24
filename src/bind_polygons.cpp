@@ -60,6 +60,8 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_BOOLEANS(cls, Triangle);
         PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Triangle);
         PGL_BIND_MINKOWSKI_CONVEX(cls, Triangle);
+        PGL_BIND_EROSION_CONVEX(cls, Triangle);
+        PGL_BIND_CONVEX_HULL(cls, Triangle);
         PGL_BIND_DEGENERACY(cls, Triangle);
         PGL_BIND_VERTEX_QUERIES(cls, Triangle);
         PGL_BIND_INDEXING(cls, Triangle);
@@ -213,6 +215,8 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_BOOLEANS(cls, Rectangle);
         PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Rectangle);
         PGL_BIND_MINKOWSKI_CONVEX(cls, Rectangle);
+        PGL_BIND_EROSION_CONVEX(cls, Rectangle);
+        PGL_BIND_CONVEX_HULL(cls, Rectangle);
         PGL_BIND_DEGENERACY(cls, Rectangle);
         PGL_BIND_VERTEX_QUERIES(cls, Rectangle);
         PGL_BIND_INDEXING(cls, Rectangle);
@@ -376,6 +380,23 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_BOOLEANS(cls, Convex);
         PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Convex);
         PGL_BIND_MINKOWSKI_CONVEX(cls, Convex);
+        PGL_BIND_EROSION_CONVEX(cls, Convex);
+        PGL_BIND_CONVEX_HULL(cls, Convex);
+        // The two smallest enclosing shapes, both of which read a *convex*
+        // boundary and so live on this class alone; any other shape reaches
+        // them through its own convexHull(), whose enclosing shapes are its.
+        cls.def("smallestEnclosingRectangle",
+                [](const Convex &c) { return c.smallestEnclosingRectangle(); },
+                "The smallest-area enclosing rectangle, at whatever angle it turns out to "
+                "be -- so a HalfplaneIntersection (four half-planes) rather than a "
+                "Rectangle, which is axis-aligned by definition. Rotating calipers over "
+                "the hull, linear in its vertices.");
+        cls.def("smallestEnclosingDisk",
+                [](const Convex &c) { return c.smallestEnclosingDisk(); },
+                "The unique smallest closed Disk containing the hull -- the same answer "
+                "the free smallestEnclosingDisk() gives for its vertices, and the reason "
+                "to prefer it is that the hull has already thrown the interior points "
+                "away. Welzl's algorithm, expected linear time.");
         PGL_BIND_DEGENERACY(cls, Convex);
         cls.def("rotate90", [](Convex &c, int k) { c.rotate90(k); }, nb::arg("k") = 1,
                 "Rotate the hull in place by 90*k degrees about the origin.");

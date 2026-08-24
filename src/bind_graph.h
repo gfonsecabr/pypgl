@@ -190,6 +190,27 @@ void bindGraph(nb::module_ &m, const char *name) {
             "that vertex alone, and an empty result means there is none -- the two lie "
             "in different components, or one of them is absent. Dijkstra's algorithm, "
             "O(m log m).");
+    // A* is the same search with a second callable steering it: the lower bound
+    // is added to the distance so far to order the frontier, so a bound that
+    // knows where the target is expands far fewer vertices than Dijkstra. Both
+    // callables answer in the same weight type -- PyWeight compares and adds
+    // through the Python protocols either way -- so an exact Fraction bound
+    // stays exact. The extra argument is what tells the two overloads apart.
+    cls.def("shortestPath",
+            [](const Graph &g, const Vertex &source, const Vertex &target,
+               nb::callable weight, nb::callable lowerBound) {
+                return g.shortestPath(
+                    source, target,
+                    [&](const Vertex &u, const Vertex &v) { return PyWeight{weight(u, v)}; },
+                    [&](const Vertex &u, const Vertex &v) { return PyWeight{lowerBound(u, v)}; });
+            },
+            nb::arg("source"), nb::arg("target"), nb::arg("weight"), nb::arg("lowerBound"),
+            "The same shortest path, found by A* instead: lowerBound(v, target) estimates "
+            "what is left to travel and prioritizes the vertices that look closest. The "
+            "estimate must be non-negative, must never exceed the true remaining "
+            "distance, and must be zero at the target -- none of which is checked, and an "
+            "overestimate simply returns a path that need not be shortest. It need not be "
+            "consistent: a vertex is reopened whenever a shorter route to it turns up.");
 
     // --- container sugar (bound here rather than in __init__.py: a Graph is
     // not a shape, so it takes part in none of that file's loops) ---

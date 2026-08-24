@@ -247,7 +247,7 @@ They are **not** nested: an island stranded inside a hole of the result is a
 component of its own, stored beside the region holding it.
 
 To unite many shapes at once, use
-[`regularizedUnionOf`](algorithms.md#boolean-operations-and-minkowski-sum),
+[`regularizedUnionOf`](algorithms.md#boolean-operations-minkowski-sums-and-erosions),
 which settles them all in one arrangement instead of building one per step.
 
 #### Why `intersection` is different
@@ -346,14 +346,90 @@ $\mathrm{hull}(A \oplus B) = \mathrm{hull}(A) \oplus \mathrm{hull}(B)$, a caller
 who wants the convex approximation can ask for it explicitly by summing the
 hulls.
 
-The two [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") sums are exact when both operands carry a radius, and raise for a
-disk built from three boundary points, whose radius is generally irrational:
+Summing two [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.")s is exact when both carry a radius, and raises for a disk
+built from three boundary points, whose radius is generally irrational:
 
 ```python
 a = pgl.Disk(pgl.Point(0,0), 3)
 b = pgl.Disk(pgl.Point(4,1), 2)
 a + b                     # Disk centered (4,1), radius 5 — exact
 ```
+
+The [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.")-with-[`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line.") pair raises whatever the disk: sliding a boundary
+out by a radius moves it along the boundary's own *unit* normal, whose length is
+a square root even when the radius is exact, and exact coordinates have no
+square root to offer.
+
+### Minkowski Erosion
+
+The erosion of `A` by `B` is the set of translations that keep `B` inside `A`,
+$A \ominus B = \{x : x \oplus B \subseteq A\}$ — the morphological dual of the
+sum. It is written `a.minkowskiErosion(b)`; there is no operator spelling, since
+`-` already means translating by a point.
+
+It is defined for exactly the pairs the sum is, but it is **not commutative**
+and reads its two operands quite differently, so its answers are not the sum's:
+
+| pair | result |
+|---|---|
+| anything with a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") | the other operand's own type, translated the opposite way — the one case that mirrors the sum |
+| a convex receiver (bounded or not) with anything | a [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty."), or a [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.") when both are rectangles |
+| a [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line.") with anything bounded | a [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line."), pulled in as far as the operand reaches |
+| a bounded non-convex receiver with anything bounded | a [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors.") |
+| two [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.")s | a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), or `None` when the eroding disk is the larger |
+
+```python
+room = pgl.Polygon([0,0, 12,0, 12,8, 6,8, 6,4, 0,4])
+brick = pgl.Rectangle(pgl.Point(0,0), pgl.Point(2,2))
+free = room.minkowskiErosion(brick)
+# every point of `free` is a position where the whole brick fits in the room
+```
+
+Two things separate it from the sum. A **convex receiver** answers a
+[`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty.") even when it is bounded and the sum would have given a
+[`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."): eroding a convex shape means clamping each of its own half-planes by
+how far the operand reaches, which never leaves that form. It also means the
+operand counts only through its hull, since a clamp reads nothing else —
+`receiver.minkowskiErosion(shape)` and
+`receiver.minkowskiErosion(shape.convexHull())` agree for a convex receiver.
+
+And an **erosion disconnects**, which is why a non-convex receiver always
+answers a [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors.") and never a single [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes."): a dumbbell eroded
+by anything wider than its handle comes apart into two regions, for operands
+that are in no way degenerate.
+
+Eroding by something too large simply leaves the empty shape of whichever type
+the table gives, as does eroding a bounded receiver by an unbounded operand.
+Eroding by a shape that covers no point is the whole plane: a convex receiver
+says so, while a region-valued one has no way to write it down and raises.
+
+The identity worth knowing is that erosion undoes a sum of convex shapes,
+$(A \oplus B) \ominus B = A$, which is what makes it the tool for questions of
+the form "where does this fit": a robot's positions in a room, a placement that
+clears every obstacle.
+
+### Convex Hull
+
+Every bounded shape answers [`convexHull()`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a3999bfdf73609b7ec708a4882fcaea2f "Computes the convex hull of a point container.") with a [`Convex`](shapes.md#convex)
+covering the same points:
+
+```python
+c = pgl.Polygon([0,0, 6,0, 6,2, 2,2, 2,4, 6,4, 6,6, 0,6])
+c.convexHull()            # Convex[(0,0),(6,0),(6,6),(0,6)] — the dents filled
+```
+
+A [`PolygonWithHoles`](shapes.md#polygon-with-holes) takes the hull of its outer
+boundary, since a hole is interior to it and can never reach the hull; a
+[`PolygonSet`](shapes.md#polygon-set) takes the hull of every component at once.
+A [`HalfplaneIntersection`](shapes.md#halfplane-intersection) has the method
+too, and raises when it is unbounded and has no finite vertex set to take.
+
+The four unbounded shapes have no hull to give and do not carry the method, and
+neither does a [`Disk`](shapes.md#disk), whose hull is itself and is no polygon.
+
+Because $\mathrm{hull}(A \oplus B) = \mathrm{hull}(A) \oplus \mathrm{hull}(B)$,
+this is also how to ask for the convex approximation of a sum or an intersection
+that is not bound for the pair at hand.
 
 ### Other Methods for Shapes
 

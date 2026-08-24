@@ -68,6 +68,9 @@ These functions use the same predicate conventions documented in
 
 To get the hull as a shape rather than as a list of points, construct a
 [`Convex`](shapes.md#convex) directly: `pgl.Convex(points)` computes the hull.
+Every bounded shape also carries its own `convexHull()`, which answers a
+`Convex` covering the same points — see
+[shape methods](shape_methods.md#convex-hull).
 
 ### Smallest enclosing disk
 
@@ -82,6 +85,35 @@ corners = [pgl.Point(0,0), pgl.Point(4,0), pgl.Point(4,4), pgl.Point(0,4)]
 disk = pgl.smallestEnclosingDisk(corners)
 print(disk.center(), disk.squaredRadius())
 # Output: (2,2) 8
+```
+
+The order of the points does not affect the answer, and neither does anything
+else: the randomization is seeded the same way every run, so the same input
+gives the identical disk.
+
+### Smallest enclosing shapes of a convex hull
+
+Both of these read a *convex* boundary, so they live on
+[`Convex`](shapes.md#convex) rather than being free functions. Any other shape
+reaches them through its own `convexHull()`, whose enclosing shapes are its own.
+
+- `Convex.smallestEnclosingDisk()`: The same disk `smallestEnclosingDisk` gives
+  for the hull's vertices. Worth preferring once a hull is at hand, since it has
+  already discarded the interior points.
+
+- `Convex.smallestEnclosingRectangle()`: The smallest-**area** enclosing
+  rectangle, at whatever angle that turns out to be — so it comes back as a
+  [`HalfplaneIntersection`](shapes.md#halfplane-intersection) of four
+  half-planes and not as a [`Rectangle`](shapes.md#rectangle), which is
+  axis-aligned by definition. By rotating calipers, linear in the hull's
+  vertices. Its corners are generally fractional even for integer input, which
+  the exact rationals carry without rounding, while its four supporting lines
+  stay in the input's own coordinates.
+
+```python
+diamond = pgl.Convex([0,4, 4,0, 8,4, 4,8])
+print(diamond.smallestEnclosingRectangle().area(), diamond.bbox().area())
+# Output: 32 64
 ```
 
 ### Closest pair of points
@@ -143,7 +175,7 @@ for w in room.visibleVertices(source):
 path = graph.shortestPath(source, target, lambda a, b: a.distance(b))
 ```
 
-### Boolean operations and Minkowski sum
+### Boolean operations, Minkowski sums and erosions
 
 Both families are documented under
 [shape methods](shape_methods.md#boolean-operations). One free function belongs

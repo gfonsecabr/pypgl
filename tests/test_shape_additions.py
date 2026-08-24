@@ -520,3 +520,98 @@ def test_the_new_mutable_shapes_have_in_place_transforms(shape):
     assert shape == scaled_y
     shape.scaleDownY(2)
     assert shape == scaled_y.scaledDownY(2)
+
+
+# --- the convex hull of any shape -------------------------------------------
+
+@pytest.mark.parametrize(
+    "shape, expected",
+    [
+        (Point(3, 4), Convex([3, 4])),
+        (Segment(0, 0, 4, 3), Convex([0, 0, 4, 3])),
+        (Triangle(0, 0, 4, 0, 0, 3), Convex([0, 0, 4, 0, 0, 3])),
+        (Rectangle(Point(0, 0), Point(4, 3)), Convex([0, 0, 4, 0, 4, 3, 0, 3])),
+        (Polyline([0, 0, 3, 4, 6, 0]), Convex([0, 0, 6, 0, 3, 4])),
+        (MonotoneChain([0, 0, 3, 4, 6, 0]), Convex([0, 0, 6, 0, 3, 4])),
+    ],
+)
+def test_a_shape_hands_back_its_own_convex_hull(shape, expected):
+    hull = shape.convexHull()
+    assert isinstance(hull, Convex)
+    assert hull.samePointSet(expected)
+
+
+def test_the_hull_of_a_non_convex_shape_fills_its_dents():
+    c = Polygon([0, 0, 6, 0, 6, 2, 2, 2, 2, 4, 6, 4, 6, 6, 0, 6])
+    hull = c.convexHull()
+    assert hull.contains(c)
+    assert hull.area() > c.area()
+    assert hull.samePointSet(Rectangle(Point(0, 0), Point(6, 6)))
+
+
+def test_a_region_takes_the_hull_of_its_outer_boundary():
+    # A hole is interior to the outer ring, so it cannot reach the hull.
+    ring = PolygonWithHoles(
+        Polygon([0, 0, 8, 0, 8, 8, 0, 8]), [Polygon([2, 2, 6, 2, 6, 6, 2, 6])]
+    )
+    assert ring.convexHull().samePointSet(Rectangle(Point(0, 0), Point(8, 8)))
+
+
+def test_a_set_takes_the_hull_of_every_component_at_once():
+    apart = pypgl.PolygonSet(
+        [
+            PolygonWithHoles(Polygon([0, 0, 2, 0, 2, 2, 0, 2])),
+            PolygonWithHoles(Polygon([8, 8, 10, 8, 10, 10, 8, 10])),
+        ]
+    )
+    hull = apart.convexHull()
+    assert hull.samePointSet(Convex([0, 0, 2, 0, 10, 8, 10, 10, 8, 10, 0, 2]))
+
+
+def test_an_unbounded_convex_shape_has_no_hull_to_give():
+    # A HalfplaneIntersection has the method, since a bounded one is a Convex;
+    # an unbounded one has no finite vertex set and says so.
+    assert HalfplaneIntersection(Rectangle(Point(0, 0), Point(4, 4))).convexHull(
+    ).samePointSet(Rectangle(Point(0, 0), Point(4, 4)))
+    with pytest.raises(Exception):
+        HalfplaneIntersection().convexHull()
+
+
+def test_the_shapes_with_no_hull_do_not_pretend_to_have_one():
+    # The four unbounded shapes have no bbox to begin with, and a Disk's hull
+    # is itself and is no polygon -- so none of them carries the method.
+    for shape in (
+        pypgl.Line(Point(0, 0), Point(1, 0)),
+        pypgl.OrientedLine(Point(0, 0), Point(1, 0)),
+        pypgl.Ray(Point(0, 0), Point(1, 0)),
+        pypgl.Halfplane(Point(0, 0), Point(1, 0)),
+        pypgl.Disk(Point(0, 0), 2),
+    ):
+        assert not hasattr(shape, "convexHull")
+
+
+# --- monotone chain counts --------------------------------------------------
+
+def test_a_convex_boundary_breaks_into_two_chains():
+    # Lexicographically monotone chains: a convex ring turns from increasing to
+    # decreasing exactly once, so it splits at its two extreme vertices.
+    assert Polygon([0, 0, 4, 0, 4, 4, 0, 4]).chainCount() == 2
+    assert Polygon([0, 0, 6, 0, 3, 5]).chainCount() == 2
+
+
+def test_a_jagged_boundary_breaks_into_more():
+    # Each tooth reverses the boundary in x twice, so a comb with three of them
+    # costs six chains where its bounding box costs two. That count is what the
+    # containment and intersection tests price themselves on.
+    comb = Polygon([0, 0, 10, 0, 10, 10, 8, 10, 8, 3, 6, 3,
+                    6, 10, 4, 10, 4, 3, 2, 3, 2, 10, 0, 10])
+    assert comb.isSimple()
+    assert comb.chainCount() == 6
+    assert comb.bbox().asPolygon().chainCount() == 2
+
+
+def test_a_region_counts_the_chains_of_every_ring():
+    outer = Polygon([0, 0, 8, 0, 8, 8, 0, 8])
+    hole = Polygon([2, 2, 6, 2, 6, 6, 2, 6])
+    region = PolygonWithHoles(outer, [hole])
+    assert region.chainCount() == outer.chainCount() + hole.chainCount()

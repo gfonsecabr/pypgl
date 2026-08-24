@@ -223,6 +223,10 @@ void bind_region(nb::module_ &m) {
     PGL_BIND_BOOLEANS(cls, PolygonWithHoles);
     PGL_BIND_REGULARIZED_INTERSECTION(cls, PolygonWithHoles);
     PGL_BIND_MINKOWSKI_REGION(cls, PolygonWithHoles);
+    PGL_BIND_EROSION_REGION(cls, PolygonWithHoles);
+    PGL_BIND_CONVEX_HULL(cls, PolygonWithHoles);
+    cls.def("chainCount", [](const PolygonWithHoles &s) { return s.chainCount(); },
+            "Number of lexicographically monotone chains the rings break into, outer boundary and holes together -- 2 for a convex ring, more the more the boundary reverses direction in x. It is what the containment and intersection tests cost: they run chain against chain when there are few, and fall back to a plane sweep when there are many.");
 
     // The literal intersection, which keeps every piece whatever its
     // dimension: a list of Point / Polyline / PolygonWithHoles against a shape

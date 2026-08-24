@@ -103,6 +103,53 @@ def test_the_smallest_enclosing_disk_of_nothing_is_an_error():
         pypgl.smallestEnclosingDisk([])
 
 
+def test_a_convex_hull_encloses_itself_the_same_way():
+    # The method form, which reads a boundary that is already convex and so
+    # lives on Convex alone. Same answer as the free function over the points.
+    corners = [Point(0, 0), Point(4, 0), Point(4, 4), Point(0, 4)]
+    hull = pypgl.Convex(corners)
+    assert hull.smallestEnclosingDisk() == pypgl.smallestEnclosingDisk(corners)
+
+
+def test_the_enclosing_disk_is_the_same_however_the_points_are_ordered():
+    # The randomized incremental algorithm settled on a deterministic order
+    # upstream, so a shuffled input gives back the identical disk.
+    corners = [Point(0, 2), Point(4, 12), Point(10, 4), Point(16, 14), Point(8, -4)]
+    first = pypgl.smallestEnclosingDisk(corners)
+    assert pypgl.smallestEnclosingDisk(list(reversed(corners))) == first
+    assert pypgl.smallestEnclosingDisk(corners[2:] + corners[:2]) == first
+
+
+# --- smallest enclosing rectangle -------------------------------------------
+
+def test_the_smallest_enclosing_rectangle_of_a_square_is_that_square():
+    square = pypgl.Convex([0, 0, 4, 0, 4, 4, 0, 4])
+    rect = square.smallestEnclosingRectangle()
+    assert isinstance(rect, pypgl.HalfplaneIntersection)
+    assert rect.samePointSet(square)
+
+
+def test_the_enclosing_rectangle_may_be_tilted():
+    # It minimizes *area* at whatever angle that takes, which is why it comes
+    # back as four half-planes rather than as an axis-aligned Rectangle. A
+    # diamond's tightest box is the tilted one, half the area of its bbox.
+    diamond = pypgl.Convex([0, 4, 4, 0, 8, 4, 4, 8])
+    rect = diamond.smallestEnclosingRectangle()
+    assert rect.contains(diamond)
+    assert rect.area() == 32                      # the bbox is 8 x 8
+    assert rect.area() < diamond.bbox().area()
+
+
+def test_the_enclosing_rectangle_stays_exact_on_a_slanted_hull():
+    # Its corners are generally fractional even for integer input, and the
+    # exact rational coordinates carry them without rounding.
+    hull = pypgl.Convex([0, 0, 5, 1, 4, 5, 1, 4])
+    rect = hull.smallestEnclosingRectangle()
+    assert rect.contains(hull)
+    for vertex in hull.vertices():
+        assert vertex in rect
+
+
 # --- closest pair -----------------------------------------------------------
 
 def test_closest_pair_finds_the_two_nearest_points():

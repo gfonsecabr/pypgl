@@ -539,6 +539,7 @@ A polygon `P` has methods such as:
 - `P.isDegenerate()`: Returns true if the polygon has null area.
 - `P.isSimple()`: Returns true if the edges only intersect at the endpoints of consecutive edges. Takes $O(n \log n)$ time for $n$ edges.
 - `P.isConvex()`: Returns true if the polygon is convex, possibly with vertices subdividing convex hull edges. Takes $O(n)$ time.
+- `P.chainCount()`: The number of lexicographically monotone chains the boundary breaks into — 2 for a convex ring, and more the more often the boundary reverses direction in $x$. It is what the containment and intersection tests price themselves on: they run chain against chain when there are few and fall back to a plane sweep when there are many.
 - `P.untangle()`: Makes the polygon simple in place, returning `None`. Edges that cross are flipped, and when a flip is blocked by collinear vertices the offending vertex is removed instead, so the vertex set may shrink. On return `P.isSimple()` holds. Worst-case complexity is high.
 - `P.pointInside()`: Returns an exact point strictly inside the polygon, even a non-convex one (the vertex average would not do: it can fall in a notch, outside the polygon).
 - `P.triangulation()` / `P.triangulation(segments)`: Returns the constrained Delaunay [`Triangulation`](data_structures.md#triangulation) of the polygon, optionally with extra constrained edges.
@@ -569,6 +570,7 @@ A convex polygon `c` has methods such as:
 - `c.centroid()`: Returns the centroid.
 - `c.insert(point)` / `c.insert(points)` / `c.insert(shape)`: Enlarges the hull in place so that it contains the given point, points, or shape. A shape must have vertices to take the hull of, so a `Disk` and the unbounded shapes raise a `TypeError`. (They are refused explicitly rather than by omission: every shape is iterable over its defining points, so without the guard `c.insert(disk)` would quietly insert the disk's three *boundary* points, whose hull the disk bulges straight past.)
 - `c.upperHull()` / `c.lowerHull()`: Return the upper and lower boundary chains as a [`MonotoneChain`](#monotonechain). Both run between the leftmost and rightmost vertices, and together they cover the boundary.
+- `c.smallestEnclosingDisk()` / `c.smallestEnclosingRectangle()`: The smallest enclosing [`Disk`](#disk), and the smallest-**area** enclosing rectangle — which comes back as a [`HalfplaneIntersection`](#halfplane-intersection), since the tightest one is generally tilted and a `Rectangle` is axis-aligned by definition. Both read a convex boundary, which is why they live here; every other shape reaches them through its own `convexHull()`. See [algorithms](algorithms.md#smallest-enclosing-shapes-of-a-convex-hull).
 
 It knows how to convert itself to:
 - `c.asPolygon()`: Returns the polygon representation of the convex polygon.
@@ -636,6 +638,7 @@ A region `A` has methods such as:
 - `A.empty()`: Returns true if the region has no outer boundary at all, and hence covers no point.
 - `A.isSimple()`: Returns true if every ring is simple. A per-ring check only: it says nothing about how the rings sit relative to one another.
 - `A.isValid()`: Tests the whole structural contract above.
+- `A.chainCount()`: The monotone chains of every ring added up, outer boundary and holes together — the same cost measure `Polygon.chainCount()` reports.
 - `A.isRegular()`: Returns true if the region is the closure of its own interior. Since the contract constrains interiors only, a valid region may pinch shut along a whole stretch of edge — a **slit**, region material with no area on either side of it, as when a hole shares an edge with another hole or with the outer boundary. A region with area is regular exactly when it has no slit. Pinching at an isolated *point* is not a slit: the interior still reaches the point from every side.
 - `A.regularized()`: Returns $\mathrm{closure}(A^\circ)$ — the region without its slits — as a [`PolygonSet`](#polygon-set), the same regularization every boolean operation applies to its own result. Dropping the slits can disconnect what they were holding together, which is why the result is a set: a region whose slits are its only connective tissue comes back as several components, and one with no area comes back empty.
 - `A.convexPartition()` / `A.convexCovering()`: Cut or cover the part of the region that has area with [`Convex`](#convex) pieces. The holes are where there is no piece, and a slit, having no area, appears in none of them.
