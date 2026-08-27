@@ -139,7 +139,7 @@ update it in lockstep if a decision changes.
 set (pgl's `algorithm/triangulation.hpp`) is bound in
 [src/bind_triangulation.cpp](src/bind_triangulation.cpp) over the module's own
 `Triangle`/`Segment` pair (`::pypgl::Triangulation` in
-[src/common.h](src/common.h) — `.pgl-ref` re-pulled to commit `99ac4d2` for
+[src/common.h](src/common.h) — `.pgl-ref` re-pulled to commit `2693693` for
 this). All four C++ construction modes are bound: an explicit triangle set, an
 explicit edge set, the Delaunay triangulation of a point set, and the
 constrained Delaunay triangulation of a simple `Polygon` (optionally with
@@ -183,7 +183,7 @@ Load-bearing design decisions below), since a spatial index that can hold,
 say, a `Triangle` and a `Disk` side by side needs a type-erased element, and
 `pgl::Shape<PointType>` is exactly that (`::pypgl::AnyShape`/`::pypgl::ShapeTree`
 in [src/common.h](src/common.h)). This needed two small upstream pgl fixes,
-made in this same session and pulled by re-pinning `.pgl-ref` to `dcea2a3`:
+made in this same session and pulled by re-pinning `.pgl-ref` to `eec62c4`:
 `Shape::bbox()` didn't exist at all (added, throwing for the four unbounded
 alternatives `Line`/`OrientedLine`/`Ray`/`Halfplane`); and `Shape::squaredDistance`
 threw for any pair involving a `Disk`, since `Disk`'s `squaredDistance` (and the
@@ -231,7 +231,7 @@ generic `size()`/`get()`/`__contains__` sugar in `__init__.py` and
 every other shape.
 
 **L1/LInf/Hausdorff distance, `Transformation`, and incremental `Triangulation`
-insertion bound** (milestone 8): `.pgl-ref` re-pinned to `3b0729b` pulled in a
+insertion bound** (milestone 8): `.pgl-ref` re-pinned to `e7985c7` pulled in a
 batch of upstream additions, all now bound.
 
 `distanceL1`/`distanceLInf` (exact Manhattan/Chebyshev distance) are bound for
@@ -311,7 +311,7 @@ explicitly before calling pgl's `inverse()` and raises a clean Python
 not an upstream fix.
 
 **`Polyline` + `MonotoneChain`, PDF/Ipe export, `has()` rename** (milestone 9):
-`.pgl-ref` re-pinned to `91b6714`, which brought two new 1D shapes, a Canvas
+`.pgl-ref` re-pinned to `8804140`, which brought two new 1D shapes, a Canvas
 overhaul, and one breaking rename.
 
 The two shapes are bound together in
@@ -403,7 +403,7 @@ geometrically *below* the supporting line (and vice versa) on all three of
 to the *left* of the directed boundary, so "above" is bounded by `min() -> max()`,
 not `max() -> min()`. pgl's own unit tests asserted the inverted behavior, and its
 `shapes.md` stated it as `orientation(p) <= 0`, which is how it got written that
-way. Fixed upstream (pgl commit `5dabc73`, which `.pgl-ref` and
+way. Fixed upstream (pgl commit `7966a5d`, which `.pgl-ref` and
 [CMakeLists.txt](CMakeLists.txt) are now pinned to) by swapping the two
 implementations and correcting the three unit tests; pypgl's `Line.halfplaneAbove`
 had been shipping the inverted result since 0.3.x. The orientation-dependent
@@ -416,11 +416,11 @@ but exist in neither library, so they were dropped from
 has them).
 
 **`PolygonWithHoles` + `HalfplaneIntersection`, booleans, Minkowski sums, and
-the degeneracy family** (milestone 11): `.pgl-ref` re-pinned to `830d9a7`, which
+the degeneracy family** (milestone 11): `.pgl-ref` re-pinned to `fe8c3ec`, which
 brought 156 upstream commits — two new shape classes, two new operation
 families, and one cross-cutting addition to every existing shape.
 
-**The re-pin did not build**, and the fix was upstream (pgl commit `830d9a7`,
+**The re-pin did not build**, and the fix was upstream (pgl commit `fe8c3ec`,
 made in this session and pushed). `Shape::squaredDistanceOf` probes
 `left.squaredDistance<ResultNumber>(right)` first; `PolygonWithHoles` and
 `HalfplaneIntersection` declare that templated form but answered in a hard-coded
@@ -549,7 +549,7 @@ polyline still equals its own reverse.
 
 **`PolygonSet`, `Graph`, `Arrangement`, `IntervalTree`, visibility, and the
 closed boolean algebra** (milestone 12, version 0.6.0): `.pgl-ref` re-pinned to
-`fab9f4e`, 174 upstream commits on from `1c6c6ee`. Four new bound classes, three
+`a50a25a`, 162 upstream commits on from `6e8d65b`. Four new bound classes, three
 breaking renames, and the two ragged matrices (`intersection`, `minkowskiSum`)
 filled in.
 
@@ -674,7 +674,7 @@ until an error message named the wrong path. Check the cache before concluding
 that a header change did not take.
 
 **`regularizedUnionOf` accepts all six bounded region types** (milestone 13):
-`.pgl-ref` re-pinned to `60c2328`, one commit on from `fab9f4e`, which fixed
+`.pgl-ref` re-pinned to `61ad2c5`, one commit on from `a50a25a`, which fixed
 both bodies milestone 12 had to route around — `appendCutSegments` now dispatches
 on whether a piece carries a lazy `edgesView()` and materializes its `edges()`
 otherwise (which is what a `Triangle`/`Rectangle` returns, a fixed-size array),
@@ -747,14 +747,14 @@ default order is deterministic upstream now, and the example is
 `example_enclosing.py`.)
 
 **A shipped segfault, fixed by a re-pin** (milestone 15, version 0.6.1):
-`.pgl-ref` re-pinned to `fe8b0cb`, 35 upstream commits on from `60c2328`.
+`.pgl-ref` re-pinned to `8c1d0bb`, 31 upstream commits on from `61ad2c5`.
 `Triangulation`'s four domain predicates crashed the interpreter for every
 compound region query — `PolygonWithHoles`, `PolygonSet` and
 `HalfplaneIntersection`, twelve combinations in all — because the erased `Shape`
 path recursed straight back into itself instead of reaching the concrete
 overload. pypgl 0.6.0 shipped it: milestone 12 bound the family against all 17
 shapes but tested only the simple ones, so nothing caught it. Fixed upstream
-(pgl `89a9849`) and now covered by three tests in
+(pgl `987db75`) and now covered by three tests in
 [tests/test_triangulation.py](tests/test_triangulation.py). **The lesson is the
 one the probe already taught in a different key**: a matrix bound by a macro is
 only as tested as its rows — bind 17 columns, test at least one of each *kind* of
@@ -870,6 +870,69 @@ end-of-life in October 2025, nanobind 3 has dropped it, and re-adding the wheels
 now would only mean dropping them again when the cap lifts. `requires-python` is
 `>=3.10`, so pip holds 3.9 users on 0.6.0 rather than erroring, and a release is
 15 wheels instead of 18.
+
+**Open-segment containment, a triangulation point-location index, and greedy
+independent sets** (milestone 17, version 1.0.0): `.pgl-ref` re-pinned to
+`f1c9dad`, 26 upstream commits on from `8c1d0bb`. Most of that batch is
+performance with no API attached — batched edge-disjoint flips behind
+`Polygon.untangle`, a faster `regularizedUnion`, faster `ShapeTree`
+construction, a rewritten Bentley-Ottmann status order, an `Arrangement`
+simple-boundaries construction path — plus a benchmark rework whose recorded
+history moved to its own repository. Nothing was removed or renamed upstream, so
+this is the first re-pin since milestone 9 that breaks nothing. Three things
+were genuinely new and all three are bound.
+
+**`interiorContainsInterior(segment)`** on `Polygon`, `PolygonWithHoles` and
+`PolygonSet` (`PGL_BIND_INTERIOR_CONTAINS_INTERIOR` in
+[src/common.h](src/common.h)) is the predicate `interiorContains` cannot express:
+the segment's *endpoints* may rest on the boundary as long as everything strictly
+between them stays strictly inside. A sightline between two boundary vertices is
+exactly that shape, which is what the predicate is for. The operand is a
+`Segment` and only a `Segment` — upstream gates it on `SegmentConcept`, which an
+`OrientedSegment` does not satisfy, so there is no second overload to bind. A
+`PolygonSet` answers componentwise, so a segment through the pinch point two
+touching components share is refused: it lies in the union but in no single
+component.
+
+**`Triangulation.buildPointLocation()`** plus `hasPointLocation()` /
+`hasCurrentPointLocation()` / `clearPointLocation()`
+([src/bind_triangulation.cpp](src/bind_triangulation.cpp)) — an arrangement over
+a *coarsening* of the mesh (one sampled vertex per `bit_width(V)`) that seeds the
+visibility walk beside the query instead of at the previous query's answer. It
+mirrors the `Arrangement` trio already bound in
+[src/bind_arrangement.cpp](src/bind_arrangement.cpp), with one difference worth
+keeping straight: **this index survives every edit.** It only chooses where the
+walk starts, so it stays *correct* across an `insert` or a `flip` and merely
+loses seed quality; `hasCurrentPointLocation()` is the fourth method, and it
+reports exactly that — whether rebuilding would find anything new. Testing it
+needs strictly-interior queries: a query on a vertex or an edge gets *an*
+incident triangle, which one being unspecified with or without the index, so the
+"answers exactly as the bare walk" test offsets its grid queries by
+`(1/3, 1/4)` to miss the mesh's horizontal, vertical and ±1-slope edges.
+
+**`Graph.independentSet()`** on both bound instantiations
+([src/bind_graph.h](src/bind_graph.h)): a maximal — not maximum — set of pairwise
+non-adjacent vertices, greedy from the lowest degree up. It is returned **sorted**,
+per the `vertices()`/`edges()` convention, but sorting fixes only the *order* of
+the answer: equal-degree ties are broken inside pgl by its hash-table walk, so
+*which* of several equally good sets comes back can vary between runs. The
+docstring and [doc/raw/data_structures.md](doc/raw/data_structures.md) say so
+rather than promising a stability the binding cannot deliver.
+
+**Not bound: `Triangulation.asArrangement()`**, which labels each face with the
+triangle's `TriId`. It returns `Arrangement<PointType, TriId>`, and pypgl binds
+the single instantiation `Arrangement<Point, Point>` (milestone 12) and left the
+`TriId` handle API unbound (milestone 16). Binding it means either a second
+`Arrangement` class plus the handle type, or stripping the labels — which throws
+away the only reason the method exists. The existing decision stands.
+
+**Version 1.0.0**, the first stable release: the API has been additive-only
+since 0.6.1, the seventeen shape classes cover pgl's own set, and the matrices
+(predicates, distances, booleans, Minkowski, intersection, `samePointSet`) are
+complete rather than ragged. `requires-python` stays `>=3.10` and the
+`nanobind>=2.0,<3` cap from 0.7.0 is unchanged — the Windows bug that forced it
+is still open, so lifting it is still the separate piece of work milestone 16
+describes.
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).

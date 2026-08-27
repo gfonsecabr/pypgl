@@ -195,6 +195,45 @@ def test_a_star_weights_may_be_exact_too():
     assert path == [Point(0, 0), Point(1, 0), Point(2, 0)]
 
 
+# --- independent sets -------------------------------------------------------
+
+def test_the_independent_set_is_independent_and_maximal():
+    g = _path_graph()
+    g.addEdge(Point(2, 0), Point(3, 0))
+    vertices = g.independentSet()
+    assert all(not g.containsEdge(u, v) for u in vertices for v in vertices if u != v)
+    # Maximal: every vertex left out has a neighbor in the set.
+    outside = [v for v in g.vertices() if v not in vertices]
+    assert all(any(n in vertices for n in g.neighbors(v)) for v in outside)
+
+
+def test_the_independent_set_comes_back_sorted():
+    g = Triangulation([Point(0, 0), Point(4, 0), Point(4, 4), Point(0, 4),
+                       Point(1, 2), Point(3, 1)]).asGraph()
+    vertices = g.independentSet()
+    assert vertices == sorted(vertices)
+
+
+def test_a_complete_graph_admits_one_vertex_only():
+    g = Graph()
+    corners = [Point(0, 0), Point(1, 0), Point(0, 1)]
+    for i, u in enumerate(corners):
+        for v in corners[i + 1:]:
+            g.addEdge(u, v)
+    assert len(g.independentSet()) == 1
+
+
+def test_isolated_vertices_are_all_selected():
+    g = Graph()
+    for i in range(4):
+        g.addVertex(Point(i, 0))
+    assert g.independentSet() == [Point(i, 0) for i in range(4)]
+
+
+def test_an_empty_graph_has_an_empty_independent_set():
+    assert Graph().independentSet() == []
+
+
 # --- where graphs come from -------------------------------------------------
 
 def test_a_triangulation_hands_back_its_1_skeleton():

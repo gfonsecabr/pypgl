@@ -45,6 +45,15 @@ The following table illustrates the result of the predicates for a triangle and 
 | `B.separates(A)`          | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | `A.crosses(B)`            | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
+One predicate sits outside that uniform surface. `A.interiorContainsInterior(s)`
+asks whether the *open* segment `s` lies in the interior of `A`: everything
+strictly between the endpoints must be strictly inside, while either endpoint may
+rest on the boundary. `interiorContains` cannot express that — it refuses a
+segment whose endpoints touch $\partial A$ — and a sightline between two boundary
+vertices is exactly that shape, which is why the predicate exists. It is defined
+on [`Polygon`](shapes.md#polygon), [`PolygonWithHoles`](shapes.md#polygon-with-holes)
+and [`PolygonSet`](shapes.md#polygon-set), and takes a `Segment`.
+
 All predicates are computed exactly. Coordinates in `pypgl` are arbitrary-precision
 rationals (`fractions.Fraction`), so there are no overflow or rounding concerns.
 

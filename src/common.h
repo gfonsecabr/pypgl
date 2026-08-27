@@ -364,6 +364,24 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_PRED(cls, SelfT, separates, OtherT);           \
     PGL_PRED(cls, SelfT, crosses, OtherT)
 
+// Containment of an *open* segment, bound on the three region shapes pgl
+// defines it for (Polygon, PolygonWithHoles, PolygonSet). It is the predicate
+// `interiorContains` cannot express: the segment's endpoints may sit on the
+// boundary as long as everything strictly between them stays strictly inside,
+// which is exactly what a visibility edge between two boundary vertices needs.
+// The operand is a Segment and only a Segment -- upstream gates it on
+// SegmentConcept, which an OrientedSegment does not satisfy.
+#define PGL_BIND_INTERIOR_CONTAINS_INTERIOR(cls, SelfT)                                    \
+    cls.def("interiorContainsInterior",                                                    \
+            [](const SelfT &self, const ::pypgl::Segment &other) {                         \
+                return self.interiorContainsInterior(other);                               \
+            },                                                                             \
+            nb::arg("segment"),                                                            \
+            "Whether the open segment lies in this shape's strict interior. Either "       \
+            "endpoint may lie on the boundary; every point strictly between them must "    \
+            "not. A degenerate segment is accepted exactly when its sole point is "        \
+            "contained.")
+
 // Bind the exact squared distance self.squaredDistance(other) for one OtherT.
 // ResultNumber defaults to the number type (ERational), so the result is the
 // exact squared Euclidean distance as a Fraction — never an approximation.

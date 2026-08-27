@@ -158,6 +158,24 @@ void bindGraph(nb::module_ &m, const char *name) {
             "A partition of the vertices into cliques, largest first, by DSATUR coloring "
             "of the complement graph. Every vertex appears in exactly one clique, but "
             "the number of cliques is not guaranteed minimum.");
+    // Sorted like vertices()/edges(), for the same reason: C++ returns the
+    // vertices in the order the greedy selected them, which is degree order
+    // broken by the hash-table walk. Sorting fixes the *order* of the answer;
+    // it cannot fix which vertices are in it, since equal-degree ties are
+    // resolved inside pgl by that same walk. The docstring says so rather than
+    // promising a stability the binding cannot deliver.
+    cls.def("independentSet",
+            [](const Graph &g) {
+                std::vector<Vertex> result = g.independentSet();
+                std::sort(result.begin(), result.end());
+                return result;
+            },
+            "A maximal set of pairwise non-adjacent vertices, sorted, chosen greedily "
+            "from the lowest-degree vertex up. Maximal, not maximum: every vertex "
+            "outside it is adjacent to one inside, but a larger independent set may "
+            "exist. Vertices of equal degree are considered in an unspecified order, so "
+            "which of several equally good sets comes back may vary between runs -- only "
+            "the ordering of the answer is fixed.");
 
     // --- weighted algorithms ---
     //

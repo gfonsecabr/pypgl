@@ -316,6 +316,76 @@ def test_locate_on_empty_triangulation():
     assert Triangulation().locate(Point(0, 0)) is None
 
 
+def test_the_point_location_index_answers_exactly_as_the_bare_walk():
+    points = [Point(x, y) for x in range(12) for y in range(12)]
+    t = Triangulation(points)
+    # Strictly inside a triangle, so the answer is unique and the index cannot
+    # change it. (On an edge or a vertex, which incident triangle comes back is
+    # unspecified either way.)
+    # The offsets avoid the mesh's horizontal, vertical and +/-1-slope edges,
+    # so no query lands on one.
+    dx, dy = Fraction(1, 3), Fraction(1, 4)
+    queries = [Point(x + dx, y + dy) for x in range(11) for y in range(11)]
+    queries.append(Point(50, 50))
+    walked = [t.locate(q) for q in queries]
+
+    t.buildPointLocation()
+    assert t.hasPointLocation()
+    assert [t.locate(q) for q in queries] == walked
+
+
+def test_a_query_on_a_vertex_still_gets_an_incident_triangle():
+    t = Triangulation([Point(x, y) for x in range(10) for y in range(10)])
+    t.buildPointLocation()
+    located = t.locate(Point(4, 4))
+    assert located is not None
+    assert Point(4, 4) in located
+
+
+def test_the_index_reports_whether_it_is_built_and_current():
+    t = Triangulation([Point(x, y) for x in range(10) for y in range(10)])
+    assert not t.hasPointLocation()
+    assert not t.hasCurrentPointLocation()
+
+    t.buildPointLocation()
+    assert t.hasPointLocation()
+    assert t.hasCurrentPointLocation()
+
+
+def test_an_edit_costs_the_index_its_currency_but_not_its_correctness():
+    t = Triangulation([Point(x, y) for x in range(10) for y in range(10)])
+    t.buildPointLocation()
+
+    assert t.insert(Point(4, 4) + Point(Fraction(1, 3), Fraction(1, 3)))
+    assert t.hasPointLocation()
+    assert not t.hasCurrentPointLocation()
+    # Still correct: the index only chooses where the walk starts.
+    assert t.locate(Point(2, 2)) in t.triangles()
+    assert t.locate(Point(100, 100)) is None
+
+    t.buildPointLocation()
+    assert t.hasCurrentPointLocation()
+
+
+def test_clearing_the_index_goes_back_to_walking():
+    t = Triangulation([Point(x, y) for x in range(10) for y in range(10)])
+    t.buildPointLocation()
+    t.clearPointLocation()
+    assert not t.hasPointLocation()
+    assert not t.hasCurrentPointLocation()
+    assert t.locate(Point(2, 2)) in t.triangles()
+
+
+def test_the_index_is_harmless_on_a_tiny_or_empty_triangulation():
+    empty = Triangulation()
+    empty.buildPointLocation()
+    assert empty.locate(Point(0, 0)) is None
+
+    t = Triangulation(_square_points())
+    t.buildPointLocation()
+    assert t.locate(Point(2, 2)) in t.triangles()
+
+
 # --- constrained edges ----------------------------------------------------------
 
 def test_is_constrained_reflects_polygon_boundary():

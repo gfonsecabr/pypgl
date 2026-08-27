@@ -235,6 +235,7 @@ void bind_region(nb::module_ &m) {
 
     // --- the shared matrices ---
     PGL_BIND_ALL_PREDICATES(cls, PolygonWithHoles);
+    PGL_BIND_INTERIOR_CONTAINS_INTERIOR(cls, PolygonWithHoles);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, PolygonWithHoles);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, PolygonWithHoles);
     PGL_BIND_ALL_SAME_POINT_SET(cls, PolygonWithHoles);

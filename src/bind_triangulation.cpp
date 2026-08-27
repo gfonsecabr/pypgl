@@ -232,7 +232,33 @@ void bind_triangulation(nb::module_ &m) {
     cls.def("locate", [](const Triangulation &t, const Point &point) { return t.locate(point); },
             nb::arg("point"),
             "The (closed) triangle containing point, or None if it lies outside "
-            "the triangulated region (or the triangulation is empty).");
+            "the triangulated region (or the triangulation is empty). Without an "
+            "index the walk starts where the previous query ended, which is fast "
+            "for queries that follow one another; see buildPointLocation().");
+
+    // The index only picks where the walk starts, so it changes what a query
+    // costs and never what it answers -- and, unlike the Arrangement trio this
+    // mirrors, it stays *correct* across insert()/flip(): a seed is a triangle
+    // of this mesh whatever has happened to the mesh since. What an edit costs
+    // is seed quality, which is what hasCurrentPointLocation() reports on.
+    cls.def("buildPointLocation", [](Triangulation &t) { t.buildPointLocation(); },
+            "Build an arrangement-backed index over a coarsening of the mesh, "
+            "after which locate() starts its walk beside the query instead of at "
+            "the previous query's answer. Expected O(V log V) time and "
+            "O(V / log V) space. Calling it again redraws the index against the "
+            "mesh as it now stands (and does nothing if nothing has changed).");
+    cls.def("hasPointLocation", [](const Triangulation &t) { return t.hasPointLocation(); },
+            "Whether locate() currently starts from the point-location index.");
+    cls.def("hasCurrentPointLocation", [](const Triangulation &t) { return t.hasCurrentPointLocation(); },
+            "Whether the index is in place and was drawn against the mesh as it "
+            "now stands. False once an edit has moved the mesh on from it, which "
+            "costs the walk seed quality and nothing else -- the index stays "
+            "correct. This is the test of whether buildPointLocation() would do "
+            "any work.");
+    cls.def("clearPointLocation", [](Triangulation &t) { t.clearPointLocation(); },
+            "Release the point-location index; locate() goes back to walking from "
+            "the previous query's answer. No edit releases it: this is the only "
+            "thing that does.");
 
     // ---- constrained edges ----------------------------------------------
     cls.def("isConstrained", [](const Triangulation &t, const Segment &edge) { return t.isConstrained(edge); },

@@ -541,6 +541,7 @@ A polygon `P` has methods such as:
 - `P.isConvex()`: Returns true if the polygon is convex, possibly with vertices subdividing convex hull edges. Takes $O(n)$ time.
 - `P.chainCount()`: The number of lexicographically monotone chains the boundary breaks into — 2 for a convex ring, and more the more often the boundary reverses direction in $x$. It is what the containment and intersection tests price themselves on: they run chain against chain when there are few and fall back to a plane sweep when there are many.
 - `P.untangle()`: Makes the polygon simple in place, returning `None`. Edges that cross are flipped, and when a flip is blocked by collinear vertices the offending vertex is removed instead, so the vertex set may shrink. On return `P.isSimple()` holds. Worst-case complexity is high.
+- `P.interiorContainsInterior(s)`: Returns true when the open segment `s` lies in the polygon's strict interior. Either endpoint may rest on the boundary; nothing strictly between them may touch it. Takes $O(n)$ time.
 - `P.pointInside()`: Returns an exact point strictly inside the polygon, even a non-convex one (the vertex average would not do: it can fall in a notch, outside the polygon).
 - `P.triangulation()` / `P.triangulation(segments)`: Returns the constrained Delaunay [`Triangulation`](data_structures.md#triangulation) of the polygon, optionally with extra constrained edges.
 - `P.isStarShaped()`: Returns true if some point of the polygon sees every other point of it.
@@ -646,6 +647,7 @@ A region `A` has methods such as:
 - `A.twiceArea()` / `A.area()`: Twice the area exactly and without division, and the area itself.
 - `A.centroid()`: The area-weighted centroid, the holes entering with negative weight. When the net area is zero the centroid of the vertex set is returned instead.
 - `A.verticesCentroid()`: The centroid of the vertex set over all rings.
+- `A.interiorContainsInterior(s)`: Returns true when the open segment `s` lies in the region's strict interior — strictly inside the outer ring and never touching a hole — while either endpoint may rest on any ring. Takes $O(n \log n)$ time.
 - `A.pointInside()`: A point strictly inside the region, so inside the outer boundary and outside every hole. Undefined for a region with no area.
 - `A.triangulation()` / `A.triangulation(segments)`: The constrained Delaunay [triangulation](data_structures.md#triangulation) of the region. Every ring becomes constrained edges and the hole interiors are left out of the domain, so the in-domain triangles cover exactly the part of the region that has area — a slit, having none, carries no triangle.
 - `A.diameter()` / `A.bbox()`: The holes lie inside the outer boundary and cannot contribute, so both are the outer polygon's.
@@ -704,6 +706,7 @@ A set `A` has methods such as:
 - `A.holeCount()` / `A.hasHoles()` / `A.vertexCount()` / `A.vertices()` / `A.edges()` / `A.orientedEdges()`: Counted and collected over every ring of every component.
 - `A.area()` / `A.twiceArea()` / `A.centroid()` / `A.verticesCentroid()` / `A.pointInside()` / `A.diameter()` / `A.bbox()`: The components have disjoint interiors, so the area is simply their sum; the diameter may join two different components.
 - `A.triangulation()` / `A.convexPartition()` / `A.convexCovering()`: The gaps between components are left out of the domain, exactly as a region's holes are.
+- `A.interiorContainsInterior(s)`: Returns true when the open segment `s` lies strictly inside **one** component. Boundary endpoints are allowed; a passage between two components that merely touch is not, since the segment would have to cross the pinch point they share.
 
 `len(A)`, `A[i]` and iteration run over the set's **vertices**, flattened across
 every ring of every component, so a set reads like every other shape — the same

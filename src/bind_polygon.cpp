@@ -173,6 +173,7 @@ void bind_polygon(nb::module_ &m) {
     // Both shared macros now include Disk (see common.h), so these two calls
     // also cover the Polygon<->Disk pairing.
     PGL_BIND_ALL_PREDICATES(cls, Polygon);
+    PGL_BIND_INTERIOR_CONTAINS_INTERIOR(cls, Polygon);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Polygon);
     // Polygon has no squaredHausdorffDistance/hausdorffDistanceL1/LInf (pgl
     // excludes it from that family -- a non-convex polygon would need a
