@@ -934,6 +934,99 @@ complete rather than ragged. `requires-python` stays `>=3.10` and the
 is still open, so lifting it is still the separate piece of work milestone 16
 describes.
 
+**`BitMatrix`, the digital-geometry grid** (milestone 18, version 1.1.0):
+`.pgl-ref` re-pinned to `1e4e6c1`, two upstream commits on from `f1c9dad`. One
+new class, one new enum, two new free functions — and one collision with the
+project's most load-bearing rule.
+
+**`BitMatrix` is the one bound class pypgl cannot hold over its own `Point`.**
+pgl constrains it to `std::signed_integral` coordinates, since a cell of the grid
+*is* an integer position, so `BitMatrix<Point>` (ERational) is ill-formed by
+construction. The cells are therefore stored over `Cell = pgl::Point<int64_t>`
+(`::pypgl::Cell` / `::pypgl::BitMatrix` in [src/common.h](src/common.h)), which
+never surfaces in Python: no second point type is bound, and the boundary is
+crossed in exactly two directions. Going in, a cell is named either by a pair of
+plain ints (the fast spelling, and the one a loop wants) or by an ordinary
+`Point`, which `toCell` checks with pgl's own `gridCoordinate`. Coming out, every
+shape a matrix produces is widened into the bound ERational class by pgl's
+cross-point-type converting constructors, and the measures request `ERational`
+explicitly, so they stay exact. int64_t is not an arbitrary choice: it is exactly
+what pgl itself picks for an ERational shape (`grid_number_t<Rational<BigInt>>`),
+so `polygon.asBitMatrix()` and `BitMatrix(polygon)` name the same grid.
+
+**The second of the two re-pinned commits is what made that clean.** At
+`2996e20` — the commit that added `BitMatrix` — `asBitMatrix` forwarded the
+shape's own point type and so did not compile for an exact shape at all, and
+narrowing one by hand *silently truncated*: a probe put a `7/2` coordinate
+through and got `3` back, no complaint. `1e4e6c1` ("Throw on a non-integer
+coordinate in asBitMatrix") added `gridCoordinate`, which checks
+`Rational::isInteger()` exactly and range-checks against the grid type, and gave
+`asBitMatrix` a `ResultNumber` defaulting through `grid_number_t`. So the whole
+narrowing/guard layer this milestone was budgeting for does not exist — pypgl
+reuses pgl's check rather than reimplementing it, which is also what keeps the
+message identical wherever a bad coordinate enters.
+
+**pgl's own `innerRaster`/`outerRaster` could not be bound directly**, and the
+workaround is a fifteen-line loop in
+[src/bind_bitmatrix.cpp](src/bind_bitmatrix.cpp). They build each cell over the
+*result grid's* point type and hand it to `shape.contains`/`intersects`, and
+`Shape<Point>`'s predicates only accept shapes over their own point type — so an
+int64 cell against an ERational shape does not compile (the error names
+`ShapeAlternative`). The binding runs the same loop with the cell widened to an
+exact `Rectangle` first, which costs nothing since the corners are whole. That
+also buys `AnyShape` support, so all 17 shapes rasterize. **The no-window
+overload is pypgl's own**: pgl's requires an integer shape, which an ERational
+one is not, so the window defaults to the bounding box **rounded outward** —
+outward rather than nearest, because that is the property `outerRaster` exists
+to have. An unbounded shape raises there and rasterizes fine over an explicit
+window, the same split `ShapeTree` already makes between storing and querying.
+
+Binding decisions worth keeping straight: `BitMatrix` is **not** a `Shape`
+alternative, so `casters.h` is untouched, it is no `ShapeTree`/`IntervalTree`
+element, and it is not a row of `PGL_BIND_ALL_PREDICATES` — pgl gives its five
+shape predicates against another `BitMatrix` only. It is mutable and hence
+unhashable, and not a fixed-extent shape, so it is shielded from the generic
+point sugar in [pypgl/__init__.py](pypgl/__init__.py) and
+[src/stubgen_patterns.txt](src/stubgen_patterns.txt) like `Triangulation`/
+`ShapeTree`, binding its own container protocol instead: `len` is the number of
+set cells, iteration yields them as `Point`s, and **`point in matrix` asks
+whether that *cell* is set**, not whether the point lies in the covered region.
+`__repr__` is hand-written (pgl gives `BitMatrix` no `operator<<`, only the
+`Canvas` one), as is the comparison set. `latticeView`/`cellsView` are not bound
+(lazy views, the same call as `Polyline.edgesView`), nor is `fbox`.
+
+**The two readings of a cell are the thing to remember.** Unprefixed, a cell is
+the unit square it covers — the predicates, the measures, the symmetries,
+`minkowskiSum`/`minkowskiErosion`, all of which commute with `asPolygonSet`.
+Prefixed with `lattice`, it is the single point at its lower-left corner, which
+is what makes a structuring element behave. The pair differs by a cell:
+`reflected()` maps `c` to `-c - (1,1)` where `latticeReflected()` maps it to
+`-c`, and the region sum comes out one cell wider and taller in each direction
+than the lattice sum. Transposition is the one operation the two readings agree
+on.
+
+`asBitMatrix()` is bound on `Polygon`/`PolygonWithHoles`/`PolygonSet` through
+`PGL_BIND_AS_BIT_MATRIX` in [src/common.h](src/common.h), each shape calling it
+in its own file (the milestone 11 lesson: nanobind resolves argument types at
+call time, so cross-TU registration order is irrelevant). `GridAdjacency` is
+bound as an `nb::enum_`, and `Canvas.draw(matrix)` streams the matrix's polygon
+set, so touching cells merge into one path — `canvas.draw(matrix.rectangles())`
+is how to draw the cells as separate elements.
+
+**A pre-existing gap this surfaced**, unrelated to `BitMatrix` and now fixed:
+`Transformation * PolygonWithHoles`, `* PolygonSet` and
+`* HalfplaneIntersection` were never bound, though pgl supports all three (a
+test rotating a matrix's polygon set is what tripped over it). The `__mul__`
+list in [src/bind_transformation.cpp](src/bind_transformation.cpp) stopped at
+`Polygon`, where milestone 8 left it, and the three shapes that landed after it
+were never added — which is what a matrix-shaped API costs when one list is
+written out by hand rather than by a macro over a shared shape list.
+
+Not added: an example. [examples/](examples/) is one file per upstream C++ one
+and upstream ships no `BitMatrix` example, so adding one would break that
+mapping.
+
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 
@@ -952,6 +1045,11 @@ point of the project:
 - **One numeric instantiation only:** `pgl::ERational = pgl::Rational<pgl::BigInt>`.
   Do **not** bind the `double` / `Rational<int64_t>` family. This is what keeps the
   binary and API surface bounded. "The number type" / `Num` always means `ERational`.
+  `BitMatrix` (milestone 18) is the one class that cannot obey this — pgl
+  constrains it to `std::signed_integral` cells — so it holds
+  `Cell = pgl::Point<int64_t>` internally while keeping the rule where it counts:
+  no second point type is *bound*, cells enter as ints or ordinary `Point`s, and
+  everything it hands back is widened to the ERational classes.
 - **Exactness is a hard contract.** Coordinates are accepted as `int`, `Fraction`,
   or `"a/b"` strings. **Reject `float` loudly** with a message pointing at the
   accepted forms — never silently approximate.
@@ -991,7 +1089,7 @@ methods), pickling, and `_repr_svg_` for inline Jupyter rendering via `Canvas`.
 
 **Translation units:** one `bind_*.cpp` per shape group (point, segment, lines,
 polygons, polygon, region, polygonset, chains, canvas, and one per data
-structure: triangulation, shapetree, intervaltree, arrangement, graph) so heavy template instantiation compiles in parallel and objects
+structure: triangulation, shapetree, bitmatrix, intervaltree, arrangement, graph) so heavy template instantiation compiles in parallel and objects
 stay small. A `PGL_BIND_PREDICATES(cls, OtherTypes...)` macro in `src/common.h`
 keeps the seven uniform predicates (`contains`, `boundaryContains`,
 `interiorContains`, `intersects`, `interiorsIntersect`, `separates`, `crosses`)

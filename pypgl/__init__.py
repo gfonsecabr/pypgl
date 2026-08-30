@@ -27,6 +27,8 @@ from ._pgl import (
     Disk,
     Triangulation,
     ShapeTree,
+    BitMatrix,
+    GridAdjacency,
     IntervalTree,
     IntervalTreeY,
     Graph,
@@ -54,6 +56,8 @@ from ._pgl import (
     polyominoesUpTo,
     polyominoRegions,
     polyominoRegionsUpTo,
+    innerRaster,
+    outerRaster,
 )
 
 try:
@@ -81,6 +85,8 @@ __all__ = [
     "Disk",
     "Triangulation",
     "ShapeTree",
+    "BitMatrix",
+    "GridAdjacency",
     "IntervalTree",
     "IntervalTreeY",
     "Graph",
@@ -108,19 +114,25 @@ __all__ = [
     "polyominoesUpTo",
     "polyominoRegions",
     "polyominoRegionsUpTo",
+    "innerRaster",
+    "outerRaster",
 ]
 
 
 # --- Pythonic sugar added in the thin Python layer (cheap here, not in C++) ---
 #
-# Triangulation, ShapeTree, IntervalTree, Graph and Arrangement are deliberately
-# absent from every loop below: unlike the fixed-extent shapes, none of them has
-# contains(Point)/pointInside/index/get to hang `in` or indexing off of. The
-# container ones bind their own has()/__contains__/__len__/__iter__ in C++, over
-# what they actually hold -- stored shapes for the two trees, vertices for a
-# graph -- which is membership, not point-in-shape. Triangulation and ShapeTree
-# do get _repr_svg_ further down, since Canvas.draw() accepts them like any
-# other shape; the rest are not drawable.
+# Triangulation, ShapeTree, BitMatrix, IntervalTree, Graph and Arrangement are
+# deliberately absent from every loop below: unlike the fixed-extent shapes, none
+# of them has contains(Point)/pointInside/index/get to hang `in` or indexing off
+# of. The container ones bind their own has()/__contains__/__len__/__iter__ in
+# C++, over what they actually hold -- stored shapes for the two trees, vertices
+# for a graph, set cells for a bit matrix -- which is membership, not
+# point-in-shape. (A BitMatrix does have pointInside() and a contains(), but the
+# first is the center of its first set cell rather than an accessor, and the
+# second takes another matrix; `point in matrix` asks whether that *cell* is
+# set.) Triangulation, ShapeTree and BitMatrix do get _repr_svg_ further down,
+# since Canvas.draw() accepts them like any other shape; the rest are not
+# drawable.
 
 def _shape_contains(self, item):
     """``point in shape`` maps to ``shape.contains(point)``.
@@ -257,11 +269,12 @@ for _cls in (
     PolygonSet,
     HalfplaneIntersection,
     Disk,
-    # Triangulation and ShapeTree are not "shapes" (see the loops above), but
-    # Canvas.draw() accepts them just like every bound shape, so the same
-    # one-shot rendering applies here too.
+    # Triangulation, ShapeTree and BitMatrix are not "shapes" (see the loops
+    # above), but Canvas.draw() accepts them just like every bound shape, so the
+    # same one-shot rendering applies here too.
     Triangulation,
     ShapeTree,
+    BitMatrix,
 ):
     _cls._repr_svg_ = _shape_repr_svg_
 

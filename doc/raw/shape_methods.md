@@ -512,6 +512,14 @@ applied with a [`Transformation`](#transformations).
 
 - `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points. Available on every shape except `Point` and `Polygon`; on a `Polygon`, use `p.index(point) is not None` instead.
 
+- `asBitMatrix()` (`Polygon`, `PolygonWithHoles` and `PolygonSet`): Returns the
+  shape rasterized into a [`BitMatrix`](data_structures.md#bit-matrix) over its
+  bounding box, one bit per covered cell, holes left unset. Only a rectilinear
+  shape is exactly a set of grid cells, so every edge must be axis-parallel, and
+  only whole coordinates name a cell, so a fractional one raises rather than
+  being rounded. Use `innerRaster` or `outerRaster` to approximate any other
+  shape.
+
 ## Iterating
 
 Every shape is iterable over its defining points — for the polygons these are

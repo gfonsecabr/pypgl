@@ -116,4 +116,12 @@ void bind_transformation(nb::module_ &m) {
     cls.def("__mul__", [](const Transformation &t, const MonotoneChain &s) { return t * s; }, nb::is_operator());
     cls.def("__mul__", [](const Transformation &t, const Polyline &s) { return t * s; }, nb::is_operator());
     cls.def("__mul__", [](const Transformation &t, const Polygon &s) { return t * s; }, nb::is_operator());
+    // The compound shapes transform ring by ring / component by component, and a
+    // half-plane intersection by its stored half-planes, so an unbounded one
+    // transforms like any other. (These three were missed when the shapes
+    // landed, which is what a matrix-shaped API costs when one list is written
+    // out by hand.)
+    cls.def("__mul__", [](const Transformation &t, const PolygonWithHoles &s) { return t * s; }, nb::is_operator());
+    cls.def("__mul__", [](const Transformation &t, const PolygonSet &s) { return t * s; }, nb::is_operator());
+    cls.def("__mul__", [](const Transformation &t, const HalfplaneIntersection &s) { return t * s; }, nb::is_operator());
 }

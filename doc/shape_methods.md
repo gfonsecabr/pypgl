@@ -514,6 +514,14 @@ applied with a [`Transformation`](#transformations).
 
 - `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points. Available on every shape except [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") and [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."); on a [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), use `p.index(point) is not None` instead.
 
+- `asBitMatrix()` ([`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes.") and [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors.")): Returns the
+  shape rasterized into a [`BitMatrix`](data_structures.md#bit-matrix) over its
+  bounding box, one bit per covered cell, holes left unset. Only a rectilinear
+  shape is exactly a set of grid cells, so every edge must be axis-parallel, and
+  only whole coordinates name a cell, so a fractional one raises rather than
+  being rounded. Use [`innerRaster`](https://gfonsecabr.github.io/pgl/namespacepgl.html#aebdf56a5d5bef8597be76abfa4083561 "Rasterizes a shape into the cells it covers: its inner approximation.") or [`outerRaster`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a9fe1fda9ac695d02fbb8f9ae220ca06d "Rasterizes a shape into the cells it meets: its outer approximation.") to approximate any other
+  shape.
+
 ## Iterating
 
 Every shape is iterable over its defining points — for the polygons these are

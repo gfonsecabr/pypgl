@@ -19,11 +19,14 @@ from pypgl import (
     Convex,
     Disk,
     Halfplane,
+    HalfplaneIntersection,
     Line,
     OrientedLine,
     OrientedSegment,
     Point,
     Polygon,
+    PolygonSet,
+    PolygonWithHoles,
     Ray,
     Rectangle,
     Segment,
@@ -179,6 +182,45 @@ def test_transformation_rotation_on_halfplane_preserves_orientation():
     # A 90-degree rotation has positive determinant, so it should not need to
     # swap source/target to preserve the interior side.
     assert rotated.contains(Transformation.rotation90(1) * Point(0, 1))
+
+
+# --- the compound shapes -------------------------------------------------------
+
+
+def test_transformation_on_a_region_maps_every_ring():
+    region = PolygonWithHoles(
+        Polygon([0, 0, 6, 0, 6, 6, 0, 6]), [Polygon([2, 2, 4, 2, 4, 4, 2, 4])]
+    )
+    moved = Transformation.translation(10, 0) * region
+    assert moved.holeCount() == 1
+    assert moved.outer() == Transformation.translation(10, 0) * region.outer()
+    assert moved.hole(0) == Transformation.translation(10, 0) * region.hole(0)
+
+
+def test_transformation_on_a_set_maps_every_component():
+    left = Polygon([0, 0, 2, 0, 2, 2, 0, 2]).asPolygonWithHoles()
+    right = Polygon([5, 0, 7, 0, 7, 2, 5, 2]).asPolygonWithHoles()
+    moved = Transformation.rotation90(1) * PolygonSet([left, right])
+    assert moved.componentCount() == 2
+    assert moved.samePointSet(
+        PolygonSet(
+            [
+                Transformation.rotation90(1) * left,
+                Transformation.rotation90(1) * right,
+            ]
+        )
+    )
+
+
+def test_transformation_on_a_halfplane_intersection_maps_its_halfplanes():
+    wedge = HalfplaneIntersection(
+        [Halfplane(Point(0, 0), Point(1, 0)), Halfplane(Point(0, 0), Point(0, -1))]
+    )
+    rotated = Transformation.rotation90(1) * wedge
+    assert rotated.size() == wedge.size()
+    # An unbounded intersection transforms like any other: the corner follows.
+    assert not rotated.isBounded()
+    assert rotated.contains(Transformation.rotation90(1) * Point(1, 1))
 
 
 # --- Rectangle / Disk are excluded ---------------------------------------------

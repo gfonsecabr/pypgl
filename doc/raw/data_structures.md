@@ -231,3 +231,54 @@ A graph also behaves like a Python container: `len(graph)`, `for vertex in
 graph` (sorted), and `vertex in graph`. It is mutable and therefore unhashable.
 
 - Other methods:
+
+### Bit Matrix
+
+`BitMatrix` represents a digital geometry shape: the union of the unit squares $[x, x+1] \times [y, y+1]$ over a set of integer points, stored as one bit per cell of a rectangular window of the grid, packed into 64-bit words. Cell `(x, y)` is that unit square, named by its lower-left corner. The window is fixed at construction and never grows: writing outside it is a no-op and reading outside it gives `False`, so sizing it is the caller's job. It is the cheap representation for the rectilinear work an exact polygonal one makes expensive — the set algebra, the Minkowski operations, connectivity and morphology all run a word at a time — at the price of only representing what the grid can.
+
+A matrix wears two hats, and which one an operation wears is in its name. As a **region of the plane**, the union of its cells as unit squares: that is what the predicates, `area()`, `perimeter()`, `centroid()`, `bbox()`, `convexHull()`, `asPolygonWithHoles()`, `asPolygonSet()`, the symmetries and `minkowskiSum()` answer for, and they all commute with `asPolygonSet()`. As a **set of lattice points**, each cell standing for its lower-left corner: that is what every `lattice`-prefixed operation works in, and it is the convention that makes a structuring element behave — a one-cell matrix is the identity of `latticeMinkowskiSum` and `latticeMinkowskiErosion` is its exact dual. The two readings differ by a cell: `reflected()` maps cell `c` to `-c - (1,1)` where `latticeReflected()` maps it to `-c`. Translation reads the same either way.
+
+A cell is named either by a pair of plain `int`s or by a `Point`, whichever reads better at the call site — `m.set(3, 4)` and `m.set(pgl.Point(3, 4))` are the same call. A `Point` naming a cell must have whole coordinates: a fractional one raises rather than being rounded, since rounding it would move the cell.
+
+- `BitMatrix(origin, width, height)` covers `width` by `height` cells from `origin`, all clear; a non-positive extent leaves the window empty. `BitMatrix(x, y, width, height)` spells the same thing with the origin as two ints. `BitMatrix(window)` takes the window as the `Rectangle` its cells cover, the inverse of `window()`. `BitMatrix(polygon)`, `BitMatrix(region)` and `BitMatrix(set)` rasterize a `Polygon`, a `PolygonWithHoles` or a `PolygonSet` whose every edge is axis-parallel, over its own bounding box, filling the cells it covers and leaving the holes and the gaps between components unset; each of those three shapes spells the same operation `asBitMatrix()`.
+
+- `innerRaster(shape, window)` and `outerRaster(shape, window)` rasterize **any** shape, the first keeping the cells the shape contains and the second the cells it meets, so the two bracket the shape. Each costs one exact predicate per cell of the window, against the one pass per row a rectilinear region takes. The window may be left out, and is then the smallest cell window covering the shape's bounding box — which is why an unbounded shape (`Line`, `OrientedLine`, `Ray`, `Halfplane`, an unbounded `HalfplaneIntersection`) needs one given explicitly, though it rasterizes perfectly well once it has one.
+
+- `get(x, y)` and `set(x, y)` read and write one cell, along with `set(x, y, value)`, `reset(x, y)`, `flip(x, y)`, `setAll()` and `clear()`. `origin()`, `width()`, `height()`, `window()`, `emptyWindow()`, `inWindow(x, y)` and `sameWindow(other)` describe the window; `resized(window)` moves the cells to another one, dropping those it cannot hold, and `trimmed()` moves them to the smallest window holding them.
+
+- `count()` and `empty()` report the set cells. `lattice()` returns them as `Point`s in row-major order and `cells()` as the unit `Rectangle`s they cover; `rectangles()` instead merges each row's runs into as few disjoint covering rectangles as a row-major pass can, which is how to draw the cells as separate elements: `canvas.draw(matrix.rectangles())`.
+
+- `area()`, `perimeter()`, `centroid()`, `pointInside()` and `bbox()` measure the covered region: the number of cells, the length of its boundary counting the edges of a cell on the window border, the average of the cell centers, the center of the first set cell, and the rectangle the cells cover. All stay exact. `centroid()` and `pointInside()` raise when no cell is set. `convexHull()` returns the hull of the region as a `Convex`.
+
+- `asPolygonSet()` returns the covered region as a `PolygonSet`, one component per edge-connected group of cells, so it has no precondition and keeps two components touching only at a corner apart. The boundary loops are read straight off the words, and vertices in the middle of a straight stretch are dropped along the way, so a filled box comes back as four corners however many cells it holds. `asPolygonWithHoles()` returns a single `PolygonWithHoles` and raises unless the cells form one edge-connected group, which a rasterized region and its Minkowski sums are. `canvas.draw(matrix)` draws the matrix as one element by drawing that polygon set.
+
+- The shape predicates read the cells as the closed squares they are. `contains(other)` holds when every cell of `other` is a cell of this matrix, and `interiorContains(other)` when none of them touches the boundary either, corners included. `intersects(other)` holds as soon as a cell of one comes within Chebyshev distance one of a cell of the other, since two cells sharing only an edge or a corner already share points; `interiorsIntersect(other)` is the stricter question of a shared cell. `boundaryContains(other)` holds only for an empty `other`, a boundary being a curve and a nonempty matrix covering area.
+
+- `&`, `|`, `^` and `difference(other)` are the set algebra, with `symmetricDifference(other)` spelling `^` out. Each returns the smallest window that provably loses no cell: the overlap of the two windows for an intersection, their hull for a union or a symmetric difference, the left window for a difference. The compound `&=`, `|=` and `^=` instead never move their window and drop whatever falls outside it, exactly as `set` does. `andCount(other)`, `orCount(other)` and `xorCount(other)` give the three cardinalities without building the result. `~` is the complement *within the window*, not against the plane.
+
+- The window is part of a matrix's value: `==` and the ordering compare it along with the cells, and the order is lexicographic on origin, width, height and bits, carrying no geometric meaning. `samePointSet(other)` is the geometric question, and `trimmed()` is the canonical form to compare by when only the region matters — a matrix is unequal to its trimmed form whenever trimming moves anything, while `samePointSet` always holds between them. Every window covering no cell has one canonical form, so all such matrices compare equal whatever origin they were built with. A matrix is mutable and therefore unhashable.
+
+- `translated(vector)` moves the cells, spelled `matrix + point` or `point + matrix`, with `matrix - point` for the opposite and `+=` and `-=` in place. `reflected()` (also `-matrix`), `reflectedX()`, `reflectedY()`, `transposed()`, `rotated90(k)` and its in-place `rotate90(k)` are the symmetries of the covered region, so they commute with the conversion. The `lattice`-prefixed `latticeReflected()`, `latticeReflectedX()`, `latticeReflectedY()`, `latticeRotated90(k)` and `latticeRotate90(k)` map the lattice points instead. Transposition is the exception the two readings agree on, so `transposed()` and `latticeTransposed()` are the same operation.
+
+- `latticeMinkowskiSum(other)` is the sum of the two cell sets read as lattice points, over a window that is exactly the bounding box of the result. It costs one shifted or-assignment of the larger operand per cell of the smaller one, so a large region and a small structuring element are cheap. `latticeMinkowskiErosion(other)` is its dual, the lattice points `p` with `p + other` inside this matrix, over this window shrunk by `other`'s bounding box; eroding by a matrix with no cell is vacuously true and fills the window. `latticeOpening(other)` and `latticeClosing(other)` compose the two in both orders.
+
+- `minkowskiSum(other)`, also spelled `matrix + matrix`, is instead the sum of the two **regions**, so it commutes with the conversion. The unit square is not the identity of that sum — $U \oplus U$ is the two-by-two square — so this is the lattice sum dilated by the block that extra square covers, and comes out one cell wider and one cell taller in each direction. `minkowskiErosion(other)` is the region erosion, regularized the way a `PolygonSet` regularizes its own, which is what keeps it on the grid: a cell eroded by a cell is a single point, which has no area and is reported as empty.
+
+- `interior(adjacency)` returns the set cells all of whose neighbors are set and `boundary(adjacency)` the rest of them, a cell on the window border always belonging to the boundary. `adjacency` is `GridAdjacency.edge` (4 neighbors) by default or `GridAdjacency.vertex` (8 neighbors).
+
+- `connectedComponents(adjacency)` returns one trimmed matrix per connected group of cells, `componentCount(adjacency)` and `isConnected(adjacency)` count them, and `fillHoles(adjacency)` adds every group of unset cells that cannot reach outside. The background is always walked with the complementary adjacency, which is what keeps a diagonal chain of cells from both being connected and letting the background leak through it. `holeCount(adjacency)` counts what `fillHoles` would add, and `eulerNumber(adjacency)` returns components minus holes.
+
+- `fillRows()` and `fillColumns()` close the gaps of every row or column in place and report whether anything changed; `makeHvConvex()` alternates them to a fixed point and returns how many cells it added, giving the smallest hv-convex superset. `isRowConvex()`, `isColumnConvex()` and `isHvConvex()` ask whether that fixed point is already reached.
+
+```python
+room = pgl.Polygon([0,0, 10,0, 10,10, 0,10]).asBitMatrix()
+robot = pgl.BitMatrix(0, 0, 2, 2)
+robot.setAll()
+free = room.minkowskiErosion(robot)          # where the robot's corner may sit
+print(free.count(), free.isConnected(), free.asPolygonSet().componentCount())
+# Output: 64 True 1
+```
+
+A matrix also behaves like a Python container: `len(matrix)` is the number of set cells, `for cell in matrix` yields them as `Point`s in row-major order, and `point in matrix` asks whether *that cell* is set — the question `get` answers, not whether the point lies in the covered region.
+
+- Other methods:

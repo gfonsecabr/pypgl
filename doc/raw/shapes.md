@@ -543,6 +543,7 @@ A polygon `P` has methods such as:
 - `P.untangle()`: Makes the polygon simple in place, returning `None`. Edges that cross are flipped, and when a flip is blocked by collinear vertices the offending vertex is removed instead, so the vertex set may shrink. On return `P.isSimple()` holds. Worst-case complexity is high.
 - `P.interiorContainsInterior(s)`: Returns true when the open segment `s` lies in the polygon's strict interior. Either endpoint may rest on the boundary; nothing strictly between them may touch it. Takes $O(n)$ time.
 - `P.pointInside()`: Returns an exact point strictly inside the polygon, even a non-convex one (the vertex average would not do: it can fall in a notch, outside the polygon).
+- `P.asBitMatrix()`: Returns the polygon rasterized into a [`BitMatrix`](data_structures.md#bit-matrix) over its bounding box, one bit per covered cell. Every edge must be axis-parallel and every coordinate a whole number, otherwise it raises; `innerRaster` / `outerRaster` approximate any other polygon.
 - `P.triangulation()` / `P.triangulation(segments)`: Returns the constrained Delaunay [`Triangulation`](data_structures.md#triangulation) of the polygon, optionally with extra constrained edges.
 - `P.isStarShaped()`: Returns true if some point of the polygon sees every other point of it.
 - `P.getStarShapedKernel()`: Returns the *kernel* — every point that sees the whole polygon — as a [`HalfplaneIntersection`](#halfplane-intersection), or `None` when the polygon is not star-shaped. For a convex polygon the kernel is the polygon itself.
@@ -649,6 +650,7 @@ A region `A` has methods such as:
 - `A.verticesCentroid()`: The centroid of the vertex set over all rings.
 - `A.interiorContainsInterior(s)`: Returns true when the open segment `s` lies in the region's strict interior — strictly inside the outer ring and never touching a hole — while either endpoint may rest on any ring. Takes $O(n \log n)$ time.
 - `A.pointInside()`: A point strictly inside the region, so inside the outer boundary and outside every hole. Undefined for a region with no area.
+- `A.asBitMatrix()`: The region rasterized into a [`BitMatrix`](data_structures.md#bit-matrix) over its bounding box, the holes left unset. Every edge of every ring must be axis-parallel and every coordinate a whole number, otherwise it raises.
 - `A.triangulation()` / `A.triangulation(segments)`: The constrained Delaunay [triangulation](data_structures.md#triangulation) of the region. Every ring becomes constrained edges and the hole interiors are left out of the domain, so the in-domain triangles cover exactly the part of the region that has area — a slit, having none, carries no triangle.
 - `A.diameter()` / `A.bbox()`: The holes lie inside the outer boundary and cannot contribute, so both are the outer polygon's.
 
@@ -705,6 +707,7 @@ A set `A` has methods such as:
 - `A.isValid()` / `A.isSimple()`: The structural contract above, and the per-ring simplicity check.
 - `A.holeCount()` / `A.hasHoles()` / `A.vertexCount()` / `A.vertices()` / `A.edges()` / `A.orientedEdges()`: Counted and collected over every ring of every component.
 - `A.area()` / `A.twiceArea()` / `A.centroid()` / `A.verticesCentroid()` / `A.pointInside()` / `A.diameter()` / `A.bbox()`: The components have disjoint interiors, so the area is simply their sum; the diameter may join two different components.
+- `A.asBitMatrix()`: The set rasterized into a [`BitMatrix`](data_structures.md#bit-matrix) over the bounding box of the whole set, the holes and the gaps between components left unset. Same rectilinear requirement as on a region.
 - `A.triangulation()` / `A.convexPartition()` / `A.convexCovering()`: The gaps between components are left out of the domain, exactly as a region's holes are.
 - `A.interiorContainsInterior(s)`: Returns true when the open segment `s` lies strictly inside **one** component. Boundary endpoints are allowed; a passage between two components that merely touch is not, since the segment would have to cross the pinch point they share.
 

@@ -83,6 +83,40 @@ using Triangulation = pgl::Triangulation<Triangle, Segment>;
 // (see bind_triangulation.cpp), and a weight function would be exactly that.
 using ShapeTree = pgl::ShapeTree<AnyShape>;
 
+// One bit per cell of a rectangular window of the integer grid
+// (algorithm/bitmatrix.hpp). This is the one bound class pypgl cannot hold over
+// its own Point: pgl constrains BitMatrix to `std::signed_integral` coordinates,
+// since a cell of the grid *is* an integer position, so BitMatrix<Point> (whose
+// coordinates are ERational) is ill-formed by construction. The cells are
+// therefore stored over `Cell = pgl::Point<std::int64_t>`, which never surfaces
+// in Python: every cell crosses the boundary either as a pair of plain ints or
+// as an ordinary pypgl Point, and every shape a matrix hands back
+// (asPolygonSet, asPolygonWithHoles, convexHull, bbox, cells, ...) is widened
+// into the bound ERational class by pgl's own cross-point-type converting
+// constructors. int64_t is exactly what pgl itself picks for an ERational shape
+// (grid_number_t<Rational<BigInt>> is int64_t), so `polygon.asBitMatrix()` and
+// `BitMatrix(polygon)` name the same grid.
+using Cell = pgl::Point<std::int64_t>;
+using BitMatrix = pgl::BitMatrix<Cell>;
+
+// A pypgl Point -> the cell of the grid it names. pgl's gridCoordinate is what
+// does the checking, exactly as it does for asBitMatrix: a coordinate that is
+// not a whole number, or is a whole one int64_t cannot hold, throws rather than
+// being rounded (which would move the shape). Reused here rather than
+// reimplemented so a bad coordinate reports the same message wherever it enters.
+inline Cell toCell(const Point &p) {
+    return Cell(pgl::detail::gridCoordinate<std::int64_t>(p.x()),
+                pgl::detail::gridCoordinate<std::int64_t>(p.y()));
+}
+
+// A pypgl Rectangle -> the window of cells it covers. An empty rectangle has no
+// corners to convert (pgl stores sentinel ones), so it maps to the empty window
+// directly -- which is what BitMatrix's own Rectangle constructor does with it.
+inline pgl::Rectangle<Cell> toGridWindow(const Rectangle &box) {
+    if (box.empty()) return pgl::Rectangle<Cell>();
+    return pgl::Rectangle<Cell>(toCell(box.min()), toCell(box.max()), true);
+}
+
 // An affine transformation of the plane (core/transformation.hpp), templated
 // only on the matrix-entry type -- unlike every shape above it carries no
 // point/label type of its own. Bound over the same single numeric
@@ -326,6 +360,21 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
 #define PGL_BIND_CONVEX_HULL(cls, SelfT)                                       \
     cls.def("convexHull", [](const SelfT &s) { return s.convexHull(); },       \
             "The convex hull of the shape's points, as a Convex.")
+
+// Rasterization onto the integer grid, bound on the three region shapes pgl
+// gives it to (Polygon, PolygonWithHoles, PolygonSet). Only a rectilinear region
+// *is* a set of grid cells, so every edge must be axis-parallel; and only whole
+// coordinates name a cell, so a fractional one is refused rather than rounded
+// (rounding it would move the region). Both are pgl's own checks -- the
+// ResultNumber of asBitMatrix defaults, for an ERational shape, to exactly the
+// int64_t grid ::pypgl::BitMatrix stores. Use innerRaster/outerRaster to
+// approximate any other shape.
+#define PGL_BIND_AS_BIT_MATRIX(cls, SelfT)                                                      \
+    cls.def("asBitMatrix", [](const SelfT &s) { return s.asBitMatrix(); },                      \
+            "The shape rasterized into a BitMatrix over its bounding box, one bit per "         \
+            "covered cell (holes and the gaps between components left unset). Raises if an "    \
+            "edge is not axis-parallel, or a coordinate is not a whole number the grid can "    \
+            "hold; use innerRaster/outerRaster to approximate any other shape.")
 
 // Queries over a shape's defining points, bound on every shape that has them
 // (all but Point, whose `index` takes a coordinate and which has no interior):

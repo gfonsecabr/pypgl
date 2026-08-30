@@ -155,6 +155,7 @@ Pangolin includes [fundamental algorithms](doc/algorithms.md):
 - **Triangulation** including **Delaunay** and **constrained Delaunay** triangulations for points and polygons.
 - **Arrangement** of lines, line segments, and rays with a **trapezoidal map** for fast point location.
 - Graph class for combinatorial algorithms like **Dijkstra** and **Prim** that can be used to compute Euclidean minimum spanning trees and shortest paths among obstacles.
+- **Bit matrix** over the integer grid: one bit per cell, for digital-geometry set algebra, Minkowski operations, connectivity and morphology a word at a time.
 
 
 ## Installation

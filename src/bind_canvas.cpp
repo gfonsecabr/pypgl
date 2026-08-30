@@ -148,6 +148,10 @@ void bind_canvas(nb::module_ &m) {
     CANVAS_DRAW(cls, Disk);
     CANVAS_DRAW(cls, Triangulation);
     CANVAS_DRAW(cls, ShapeTree);
+    // A bit matrix is drawn as one element, by streaming its polygon set -- so
+    // touching cells merge into one path and the individual cell edges do not
+    // show. canvas.draw(matrix.rectangles()) draws them as separate elements.
+    CANVAS_DRAW(cls, BitMatrix);
 
     // draw(collection) draws every element in order, each with the current
     // style, so a whole construction can be handed over at once:
