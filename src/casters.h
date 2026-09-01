@@ -70,12 +70,74 @@ struct type_caster<pgl::BigInt> {
     }
 
     static handle from_cpp(const pgl::BigInt &b, rv_policy, cleanup_list *) noexcept {
+        // Fast path, and the one nearly every coordinate takes: a magnitude
+        // below 2^63 becomes a Python int in a single CPython call, with no
+        // formatting at all. (fitsInt64 tests the *magnitude*, so INT64_MIN
+        // itself falls through to the string route -- correct, if pedantic.)
+        if (b.fitsInt64())
+            return PyLong_FromLongLong(static_cast<long long>(static_cast<std::int64_t>(b)));
+
+        // Slow path: |value| >= 2^63 -> format and reparse the decimal string,
+        // which pgl::BigInt already writes via operator<<.
         std::ostringstream out;
         out << b;
         const std::string text = out.str();
         return PyLong_FromString(text.c_str(), nullptr, 10);
     }
 };
+
+// The `fractions` API this caster needs, looked up once per process instead of
+// once per conversion: importing the module and fetching the attribute each
+// time cost more than the conversion itself.
+//
+//   type    -- fractions.Fraction, also used to recognize an exact Fraction on
+//              the way in (only then are its terms known to be coprime).
+//   coprime -- Fraction._from_coprime_ints, the constructor that trusts its
+//              arguments to be in lowest terms and so skips the gcd Fraction()
+//              would run. pgl::Rational stores in lowest terms, so it always
+//              is. Private, and only present from CPython 3.12; null below
+//              that, where the public constructor is used instead.
+//
+// The references are deliberately leaked: a static nb::object would be
+// destroyed after the interpreter has finalized.
+struct FractionApi {
+    PyObject *type = nullptr;
+    PyObject *coprime = nullptr;
+};
+
+inline const FractionApi &fraction_api() noexcept {
+    static const FractionApi api = [] {
+        FractionApi a;
+        PyObject *module = PyImport_ImportModule("fractions");
+        if (!module) {
+            PyErr_Clear();
+            return a;
+        }
+        a.type = PyObject_GetAttrString(module, "Fraction");
+        Py_DECREF(module);
+        if (!a.type) {
+            PyErr_Clear();
+            return a;
+        }
+        a.coprime = PyObject_GetAttrString(a.type, "_from_coprime_ints");
+        if (!a.coprime)
+            PyErr_Clear();
+        return a;
+    }();
+    return api;
+}
+
+// The two attribute names, interned once rather than rebuilt as a temporary str
+// by every PyObject_GetAttrString call.
+inline PyObject *numerator_name() noexcept {
+    static PyObject *name = PyUnicode_InternFromString("numerator");
+    return name;
+}
+
+inline PyObject *denominator_name() noexcept {
+    static PyObject *name = PyUnicode_InternFromString("denominator");
+    return name;
+}
 
 // --- pgl::ERational <-> fractions.Fraction ----------------------------------
 //
@@ -113,9 +175,22 @@ struct type_caster<pgl::ERational> {
             target = owner.ptr();
         }
 
+        // Fast path, and the one an integer coordinate takes: a Python int is
+        // already a rational in lowest terms over denominator 1, so neither
+        // attribute lookup nor a gcd is needed. (`int.numerator` is the int
+        // itself, so the general path below would reach the same value the
+        // long way round.)
+        if (PyLong_Check(target)) {
+            type_caster<pgl::BigInt> num_caster;
+            if (!num_caster.from_python(handle(target), flags, cl))
+                return false;
+            value = pgl::ERational(std::move(num_caster.value));
+            return true;
+        }
+
         // int, Fraction, or any object exposing integer numerator/denominator.
-        object num = steal(PyObject_GetAttrString(target, "numerator"));
-        object den = steal(PyObject_GetAttrString(target, "denominator"));
+        object num = steal(PyObject_GetAttr(target, numerator_name()));
+        object den = steal(PyObject_GetAttr(target, denominator_name()));
         if (!num.is_valid() || !den.is_valid()) {
             PyErr_Clear();
             return false;
@@ -124,21 +199,42 @@ struct type_caster<pgl::ERational> {
         if (!num_caster.from_python(num, flags, cl) ||
             !den_caster.from_python(den, flags, cl))
             return false;
-        value = pgl::ERational(num_caster.value, den_caster.value);
+
+        // Skipping pgl's deferred reduction is only safe for terms already known
+        // to be coprime. A Fraction guarantees it (and so does the string route
+        // above, which builds one); an arbitrary object exposing the two
+        // attributes does not, so that case keeps the reduction.
+        const FractionApi &api = fraction_api();
+        const bool coprime = api.type && PyObject_TypeCheck(target, (PyTypeObject *) api.type);
+        value = pgl::ERational(std::move(num_caster.value), std::move(den_caster.value), coprime);
         return true;
     }
 
     static handle from_cpp(const pgl::ERational &r, rv_policy pol, cleanup_list *cl) noexcept {
+        const FractionApi &api = fraction_api();
+        if (!api.type)
+            return handle();
+
+        // numerator() and denominator() each run their own gcd when the value's
+        // reduction is still deferred, so a deferred one is reduced twice here.
+        // Left as is: the terms are already in lowest terms for everything a
+        // shape stores, and simplified() would copy on every read to save a gcd
+        // the common case never runs. A caller reading one deferred value many
+        // times has pgl's own simplify() for it.
         object num = steal(type_caster<pgl::BigInt>::from_cpp(r.numerator(), pol, cl));
         object den = steal(type_caster<pgl::BigInt>::from_cpp(r.denominator(), pol, cl));
         if (!num.is_valid() || !den.is_valid())
             return handle();
-        object fraction = module_::import_("fractions").attr("Fraction");
-        try {
-            return fraction(num, den).release();
-        } catch (...) {
+
+        // _from_coprime_ints where it exists: pgl stores the terms in lowest
+        // terms, so Fraction's own normalizing gcd has nothing to find.
+        PyObject *result = PyObject_CallFunctionObjArgs(api.coprime ? api.coprime : api.type,
+                                                        num.ptr(), den.ptr(), nullptr);
+        if (!result) {
+            PyErr_Clear();
             return handle();
         }
+        return handle(result);
     }
 };
 

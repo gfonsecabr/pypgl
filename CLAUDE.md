@@ -1089,6 +1089,50 @@ change on the pypgl side.
 Not added: an example, for the same reason milestone 18 added none — upstream
 ships no example for either addition.
 
+**The casters had been paying for the common coordinate** (milestone 19
+follow-up, same release): a look at what `vector<EPoint>` costs to convert found
+the two hand-written number casters doing avoidable work on every coordinate.
+`vector<EPoint>` itself never reaches them — `Point` is a bound class, so the
+vector caster only creates one Python object per element — but `p.x()`/`p.y()`
+and every `Point(x, y)` from Python do.
+
+Three things were wrong, all in [src/casters.h](src/casters.h). The `BigInt`
+fast path existed **only on the way in**: the comment claimed one but
+`from_cpp` sent every value, however small, through `std::ostringstream` and
+`PyLong_FromString`. Every `ERational` → `Fraction` re-imported `fractions` and
+re-fetched the attribute, then called the public constructor, whose normalizing
+gcd has nothing to find on terms pgl already stores in lowest terms. And on the
+way in, `PyObject_GetAttrString` built a temporary `str` per lookup — twice per
+coordinate — even for a plain `int`, whose `numerator` is itself.
+
+So: `fitsInt64()` → one `PyLong_FromLongLong` out; `fractions.Fraction` and
+`Fraction._from_coprime_ints` resolved once per process (as deliberately leaked
+references, since a static `nb::object` would be destroyed after the interpreter
+finalizes); a `PyLong_Check` fast path in, giving denominator 1 with no
+attribute lookup and no gcd; and interned names for everything else.
+`p.x()` went from 740 ns to 195 ns, `Point(i, j)` from 436 to 264, and
+`Point(Fraction, Fraction)` from 322 to 214. The two `vector<Point>` directions
+(310 ns and 105 ns per point) are unchanged, since they never touched these
+casters.
+
+**Two correctness lines are load-bearing.** `_from_coprime_ints` is private and
+only exists from CPython 3.12, so the caster falls back to the public
+constructor below that (verified by forcing the fallback in a throwaway build:
+correct, and 236 ns rather than 195). And the gcd is skipped **only** for an
+`int` or a real `Fraction`, whose terms are coprime by contract — an arbitrary
+object exposing `numerator`/`denominator` is still reduced, or a `6/4` would
+come back marked normalized and compare and hash wrongly.
+
+What is left is not in the casters: of `p.x()`'s 195 ns, about 59 is bound-call
+overhead and about 130 is constructing the `Fraction` object itself; and the
+~310 ns per point of a `vector<Point>` result is nanobind instance creation
+(`[Point() for _ in range(N)]` alone costs 204 ns, against 26 ns for a C++
+`EPoint` copy). The one lever left is an API change rather than an optimization:
+returning a plain `int` from `x()`/`y()` when the denominator is 1 would cut a
+coordinate read to roughly 80 ns and stay exact, but `isinstance(p.x(),
+Fraction)` would become false. Not done — it is a semantic decision, not a
+tuning one.
+
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
@@ -1129,12 +1173,17 @@ point of the project:
 The hand-written plumbing is three type casters in `src/casters.h`; everything
 else is mechanical `.def(...)`:
 
-1. `pgl::BigInt` ↔ Python `int` — via decimal string round-trip (lossless; uses
-   pgl's existing `operator<<`/`operator>>`). A machine-int fast path is a later
-   optimization, not a correctness requirement.
+1. `pgl::BigInt` ↔ Python `int` — a machine-integer fast path in **both**
+   directions (`fitsInt64()` out, `PyLong_AsLongLongAndOverflow` in), falling
+   back to a lossless decimal string round-trip through pgl's existing
+   `operator<<`/`operator>>` for anything larger.
 2. `pgl::ERational` ↔ Python `fractions.Fraction` — built from `numerator()` /
    `denominator()` (stored in lowest terms), each term flowing through the BigInt
-   caster so arbitrarily large coordinates round-trip.
+   caster so arbitrarily large coordinates round-trip. A Python `int` is read
+   without touching its `numerator`/`denominator` at all, and the `Fraction`
+   type and its `_from_coprime_ints` constructor are looked up once per process
+   rather than per conversion — see the milestone 19 follow-up below for what
+   each of those was costing.
 3. `pgl::Shape<EPoint>` ↔ a concrete pypgl shape object — used by `ShapeTree`
    and `IntervalTree` (see milestones 7 and 12); probes the seventeen bound
    classes with an exact `try_cast` going in, dispatches on the stored
