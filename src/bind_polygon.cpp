@@ -137,6 +137,9 @@ void bind_polygon(nb::module_ &m) {
     PGL_BIND_MINKOWSKI_REGION(cls, Polygon);
     PGL_BIND_EROSION_REGION(cls, Polygon);
     PGL_BIND_CONVEX_HULL(cls, Polygon);
+    PGL_BIND_LATTICE_POINTS(cls, Polygon,
+                            "The integer points the polygon contains, in increasing order, boundary included: a "
+                            "point on an edge is a point of the shape.");
     PGL_BIND_AS_BIT_MATRIX(cls, Polygon);
     cls.def("chainCount", [](const Polygon &s) { return s.chainCount(); },
             "Number of lexicographically monotone chains the boundary breaks into -- 2 for a convex ring, more the more the boundary reverses direction in x. It is what the containment and intersection tests cost: they run chain against chain when there are few, and fall back to a plane sweep when there are many.");

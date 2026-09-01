@@ -124,6 +124,10 @@ void bind_halfplane_intersection(nb::module_ &m) {
     PGL_BIND_MINKOWSKI_UNBOUNDED(cls, HalfplaneIntersection);
     PGL_BIND_EROSION_UNBOUNDED(cls, HalfplaneIntersection);
     PGL_BIND_CONVEX_HULL(cls, HalfplaneIntersection);
+    PGL_BIND_LATTICE_POINTS(cls, HalfplaneIntersection,
+                            "The integer points the region contains, in increasing order, boundary included: a "
+                            "point on an edge is a point of the shape. Raises if the region is unbounded (the whole "
+                            "plane included), an unbounded one covering infinitely many.");
 
     // --- the implicit corners ---
     cls.def("vertexCount", [](const HalfplaneIntersection &k) { return k.vertexCount(); },

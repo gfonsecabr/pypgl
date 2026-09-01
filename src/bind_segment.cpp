@@ -35,6 +35,11 @@ void bind_segment(nb::module_ &m) {
     PGL_BIND_MINKOWSKI_CONVEX(cls, Segment);
     PGL_BIND_EROSION_CONVEX(cls, Segment);
     PGL_BIND_CONVEX_HULL(cls, Segment);
+    PGL_BIND_LATTICE_POINTS(cls, Segment,
+                            "The integer points on the segment, in increasing order. An endpoint is among them "
+                            "exactly when it is a lattice point itself, so a segment over fractional coordinates "
+                            "still contains every grid point it passes through, and one whose supporting line "
+                            "misses the grid contains none.");
     PGL_BIND_VERTEX_QUERIES(cls, Segment);
     PGL_BIND_INDEXING(cls, Segment);
     PGL_BIND_LINE_HELPERS(cls, Segment);
@@ -91,6 +96,9 @@ void bind_oriented_segment(nb::module_ &m) {
     PGL_BIND_MINKOWSKI_CONVEX(cls, OrientedSegment);
     PGL_BIND_EROSION_CONVEX(cls, OrientedSegment);
     PGL_BIND_CONVEX_HULL(cls, OrientedSegment);
+    PGL_BIND_LATTICE_POINTS(cls, OrientedSegment,
+                            "The integer points on the segment, listed from source to target rather than in "
+                            "increasing order. An endpoint is among them exactly when it is a lattice point itself.");
     PGL_BIND_VERTEX_QUERIES(cls, OrientedSegment);
     PGL_BIND_INDEXING(cls, OrientedSegment);
     PGL_BIND_LINE_HELPERS(cls, OrientedSegment);

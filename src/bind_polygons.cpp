@@ -62,6 +62,9 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_MINKOWSKI_CONVEX(cls, Triangle);
         PGL_BIND_EROSION_CONVEX(cls, Triangle);
         PGL_BIND_CONVEX_HULL(cls, Triangle);
+        PGL_BIND_LATTICE_POINTS(cls, Triangle,
+                                "The integer points the triangle contains, in increasing order, boundary included: a "
+                                "point on an edge is a point of the shape.");
         PGL_BIND_DEGENERACY(cls, Triangle);
         PGL_BIND_VERTEX_QUERIES(cls, Triangle);
         PGL_BIND_INDEXING(cls, Triangle);
@@ -217,6 +220,9 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_MINKOWSKI_CONVEX(cls, Rectangle);
         PGL_BIND_EROSION_CONVEX(cls, Rectangle);
         PGL_BIND_CONVEX_HULL(cls, Rectangle);
+        PGL_BIND_LATTICE_POINTS(cls, Rectangle,
+                                "The integer points the rectangle contains, in increasing order, boundary included: "
+                                "every integer of the x range paired with every integer of the y range.");
         PGL_BIND_DEGENERACY(cls, Rectangle);
         PGL_BIND_VERTEX_QUERIES(cls, Rectangle);
         PGL_BIND_INDEXING(cls, Rectangle);
@@ -382,6 +388,9 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_MINKOWSKI_CONVEX(cls, Convex);
         PGL_BIND_EROSION_CONVEX(cls, Convex);
         PGL_BIND_CONVEX_HULL(cls, Convex);
+        PGL_BIND_LATTICE_POINTS(cls, Convex,
+                                "The integer points the convex polygon contains, in increasing order, boundary "
+                                "included: a point on an edge is a point of the shape.");
         // The two smallest enclosing shapes, both of which read a *convex*
         // boundary and so live on this class alone; any other shape reaches
         // them through its own convexHull(), whose enclosing shapes are its.

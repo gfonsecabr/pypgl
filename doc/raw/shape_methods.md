@@ -512,6 +512,19 @@ applied with a [`Transformation`](#transformations).
 
 - `verticesContain(p)`: Returns `True` if there exists an index `i` such that `s[i] == p` for the shape `s`. Notice that two shapes (for example lines) may be equal (according to `==`) but still behave differently for `verticesContain` if they are defined by different points. Available on every shape except `Point` and `Polygon`; on a `Polygon`, use `p.index(point) is not None` instead.
 
+- `latticePoints()`: Returns the integer points the shape contains, in
+  increasing order and each of them once. The boundary counts, as it does for
+  `contains`, so a point on an edge is reported. Defined for the bounded shapes
+  — `Segment`, `OrientedSegment`, `MonotoneChain`, `Polyline`, `Rectangle`,
+  `Triangle`, `Disk`, `Convex`, `Polygon`, `PolygonWithHoles`, `PolygonSet`, and
+  a `HalfplaneIntersection` that is bounded, which raises when it is not.
+  `Line`, `OrientedLine`, `Ray` and `Halfplane` do not have it: an unbounded
+  shape covers infinitely many. A one-dimensional shape walks its edges in
+  traversal order; a two-dimensional one sweeps the columns of its bounding box,
+  so either costs one pass over the edges plus one step per point reported. The
+  answer is an ordinary list of `Point`, so a coordinate is never capped: a
+  short segment sitting at x = 10\*\*20 names its three lattice points exactly.
+
 - `asBitMatrix()` (`Polygon`, `PolygonWithHoles` and `PolygonSet`): Returns the
   shape rasterized into a [`BitMatrix`](data_structures.md#bit-matrix) over its
   bounding box, one bit per covered cell, holes left unset. Only a rectilinear

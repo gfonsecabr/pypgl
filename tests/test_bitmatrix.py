@@ -155,6 +155,123 @@ def test_a_whole_fraction_names_a_cell():
     assert matrix.get(3, 1)
 
 
+# --- many cells at once ------------------------------------------------------
+#
+# A range of cells is read as lattice points: every point names the cell it *is*,
+# rather than a corner of a region to fill. The constructor takes the smallest
+# window holding them; the mutators keep the window the matrix already has.
+
+
+def test_the_range_constructor_takes_the_smallest_window_holding_the_cells():
+    matrix = BitMatrix([Point(0, 0), Point(2, 3), Point(1, 1)])
+    assert matrix.count() == 3
+    assert matrix.origin() == Point(0, 0)
+    assert (matrix.width(), matrix.height()) == (3, 4)
+    # The window is tight by construction, so the matrix is its own trimmed form.
+    assert matrix == matrix.trimmed()
+
+
+def test_a_range_of_cells_takes_either_spelling():
+    from_points = BitMatrix([Point(0, 0), Point(2, 3), Point(1, 1)])
+    from_pairs = BitMatrix([(0, 0), (2, 3), (1, 1)])
+    assert from_points == from_pairs
+    mixed = BitMatrix([Point(0, 0), (2, 3), Point(1, 1)])
+    assert mixed == from_points
+
+
+def test_an_empty_range_gives_an_empty_window():
+    matrix = BitMatrix([])
+    assert matrix.emptyWindow()
+    assert matrix.count() == 0
+
+
+def test_a_repeated_cell_changes_nothing_in_the_constructor():
+    assert BitMatrix([(1, 1), (1, 1), (2, 2)]) == BitMatrix([(1, 1), (2, 2)])
+
+
+def test_the_range_constructor_takes_any_iterable():
+    triangle = Triangle(Point(0, 0), Point(4, 0), Point(0, 4))
+    # The two new families compose: the lattice points of a shape are exactly
+    # the cells to set for its lattice-point reading.
+    matrix = BitMatrix(point for point in triangle.latticePoints())
+    assert sorted(matrix) == sorted(triangle.latticePoints())
+
+
+def test_range_set_reset_and_flip_keep_the_matrix_window():
+    matrix = BitMatrix(0, 0, 4, 4)
+    matrix.set([(0, 0), (1, 1), (2, 2)])
+    assert sorted(matrix) == [Point(0, 0), Point(1, 1), Point(2, 2)]
+    matrix.reset([Point(0, 0), Point(2, 2)])
+    assert sorted(matrix) == [Point(1, 1)]
+    matrix.flip([(1, 1), (3, 3)])
+    assert sorted(matrix) == [Point(3, 3)]
+    assert (matrix.origin(), matrix.width(), matrix.height()) == (Point(0, 0), 4, 4)
+
+
+def test_a_cell_outside_the_window_is_dropped_by_the_range_mutators():
+    matrix = BitMatrix(0, 0, 2, 2)
+    matrix.set([(0, 0), (9, 9)])
+    assert sorted(matrix) == [Point(0, 0)]
+
+
+def test_repetition_cancels_under_flip_but_not_under_set_or_reset():
+    matrix = BitMatrix(0, 0, 4, 4)
+    matrix.set([(1, 1), (1, 1)])
+    assert matrix.get(1, 1)
+    matrix.reset([(1, 1), (1, 1)])
+    assert not matrix.get(1, 1)
+    # Flipping a cell twice is what leaves it as it was.
+    matrix.flip([(1, 1), (1, 1)])
+    assert not matrix.get(1, 1)
+    matrix.flip([(1, 1), (1, 1), (1, 1)])
+    assert matrix.get(1, 1)
+
+
+def test_a_fractional_coordinate_is_refused_in_a_range_too():
+    with pytest.raises(RuntimeError, match="not an integer"):
+        BitMatrix([Point(0, 0), Point(Fraction(1, 2), 1)])
+    matrix = BitMatrix(0, 0, 4, 4)
+    with pytest.raises(RuntimeError, match="not an integer"):
+        matrix.set([Point(Fraction(1, 2), 1)])
+
+
+def test_a_shape_is_not_a_range_of_cells():
+    """Every shape iterates over its defining points, which are a boundary."""
+    triangle = Triangle(Point(0, 0), Point(4, 0), Point(0, 4))
+    with pytest.raises(TypeError, match="not a range of cells"):
+        BitMatrix(triangle)
+    matrix = BitMatrix(0, 0, 8, 8)
+    for mutate in (matrix.set, matrix.reset, matrix.flip):
+        with pytest.raises(TypeError, match="not a range of cells"):
+            mutate(triangle)
+    # Passing the points explicitly is how to ask for that reading anyway.
+    assert BitMatrix(triangle.vertices()).count() == 3
+
+
+def test_a_rectilinear_shape_still_reaches_its_rasterizing_constructor():
+    polygon = Polygon([0, 0, 3, 0, 3, 2, 0, 2])
+    # Not the three cells of its vertices: the six cells it covers.
+    assert BitMatrix(polygon) == polygon.asBitMatrix()
+    assert BitMatrix(polygon).count() == 6
+
+
+def test_a_matrix_is_not_a_range_of_cells_either():
+    matrix = BitMatrix([(0, 0), (2, 2)])
+    with pytest.raises(TypeError, match="carries a window"):
+        BitMatrix(matrix)
+    with pytest.raises(TypeError, match="carries a window"):
+        matrix.set(matrix)
+    # lattice() is the reading to pass on.
+    assert BitMatrix(matrix.lattice()) == matrix
+
+
+def test_a_range_item_must_be_a_cell():
+    with pytest.raises(TypeError, match="a Point or a pair of ints"):
+        BitMatrix(["a", "b"])
+    with pytest.raises(TypeError, match="a Point or a pair of ints"):
+        BitMatrix([(0, 0, 0)])
+
+
 # --- container protocol ------------------------------------------------------
 
 

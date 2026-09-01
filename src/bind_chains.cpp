@@ -191,6 +191,11 @@ void bind_chains(nb::module_ &m) {
                 "The same vertex sequence as a Polyline, which keeps its vertices in "
                 "traversal order rather than as a sorted point set.");
 
+        PGL_BIND_LATTICE_POINTS(cls, MonotoneChain,
+                                "The integer points on the chain, in increasing order, each of them "
+                                "once: a vertex shared by two edges is reported a single time, and a "
+                                "chain meets no point twice otherwise.");
+
         // Vertical queries -- the payoff of the sorted storage, and unique to
         // this shape. All are O(log n) and exact; each returns None rather than
         // an index when the query x lies outside the chain's x-extent.
@@ -260,6 +265,12 @@ void bind_chains(nb::module_ &m) {
                 "non-adjacent edges meet, adjacent edges meet only at their shared "
                 "vertex, and no edge has zero length. A closed polyline (first "
                 "vertex equal to the last) is therefore not simple.");
+
+        PGL_BIND_LATTICE_POINTS(cls, Polyline,
+                                "The integer points on the polyline, edge by edge in traversal "
+                                "order, each kept the first time the polyline reaches it -- so a "
+                                "shared vertex, a crossing and a retraced stretch are each reported "
+                                "once.");
 
         // The 2-opt edge flip: remove one edge and rejoin the two sub-paths it
         // leaves by a different edge over the same vertex set. Removing edge

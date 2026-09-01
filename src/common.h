@@ -376,6 +376,29 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
             "edge is not axis-parallel, or a coordinate is not a whole number the grid can "    \
             "hold; use innerRaster/outerRaster to approximate any other shape.")
 
+// The integer points a shape contains, bound on the twelve bounded shapes pgl
+// gives it to (every bounded one, plus a HalfplaneIntersection, which raises
+// when it is unbounded; the four unbounded shapes cover infinitely many). The
+// boundary counts as contains() counts it, so a point on an edge is a point of
+// the shape, and every point is reported once.
+//
+// ResultNumber is asked for as BigInt rather than left to default. The default
+// for an ERational shape is the same int64_t grid asBitMatrix() uses, and pgl
+// throws when a lattice point does not fit it -- but a pypgl Point holds a
+// BigInt coordinate, so that ceiling is one the binding would be imposing on an
+// answer the bound type represents perfectly well (a short segment sitting at
+// x = 10^20 has three lattice points and no int64_t to name them with). The
+// widening to the bound Point allocates a BigInt per coordinate either way,
+// which is most of what the narrower type would have saved.
+#define PGL_BIND_LATTICE_POINTS(cls, SelfT, doc)                                \
+    cls.def("latticePoints", [](const SelfT &s) {                               \
+        const auto exact = s.latticePoints<pgl::BigInt>();                      \
+        std::vector<Point> result;                                              \
+        result.reserve(exact.size());                                           \
+        for (const auto &p : exact) result.emplace_back(p);                     \
+        return result;                                                          \
+    }, doc)
+
 // Queries over a shape's defining points, bound on every shape that has them
 // (all but Point, whose `index` takes a coordinate and which has no interior):
 //   pointInside()        — an exact interior point (ResultNumber defaults to

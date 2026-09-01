@@ -162,6 +162,7 @@ if not s.interiorsIntersect(t):
 A segment `s` has methods such as:
 
 - `s.midpoint()`: Returns the midpoint.
+- `s.latticePoints()`: Returns the integer points on `s` in increasing order, an endpoint among them exactly when its own coordinates are whole. A segment over fractional coordinates still reports every grid point it passes through, and one whose supporting line misses the grid reports none.
 - `s.length()`: Returns `s[0].distance(s[1])` as `float`.
 - `s.squaredLength()`: Returns `s[0].squaredDistance(s[1])`.
 - `s.isDegenerate()`: Returns `s.length() == 0`.
@@ -201,6 +202,7 @@ print(s)
 An oriented segment `s` has all methods of the `Segment` class:
 
 - `s.midpoint()`: Returns the midpoint.
+- `s.latticePoints()`: The same integer points as the unoriented segment's, listed from `source()` to `target()` instead of in increasing order.
 - `s.length()`: Returns `s[0].distance(s[1])` as `float`.
 - `s.squaredLength()`: Returns `s[0].squaredDistance(s[1])`.
 - `s.isDegenerate()`: Returns `s.length() == 0`.
@@ -364,6 +366,7 @@ A polyline `p` has methods such as:
 - `p.length()`: Returns the Euclidean length (a `float`: a sum of square roots is irrational in general).
 - `p.lengthL1()` / `p.lengthLInf()`: Return the exact Manhattan / Chebyshev length.
 - `p.pointInside()`: Returns an exact point in the relative interior (the midpoint of the first edge).
+- `p.latticePoints()`: The integer points on `p`, edge by edge in traversal order, each of them once — a shared vertex, a crossing and a retraced stretch are all reported only where the polyline first reaches them.
 
 As a 1-dimensional shape, its boundary is its two extreme vertices and its relative interior is everything else — the same convention as `Segment`. `p.intersection(s)` returns a *list* of `Point` and `Segment` pieces, since a chain can meet even a line in arbitrarily many disjoint places. It is not defined against `Disk` or `Polygon`.
 
@@ -390,6 +393,7 @@ The sorted order buys $O(\log n)$ vertical queries, which no other shape has. Ea
 - `c.yAtX(x)`: The exact y-coordinate of the chain at `x`.
 - `c.isBelow(p)` / `c.isAbove(p)`: Engaged when a ray shot straight down / up from `p` hits the chain. A point *on* the chain satisfies both.
 - `c.isStrictlyBelow(p)` / `c.isStrictlyAbove(p)`: The strict variants. A point on the chain satisfies neither.
+- `c.latticePoints()`: The integer points on `c`, edge by edge and hence in increasing order, the vertex two edges share reported once.
 
 It is also the only chain that can grow: `c.insert(point)` or `c.insert(points)` splices new vertices into the sorted sequence (a duplicate is ignored).
 
@@ -524,6 +528,7 @@ Disk does not have the `intersection` method and cannot be scaled on a single ax
 - `d.isDegenerate()`: Returns true if the points are collinear or equal.
 - `d.radius()`: Returns the radius length.
 - `d.squaredRadius()`: Returns the squared radius.
+- `d.latticePoints()`: The integer points of the disk, its boundary circle included. Each column grows from the row nearest the centre by the disk's own containment test, so no square root is taken and nothing is rounded.
 - `d.center()`: Returns the center point.
 - `d.diameter()`: As always returns a diameter `Segment`, but for disks the segment is always horizontal.
 
@@ -650,6 +655,7 @@ A region `A` has methods such as:
 - `A.verticesCentroid()`: The centroid of the vertex set over all rings.
 - `A.interiorContainsInterior(s)`: Returns true when the open segment `s` lies in the region's strict interior — strictly inside the outer ring and never touching a hole — while either endpoint may rest on any ring. Takes $O(n \log n)$ time.
 - `A.pointInside()`: A point strictly inside the region, so inside the outer boundary and outside every hole. Undefined for a region with no area.
+- `A.latticePoints()`: The integer points of the region. A hole takes away the points strictly inside it and keeps the ones on its boundary, which belong to the region as any boundary point does.
 - `A.asBitMatrix()`: The region rasterized into a [`BitMatrix`](data_structures.md#bit-matrix) over its bounding box, the holes left unset. Every edge of every ring must be axis-parallel and every coordinate a whole number, otherwise it raises.
 - `A.triangulation()` / `A.triangulation(segments)`: The constrained Delaunay [triangulation](data_structures.md#triangulation) of the region. Every ring becomes constrained edges and the hole interiors are left out of the domain, so the in-domain triangles cover exactly the part of the region that has area — a slit, having none, carries no triangle.
 - `A.diameter()` / `A.bbox()`: The holes lie inside the outer boundary and cannot contribute, so both are the outer polygon's.
@@ -708,6 +714,7 @@ A set `A` has methods such as:
 - `A.holeCount()` / `A.hasHoles()` / `A.vertexCount()` / `A.vertices()` / `A.edges()` / `A.orientedEdges()`: Counted and collected over every ring of every component.
 - `A.area()` / `A.twiceArea()` / `A.centroid()` / `A.verticesCentroid()` / `A.pointInside()` / `A.diameter()` / `A.bbox()`: The components have disjoint interiors, so the area is simply their sum; the diameter may join two different components.
 - `A.asBitMatrix()`: The set rasterized into a [`BitMatrix`](data_structures.md#bit-matrix) over the bounding box of the whole set, the holes and the gaps between components left unset. Same rectilinear requirement as on a region.
+- `A.latticePoints()`: The integer points of the set, over all components at once, so a point two touching components share is reported once.
 - `A.triangulation()` / `A.convexPartition()` / `A.convexCovering()`: The gaps between components are left out of the domain, exactly as a region's holes are.
 - `A.interiorContainsInterior(s)`: Returns true when the open segment `s` lies strictly inside **one** component. Boundary endpoints are allowed; a passage between two components that merely touch is not, since the segment would have to cross the pinch point they share.
 
@@ -764,6 +771,7 @@ A half-plane intersection `k` has methods such as:
 - `k.edge(i)`: The boundary contribution of half-plane `i`: a [`Segment`](#segment) when both neighbouring vertices exist, a [`Ray`](#ray) when only one does, and the whole boundary [`Line`](#line) otherwise.
 - `k.halfplanes()`: The stored half-planes, in boundary order.
 - `k.bbox()`, `k.asConvex()`, `k.area()`, `k.twiceArea()`, `k.centroid()`: Raise when the region is empty or unbounded — none of them exists then.
+- `k.latticePoints()`: The integer points of the region, read off the exact convex polygon its constraints cut out. Raises for an unbounded region, which covers infinitely many.
 - `k.intersection(other)`: Intersecting with a `Halfplane`, `Rectangle`, `Triangle`, `Convex`, or another `HalfplaneIntersection` returns another `HalfplaneIntersection`, so the type is closed under these and the result is exact, with no coordinate divisions. Against the 0D/1D shapes it returns the usual concrete piece.
 
 `len(k)`, `k[i]` and iteration run over the **half-planes**, which are what the

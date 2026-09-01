@@ -1,5 +1,7 @@
 #include "common.h"
 
+#include <nanobind/stl/pair.h>
+
 using namespace pypgl;
 
 // BitMatrix: one bit per cell of a fixed rectangular window of the integer grid
@@ -124,6 +126,48 @@ pgl::Rectangle<Cell> boundingWindow(const AnyShape &shape) {
                                 Cell(ceilTo(box.max().x()), ceilTo(box.max().y())), true);
 }
 
+// A Python iterable of cells -> the cells themselves, in the lattice-point
+// reading: every item names the cell it *is*, rather than a corner of a region
+// to fill. Both spellings a single cell takes are accepted item by item -- an
+// ordinary Point (checked by toCell, so a fractional coordinate raises) or a
+// pair of plain ints, which is what a loop building many of them wants.
+//
+// A shape and another matrix are refused rather than read. In Python every
+// shape iterates over its defining points and a matrix over its set cells, so
+// both would otherwise convert quietly and answer the wrong question: a Polygon
+// would come in as the ring of its vertices, which is a boundary and not a
+// point cloud, and a matrix would be trimmed out of the window it carries. The
+// shape check is a single non-converting probe of the seventeen bound classes,
+// which is what the AnyShape caster in casters.h already does.
+std::vector<Cell> toCells(nb::handle cells) {
+    if (nb::isinstance<BitMatrix>(cells))
+        throw nb::type_error(
+            "BitMatrix: a matrix is not a range of cells here -- it carries a window this "
+            "reading would trim away. Pass matrix.lattice() to ask for its set cells.");
+    AnyShape probe;
+    if (nb::try_cast<AnyShape>(cells, probe, /*convert=*/false))
+        throw nb::type_error(
+            "BitMatrix: a shape is not a range of cells -- its points are a boundary, not a "
+            "point cloud. Rasterize it with BitMatrix(shape), asBitMatrix() or "
+            "innerRaster/outerRaster, or pass shape.vertices() to read them as cells.");
+
+    std::vector<Cell> result;
+    for (nb::handle item : cells) {
+        Point point;
+        if (nb::try_cast<Point>(item, point, /*convert=*/false)) {
+            result.push_back(toCell(point));
+            continue;
+        }
+        std::pair<std::int64_t, std::int64_t> xy;
+        if (nb::try_cast<std::pair<std::int64_t, std::int64_t>>(item, xy, /*convert=*/false)) {
+            result.emplace_back(xy.first, xy.second);
+            continue;
+        }
+        throw nb::type_error("BitMatrix: a cell is a Point or a pair of ints.");
+    }
+    return result;
+}
+
 // Both spellings of a cell-addressing method: (x, y) as plain ints, and a Point.
 template <class Class, class Fn>
 void bind_cell_pair(Class &cls, const char *name, Fn fn, const char *doc) {
@@ -185,6 +229,24 @@ void bind_bitmatrix(nb::module_ &m) {
             "holes and the gaps between components left unset; the same operation as "
             "PolygonSet.asBitMatrix().");
 
+    // The lattice-point reading of a range: one set cell per cell named, over
+    // the smallest window holding them all -- so the result equals its own
+    // trimmed form, and an empty range gives an empty window. Registered after
+    // every typed constructor above, which is what keeps a Polygon (iterable
+    // over its vertices in the Python layer) reaching its rasterizing overload
+    // rather than this one; a shape or a matrix that does get here is refused
+    // by toCells rather than read.
+    cls.def("__init__",
+            [](BitMatrix *self, nb::iterable cells) { new (self) BitMatrix(toCells(cells)); },
+            nb::arg("cells"),
+            nb::sig("def __init__(self, cells: collections.abc.Iterable[Point | tuple[int, int]]) "
+                    "-> None"),
+            "A matrix with one cell set per point of the range, over the smallest window "
+            "holding them. Every point names the cell it is -- a Point, whose coordinates "
+            "must be whole numbers, or a pair of plain ints. A repeated cell sets the same "
+            "bit again, which changes nothing. A shape is refused: rasterize it with "
+            "BitMatrix(shape) instead.");
+
     // ---- the window --------------------------------------------------------
     cls.def("origin", [](const BitMatrix &b) { return Point(b.origin()); },
             "Lower-left cell of the window.");
@@ -224,6 +286,31 @@ void bind_bitmatrix(nb::module_ &m) {
                 b.set(c.x(), c.y(), value);
             },
             nb::arg("cell"), nb::arg("value"), "Sets or clears the cell.");
+
+    // ---- many cells at once ------------------------------------------------
+    // The plural of the three above, reading a range the way the range
+    // constructor does -- every point names the cell it is -- except that the
+    // window here is the one the matrix already has, so a cell outside it is
+    // dropped exactly as it is for the single-cell forms.
+    cls.def("set", [](BitMatrix &b, nb::iterable cells) { b.set(toCells(cells)); },
+            nb::arg("cells"),
+            nb::sig("def set(self, cells: collections.abc.Iterable[Point | tuple[int, int]]) "
+                    "-> None"),
+            "Sets one cell per point of the range. Cells outside the window are dropped, and "
+            "a repeated cell changes nothing.");
+    cls.def("reset", [](BitMatrix &b, nb::iterable cells) { b.reset(toCells(cells)); },
+            nb::arg("cells"),
+            nb::sig("def reset(self, cells: collections.abc.Iterable[Point | tuple[int, int]]) "
+                    "-> None"),
+            "Clears one cell per point of the range. Cells outside the window are dropped, and "
+            "a repeated cell changes nothing.");
+    cls.def("flip", [](BitMatrix &b, nb::iterable cells) { b.flip(toCells(cells)); },
+            nb::arg("cells"),
+            nb::sig("def flip(self, cells: collections.abc.Iterable[Point | tuple[int, int]]) "
+                    "-> None"),
+            "Inverts one cell per point of the range. Cells outside the window are dropped; "
+            "unlike set and reset, a repeated cell flips twice and so leaves the bit as it "
+            "was.");
     cls.def("setAll", &BitMatrix::setAll, "Sets every cell of the window.");
     cls.def("clear", &BitMatrix::clear, "Clears every cell.");
 

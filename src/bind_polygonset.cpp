@@ -181,6 +181,10 @@ void bind_polygonset(nb::module_ &m) {
     PGL_BIND_MINKOWSKI_REGION(cls, PolygonSet);
     PGL_BIND_EROSION_REGION(cls, PolygonSet);
     PGL_BIND_CONVEX_HULL(cls, PolygonSet);
+    PGL_BIND_LATTICE_POINTS(cls, PolygonSet,
+                            "The integer points the set contains, in increasing order, boundary included: a point "
+                            "on an edge is a point of the shape. A point shared by two components, which can only "
+                            "be a boundary point of both, is reported once.");
     PGL_BIND_AS_BIT_MATRIX(cls, PolygonSet);
     PGL_BIND_INTERSECTION_SET(cls, PolygonSet);
 

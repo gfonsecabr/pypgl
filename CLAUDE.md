@@ -1026,6 +1026,69 @@ Not added: an example. [examples/](examples/) is one file per upstream C++ one
 and upstream ships no `BitMatrix` example, so adding one would break that
 mapping.
 
+**`latticePoints` and cell ranges** (milestone 19, version 1.2.0): `.pgl-ref`
+re-pinned to `bfa6e08`, two upstream commits on from `1e4e6c1` — a small re-pin
+that renames and breaks nothing, so both additions are pure new surface.
+
+**`latticePoints()`** — the integer points a shape contains, boundary included
+as `contains` counts it, each of them once — is bound on the twelve bounded
+shapes pgl gives it to via `PGL_BIND_LATTICE_POINTS` in
+[src/common.h](src/common.h): every bounded shape except `Point` (which has none
+upstream: it is its own answer), plus `HalfplaneIntersection`, which raises when
+unbounded. The four unbounded shapes cover infinitely many and do not have it.
+Ordering is the shape's own — increasing everywhere except an `OrientedSegment`
+(source to target) and a `Polyline` (edge by edge in traversal order, each point
+kept where the chain first reaches it, so a shared vertex, a crossing and a
+retraced stretch are each reported once).
+
+**The one binding decision is `ResultNumber = BigInt`, asked for explicitly
+rather than defaulted.** The default for an ERational shape is the same int64_t
+grid `asBitMatrix()` uses, and pgl throws when a lattice point does not fit it —
+but a pypgl `Point` holds a BigInt coordinate, so that ceiling would be one the
+*binding* imposes on an answer the bound type represents perfectly well: a short
+segment sitting at x = 10^20 has three lattice points and no int64_t to name
+them with. Measured at ~3.5x the int64_t path end to end (180k points: 6ms
+against 1.7ms, widening included), which the Python object creation dominates
+anyway — and the widening to the bound `Point` allocates a BigInt per coordinate
+either way, which is most of what the narrower type would have saved.
+
+**A range of cells for `BitMatrix`**: the new `BitMatrix(cells)` constructor
+(one set cell per point, over the smallest window holding them, so the result is
+its own `trimmed()`) plus range `set`/`reset`/`flip` (same reading, over the
+window the matrix already has, a cell outside it dropped as for the single-cell
+forms). Both spellings a single cell already took are accepted item by item — a
+`Point` or a pair of plain ints — and they may be mixed.
+
+**pgl refuses a shape or another matrix as such a range, and in Python that
+refusal has to be made at runtime.** Upstream constrains the overload with
+`!AnyShapeConcept && !is_bit_matrix_v`; here every shape iterates over its
+defining points and a matrix over its set cells, so both would convert quietly
+and answer the wrong question — a `Polygon` coming in as the ring of its
+vertices (a boundary, not a point cloud) and a matrix trimmed out of the window
+it carries. Rather than the ~68 refusing overloads the milestone 11
+`Convex.insert` pattern would have cost here, `toCells` in
+[src/bind_bitmatrix.cpp](src/bind_bitmatrix.cpp) takes `nb::iterable` and probes
+once: `nb::isinstance<BitMatrix>`, then a non-converting `try_cast<AnyShape>`,
+which is exactly the seventeen-class probe the `casters.h` `Shape` caster
+already does. Each raises a `TypeError` naming what to pass instead
+(`shape.vertices()`, `matrix.lattice()`, or `shape.latticePoints()`). The
+`nb::iterable` overloads are registered **after** every typed one, the milestone
+14 `Canvas.draw` ordering: that is what keeps `BitMatrix(polygon)` reaching its
+rasterizing constructor rather than the cell-range one.
+
+**An upstream doc bug this surfaced, not fixed here** (pgl's checkout is the
+user's): in `shape/disk.hpp` and `shape/polygonwithholes.hpp`, commit `08992e0`
+inserted `latticePoints`' doc block *and declaration* between `bbox()`'s doc
+comment and `bbox()` itself. Doxygen therefore gives `latticePoints` the `bbox`
+brief and leaves `bbox` with `latticePoints`' `@return`/`@throws`, which is why
+those two rows of [doc/shapes.md](doc/shapes.md) carry a bounding-box tooltip on
+a lattice-points link. The generated pages will correct themselves on the next
+re-pin once the two comment blocks are reordered upstream; there is nothing to
+change on the pypgl side.
+
+Not added: an example, for the same reason milestone 18 added none — upstream
+ships no example for either addition.
+
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).

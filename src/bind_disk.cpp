@@ -130,6 +130,12 @@ void bind_disk(nb::module_ &m) {
     cls.def("bbox", [](const Disk &d) { return d.bbox(); },
             "Exact axis-aligned bounding box (a Rectangle); tight when built from a center and radius.");
 
+    PGL_BIND_LATTICE_POINTS(cls, Disk,
+                            "The integer points the disk contains, in increasing order, boundary "
+                            "included: a point at distance exactly the radius is one of them. Each "
+                            "column of the bounding box meets the disk in one run of rows, grown by "
+                            "the disk's own exact containment test, so no square root is taken.");
+
     cls.def("index", [](const Disk &d, const Point &p) -> std::optional<std::ptrdiff_t> {
                 auto i = d.index(p);
                 if (i < 0) return std::nullopt;
