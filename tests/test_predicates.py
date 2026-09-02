@@ -116,3 +116,32 @@ def test_a_set_asks_about_one_component_at_a_time():
     # Spanning the gap lies in neither component.
     assert not both.interiorContainsInterior(
         pypgl.Segment(pypgl.Point(1, 1), pypgl.Point(5, 1)))
+
+
+def test_a_degenerate_shape_separates_like_the_segment_it_spans():
+    # A flattened Convex/Triangle/Polygon stands for the segment it spans, so
+    # `separates` (and `crosses`, its conjunction) must answer as that segment
+    # does -- in both directions.
+    triangle = pypgl.Triangle(pypgl.Point(0, 0), pypgl.Point(10, 0),
+                              pypgl.Point(5, 10))
+    ends = [pypgl.Point(5, -5), pypgl.Point(5, 15)]
+    segment = pypgl.Segment(*ends)
+    assert segment.separates(triangle) and triangle.separates(segment)
+
+    flat = [
+        pypgl.Convex(ends),
+        pypgl.Triangle(ends[0], pypgl.Point(5, 2), ends[1]),
+        pypgl.Polygon([ends[0], pypgl.Point(5, 2), ends[1]]),
+    ]
+    for shape in flat:
+        assert shape.separates(triangle)
+        assert triangle.separates(shape)
+        assert shape.crosses(triangle)
+        assert triangle.crosses(shape)
+
+    # A degenerate shape that stops short of the far side disconnects nothing,
+    # again exactly as the segment does.
+    short = [pypgl.Point(5, -5), pypgl.Point(5, 8)]
+    assert not pypgl.Segment(*short).separates(triangle)
+    assert not pypgl.Convex(short).separates(triangle)
+    assert not triangle.separates(pypgl.Convex(short))

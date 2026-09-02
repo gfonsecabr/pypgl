@@ -1084,7 +1084,7 @@ brief and leaves `bbox` with `latticePoints`' `@return`/`@throws`, which is why
 those two rows of [doc/shapes.md](doc/shapes.md) carry a bounding-box tooltip on
 a lattice-points link. The generated pages will correct themselves on the next
 re-pin once the two comment blocks are reordered upstream; there is nothing to
-change on the pypgl side.
+change on the pypgl side. (They did, in milestone 20 below.)
 
 Not added: an example, for the same reason milestone 18 added none — upstream
 ships no example for either addition.
@@ -1133,6 +1133,54 @@ coordinate read to roughly 80 ns and stay exact, but `isinstance(p.x(),
 Fraction)` would become false. Not done — it is a semantic decision, not a
 tuning one.
 
+
+**A re-pin that binds nothing** (milestone 20, version 1.2.1): `.pgl-ref`
+re-pinned to `9e7a041`, ten upstream commits on from `bfa6e08`. Nothing was
+added, renamed or removed — the batch is arithmetic and rasterization
+performance (`BigInt` limb division and comparison without a per-step
+allocation, a `Rational` reduced once where both parts are read and its gcd
+skipped for a numerator of -1, `BitMatrix` centroid and hashing a word at a
+time) plus four correctness fixes. So there is no new surface to bind and no
+macro list to widen; the release is the re-pin itself.
+
+**One of those fixes is user-visible through an already-bound method.**
+`separates` (and `crosses`, which is the conjunction of the two directions)
+answered `False` outright for a *degenerate* `Convex`/`Triangle`/`Polygon`/`Disk`
+operand on either side, contradicting the promise every other predicate keeps —
+that a flattened shape stands for the segment it spans. A two-vertex `Convex`
+cut straight through a triangle therefore separated nothing while the equal
+`Segment` did, and `Rectangle`/`Triangle`/`Polygon` reach the algorithm through
+`asConvex()`, so a collinear triangle was refused everywhere. Verified against
+the old headers before writing the test (a throwaway `g++ -I` against a
+`git archive` of `bfa6e08`): `convex.separates(tri)` and `tri.separates(convex)`
+were both false, and the degenerate-`Triangle` pair was *asymmetric* — true one
+way, false the other. Now all of them answer as the `Segment` does, and
+[tests/test_predicates.py](tests/test_predicates.py) pins it. **This is the
+milestone 15 lesson in yet another key**: the predicate matrix is bound by a
+macro over 17 shapes, but its *degenerate* rows are a second dimension the
+macro says nothing about.
+
+The other three need nothing here: the most-negative-`int128` streaming fix and
+the two float-conversion fixes sit under a caster that rejects `float` and
+reads a coordinate through `numerator`/`denominator`, and the
+`Rectangle`/`Disk` `latticePoints` overflow fix is about a *fixed-width*
+`ResultNumber` wrapping — pypgl asks for `BigInt` (milestone 19), which has no
+range to wrap.
+
+**The milestone 19 doc bug fixed itself, exactly as predicted.** Upstream
+commit `5ac85fc` reattached the `bbox()` comments that `latticePoints`' block
+had been inserted into, so re-running [doc/raw/doxylink.py](doc/raw/doxylink.py)
+`--write` changed five tooltips in [doc/shapes.md](doc/shapes.md) and nothing
+else: `Disk`/`PolygonWithHoles` `latticePoints` stopped claiming to return a
+bounding box, both `bbox()` links gained the brief they had been missing, and
+`Convex.rotated90` lost a stray "Translates the convex polygon" left by a
+duplicated doc block removed in the same commit. Regenerating the pages after a
+re-pin is worth doing even when no binding changes — the tooltips come from the
+pinned headers.
+
+Every example's SVG and Ipe output is byte-identical to
+[examples/figures/](examples/figures/); only `canvas_gallery.pdf` differs, in
+its creation date, which is the standing exception.
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
