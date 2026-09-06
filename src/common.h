@@ -492,6 +492,95 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_SQDIST(cls, SelfT, ::pypgl::PolygonSet);                 \
     PGL_SQDIST(cls, SelfT, ::pypgl::Disk)
 
+// -----------------------------------------------------------------------------
+// Closest elements and closest points
+//
+// squaredDistance answers *how far* two shapes are and forgets *where*.
+// closestSegments names the two elements attaining it -- the receiver's first,
+// the argument's second, each an edge of its shape and degenerate to a vertex
+// where the shape has no edge -- and closestPoints names the two points
+// themselves. Both return None exactly when the distance is zero, which is the
+// same question squaredDistance already answers (and includes one shape nested
+// inside the other, or inside a hole of it: a hole is boundary like any other,
+// so a shape sitting in one is at *positive* distance from the region around
+// it and the witness lands on the hole's edge).
+//
+// The two grids differ, and the reason is what each answer has to name:
+//
+//   * closestSegments needs both operands *bounded polygonal* -- covered by
+//     finitely many segments whose endpoints are the shape's own vertices --
+//     so its grid is the eleven such shapes squared. That is what keeps it
+//     exact in the plain number type: the answer is made of vertices already
+//     stored.
+//   * closestPoints needs only *one* of them to be. An unbounded convex
+//     operand (Line, OrientedLine, Ray, Halfplane, HalfplaneIntersection)
+//     realizes the distance at a point lying on no edge and at no vertex, so
+//     it has no element to name -- but the point is there and is still exact.
+//     Both operands unbounded is left out (two parallel lines realize their
+//     distance along their whole length, with nothing to anchor a choice to),
+//     and so is Disk in either position, whose nearest point is irrational.
+//
+// Where both are defined, closestPoints refines the elements closestSegments
+// names, so the two never disagree about which pair they describe. Each
+// returns a list of two, so `a.closestPoints(b)[0]` is the point on `a`.
+#define PGL_CLOSEST_SEGMENTS(cls, SelfT, OtherT) PGL_PRED(cls, SelfT, closestSegments, OtherT)
+#define PGL_CLOSEST_POINTS(cls, SelfT, OtherT)   PGL_PRED(cls, SelfT, closestPoints, OtherT)
+
+// The eleven bounded polygonal shapes: every pair of them has both methods.
+#define PGL_BIND_CLOSEST_SEGMENTS_ALL(cls, SelfT)                    \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::Point);                \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::Segment);              \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::OrientedSegment);      \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::Triangle);             \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::Rectangle);            \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::Convex);               \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::MonotoneChain);        \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::Polyline);             \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::Polygon);              \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::PolygonWithHoles);     \
+    PGL_CLOSEST_SEGMENTS(cls, SelfT, ::pypgl::PolygonSet)
+
+// closestPoints of a *bounded polygonal* receiver: those same eleven plus the
+// five unbounded convex shapes -- sixteen operands, everything but Disk.
+#define PGL_BIND_CLOSEST_POINTS_BOUNDED(cls, SelfT)                  \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Point);                  \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Segment);                \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::OrientedSegment);        \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Line);                   \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::OrientedLine);           \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Ray);                    \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Halfplane);              \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Triangle);               \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Rectangle);              \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Convex);                 \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::MonotoneChain);          \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Polyline);               \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Polygon);                \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::PolygonWithHoles);       \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::HalfplaneIntersection);  \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::PolygonSet)
+
+// Both families for a bounded polygonal receiver.
+#define PGL_BIND_ALL_CLOSEST(cls, SelfT)          \
+    PGL_BIND_CLOSEST_SEGMENTS_ALL(cls, SelfT);    \
+    PGL_BIND_CLOSEST_POINTS_BOUNDED(cls, SelfT)
+
+// closestPoints of an *unbounded convex* receiver: the eleven bounded
+// polygonal operands and no more -- it has no closestSegments at all, and no
+// second unbounded operand.
+#define PGL_BIND_CLOSEST_POINTS_UNBOUNDED(cls, SelfT)                \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Point);                  \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Segment);                \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::OrientedSegment);        \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Triangle);               \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Rectangle);              \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Convex);                 \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::MonotoneChain);          \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Polyline);               \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::Polygon);                \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::PolygonWithHoles);       \
+    PGL_CLOSEST_POINTS(cls, SelfT, ::pypgl::PolygonSet)
+
 // samePointSet of SelfT against every bound shape (all seventeen, including
 // itself): whether the two shapes are the same set of points, which is what
 // `a.contains(b) and b.contains(a)` says but decided directly and usually

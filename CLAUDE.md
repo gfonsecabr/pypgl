@@ -1182,6 +1182,67 @@ Every example's SVG and Ipe output is byte-identical to
 [examples/figures/](examples/figures/); only `canvas_gallery.pdf` differs, in
 its creation date, which is the standing exception.
 
+**Closest elements, closest points, and the minimum width** (milestone 21,
+version 1.3.0): `.pgl-ref` re-pinned to `ae4e7a3`, two upstream commits on from
+`9e7a041`. Nothing renamed or removed, so both additions are pure new surface —
+two new methods on `Convex` and two new matrices.
+
+**`closestSegments`/`closestPoints` say *where* a `squaredDistance` is
+realized**, which is the half `squaredDistance` throws away. `closestSegments`
+names the two elements attaining it — the receiver's first, each an edge of its
+shape and degenerate to a vertex where the shape has none — and `closestPoints`
+names the two points. Both answer `None` exactly when the distance is zero,
+so the `optional` restates the question the distance already answers rather
+than asking a second one (and zero includes one shape nested inside the other;
+a hole is boundary like any other, so a shape sitting *in* a hole is at
+positive distance from the region around it and the witness lands on the hole's
+edge).
+
+**The two grids are different shapes, and that is the thing to remember.**
+`closestSegments` is the eleven bounded polygonal shapes squared (121 pairs) —
+both operands must be covered by finitely many segments whose endpoints are
+their own vertices, which is what keeps the answer exact in the plain number
+type. `closestPoints` needs only *one* operand to be: an unbounded convex
+operand (`Line`, `OrientedLine`, `Ray`, `Halfplane`, `HalfplaneIntersection`)
+realizes the distance at a point on no edge and at no vertex, so it has no
+element to name but still has an exact point — 11×16 + 5×11 = 231 pairs.
+Unbounded on *both* sides is out (two parallel lines realize their distance
+along their whole length, with nothing to anchor a choice to) and so is `Disk`
+in either position. Hence three macros in [src/common.h](src/common.h):
+`PGL_BIND_CLOSEST_SEGMENTS_ALL`, `PGL_BIND_CLOSEST_POINTS_BOUNDED` (the two
+together as `PGL_BIND_ALL_CLOSEST`, what a bounded receiver calls) and
+`PGL_BIND_CLOSEST_POINTS_UNBOUNDED`. Both return a list of two, from
+`std::array` through the caster [src/common.h](src/common.h) already included.
+
+**The probe was stronger this time than in milestones 12 and 16**, and worth
+reusing in this form: because both methods have a deduced (`auto`) return type,
+asking for `decltype(a.closestPoints(b))` instantiates the *body*, not just the
+declaration — so the throwaway `scratchpad/probe.cpp` that printed the
+demangled return type of all 17×17 pairs also proved every pair compiles, which
+a bare `requires` check does not (the milestone 12 `regularizedUnionOf` lesson).
+It reported exactly the 121/231 grid the concepts describe, and the full build
+then went through first try.
+
+**`Convex.smallestEnclosingSlab`/`squaredMinimumWidth`/`minimumWidth`** are the
+other half of the rotating-calipers pair whose first half is `diameter()`: the
+narrowest strip between two parallel supporting lines. The slab comes back as a
+`HalfplaneIntersection` for the same reason `smallestEnclosingRectangle` does —
+both lines are exact (one flush with an edge, one through the farthest vertex)
+while the distance between them divides by an edge length and takes a square
+root — so the width is asked for separately, exact as `squaredMinimumWidth`
+(a `Fraction`, the form to compare against a threshold: fitting through a gap of
+width `w` is `squaredMinimumWidth() <= w*w`, decided with no square root) and
+approximate as `minimumWidth`. A hull of fewer than three vertices has width
+zero and comes back as its own region. All three are bound in
+[src/bind_polygons.cpp](src/bind_polygons.cpp) beside the two enclosing shapes,
+on `Convex` alone, since all of them read a convex boundary.
+
+Not added: an example, for the reason milestones 18 and 19 added none —
+[examples/](examples/) is one file per upstream C++ one and upstream ships none
+for either addition. Every example's SVG and Ipe output is byte-identical to
+[examples/figures/](examples/figures/); only `canvas_gallery.pdf` differs, in
+its creation date, the standing exception.
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 
@@ -1260,7 +1321,11 @@ consistent across classes; each predicate is overloaded per accepted shape type.
 themselves, so every pair works in both directions;
 `PGL_BIND_ALL_L1LINF_DISTANCE` lists sixteen (no `Disk`, which pgl implements
 only against a `Point`) and `PGL_BIND_ALL_HAUSDORFF_DISTANCE` only the six
-bounded convex ones.
+bounded convex ones. The closest-pair family (milestone 21) has two grids of
+its own: `PGL_BIND_CLOSEST_SEGMENTS_ALL` lists the eleven bounded polygonal
+shapes and `PGL_BIND_CLOSEST_POINTS_BOUNDED` those eleven plus the five
+unbounded convex ones, with `PGL_BIND_CLOSEST_POINTS_UNBOUNDED` for an
+unbounded receiver.
 
 ## Build & test
 

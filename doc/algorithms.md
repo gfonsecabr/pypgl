@@ -118,6 +118,29 @@ print(diamond.smallestEnclosingRectangle().area(), diamond.bbox().area())
 # Output: 32 64
 ```
 
+- `Convex.smallestEnclosingSlab()`: The narrowest strip between two parallel
+  supporting lines — the *width* of the hull, and the other half of the
+  rotating-calipers pair whose first half is `diameter()`. It comes back as a
+  [`HalfplaneIntersection`](shapes.md#halfplane-intersection) of two half-planes
+  for the same reason the rectangle does: both lines are exact — one flush with
+  an edge, one through the vertex farthest from it — while the distance between
+  them divides by an edge length and takes a square root. The slab is unbounded,
+  so it has no `bbox()` and no corners to ask for.
+
+- `Convex.squaredMinimumWidth()` / `Convex.minimumWidth()`: That distance,
+  squared and exact, or plain and approximate. The width itself is generally
+  irrational; its square is a `Fraction`, so it is the form to compare against a
+  threshold or between hulls — fitting through a gap of width `w` is
+  `squaredMinimumWidth() <= w * w`, decided without a square root. A hull of
+  fewer than three vertices has no width to minimize: the width is zero and the
+  slab is the hull's own region.
+
+```python
+strip = pgl.Convex([0,0, 4,2, 3,4, -1,2])
+print(strip.squaredMinimumWidth(), strip.bbox().width(), strip.bbox().height())
+# Output: 5 5 4
+```
+
 ### Closest pair of points
 
 - [`closestPair(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a9d03d057595b9229d8cc245045ce4df4 "Computes a closest pair of points by divide and conquer."): Returns a [`Segment`](shapes.md#segment) joining two of

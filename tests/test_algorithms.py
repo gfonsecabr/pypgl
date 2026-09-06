@@ -1,5 +1,8 @@
 """Free algorithms documented by Pangolin's algorithms reference."""
 
+import math
+from fractions import Fraction
+
 import pytest
 
 import pypgl
@@ -148,6 +151,53 @@ def test_the_enclosing_rectangle_stays_exact_on_a_slanted_hull():
     assert rect.contains(hull)
     for vertex in hull.vertices():
         assert vertex in rect
+
+
+# --- minimum width ----------------------------------------------------------
+
+def test_the_minimum_width_of_a_square_is_its_side():
+    square = pypgl.Convex([0, 0, 4, 0, 4, 4, 0, 4])
+    assert square.squaredMinimumWidth() == 16
+    assert square.minimumWidth() == pytest.approx(4.0)
+
+
+def test_the_narrowest_slab_is_the_other_half_of_the_calipers_pair():
+    # Both supporting lines are exact -- one flush with an edge, one through
+    # the farthest vertex -- so the slab is exact even though its width is not.
+    strip = pypgl.Convex([Point(0, 0), Point(4, 2), Point(3, 4), Point(-1, 2)])
+    slab = strip.smallestEnclosingSlab()
+    assert isinstance(slab, pypgl.HalfplaneIntersection)
+    assert slab.contains(strip)
+    assert len(slab) == 2                          # two parallel half-planes
+    assert strip.squaredMinimumWidth() == 5        # exact; the width is sqrt(5)
+    assert strip.minimumWidth() == pytest.approx(math.sqrt(5))
+
+
+def test_the_width_can_beat_every_side_of_the_bounding_box():
+    # The minimum is attained flush with an edge, at whatever angle that is:
+    # this parallelogram is thinner than either side of its 5 x 4 bbox.
+    strip = pypgl.Convex([Point(0, 0), Point(4, 2), Point(3, 4), Point(-1, 2)])
+    box = strip.bbox()
+    assert strip.squaredMinimumWidth() < min(box.width(), box.height()) ** 2
+
+
+def test_the_squared_width_is_the_exact_form_to_compare_with():
+    triangle = pypgl.Convex([Point(0, 0), Point(4, 0), Point(2, 3)])
+    assert triangle.squaredMinimumWidth() == 9      # 2 * area / longest edge
+    assert isinstance(triangle.squaredMinimumWidth(), Fraction)
+    assert isinstance(triangle.minimumWidth(), float)
+    # Fitting through a gap of width w is decided exactly, with no square root.
+    assert triangle.squaredMinimumWidth() <= Fraction(3) ** 2
+    assert not triangle.squaredMinimumWidth() <= Fraction(29, 10) ** 2
+
+
+def test_a_hull_of_fewer_than_three_vertices_has_no_width_to_minimize():
+    for hull in (pypgl.Convex(), pypgl.Convex([Point(1, 1)]),
+                 pypgl.Convex([Point(0, 0), Point(5, 5)])):
+        assert hull.squaredMinimumWidth() == 0
+        assert hull.minimumWidth() == 0.0
+        # The degenerate slab of width zero is the hull's own region.
+        assert hull.smallestEnclosingSlab() == hull.asHalfplaneIntersection()
 
 
 # --- closest pair -----------------------------------------------------------

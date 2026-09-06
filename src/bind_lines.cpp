@@ -42,6 +42,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_PARALLEL(cls, Line);
         PGL_BIND_ALL_PREDICATES(cls, Line);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Line);
+        PGL_BIND_CLOSEST_POINTS_UNBOUNDED(cls, Line);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Line);
         PGL_BIND_ALL_SAME_POINT_SET(cls, Line);
 
@@ -82,6 +83,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_PARALLEL(cls, OrientedLine);
         PGL_BIND_ALL_PREDICATES(cls, OrientedLine);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, OrientedLine);
+        PGL_BIND_CLOSEST_POINTS_UNBOUNDED(cls, OrientedLine);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, OrientedLine);
         PGL_BIND_ALL_SAME_POINT_SET(cls, OrientedLine);
         PGL_BIND_INTERSECTION_LINEAR(cls, OrientedLine);
@@ -119,6 +121,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_PARALLEL(cls, Ray);
         PGL_BIND_ALL_PREDICATES(cls, Ray);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Ray);
+        PGL_BIND_CLOSEST_POINTS_UNBOUNDED(cls, Ray);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Ray);
         PGL_BIND_ALL_SAME_POINT_SET(cls, Ray);
 
@@ -195,6 +198,7 @@ void bind_lines(nb::module_ &m) {
                 "keep the whole disk inside it. Raises for the same reason its sum does.");
         PGL_BIND_ALL_PREDICATES(cls, Halfplane);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Halfplane);
+        PGL_BIND_CLOSEST_POINTS_UNBOUNDED(cls, Halfplane);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Halfplane);
         PGL_BIND_ALL_SAME_POINT_SET(cls, Halfplane);
         // The regularized intersection is available exactly when the other

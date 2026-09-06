@@ -70,6 +70,7 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_INDEXING(cls, Triangle);
         PGL_BIND_ALL_PREDICATES(cls, Triangle);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Triangle);
+        PGL_BIND_ALL_CLOSEST(cls, Triangle);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Triangle);
         PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Triangle);
         PGL_BIND_ALL_SAME_POINT_SET(cls, Triangle);
@@ -228,6 +229,7 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_INDEXING(cls, Rectangle);
         PGL_BIND_ALL_PREDICATES(cls, Rectangle);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Rectangle);
+        PGL_BIND_ALL_CLOSEST(cls, Rectangle);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Rectangle);
         PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Rectangle);
         PGL_BIND_ALL_SAME_POINT_SET(cls, Rectangle);
@@ -391,15 +393,40 @@ void bind_polygons(nb::module_ &m) {
         PGL_BIND_LATTICE_POINTS(cls, Convex,
                                 "The integer points the convex polygon contains, in increasing order, boundary "
                                 "included: a point on an edge is a point of the shape.");
-        // The two smallest enclosing shapes, both of which read a *convex*
-        // boundary and so live on this class alone; any other shape reaches
-        // them through its own convexHull(), whose enclosing shapes are its.
+        // The enclosing shapes and the minimum width, all of which read a
+        // *convex* boundary and so live on this class alone; any other shape
+        // reaches them through its own convexHull(), whose enclosing shapes
+        // are its. The rectangle and the slab are the two rotating-calipers
+        // sweeps that answer with supporting lines rather than corners.
         cls.def("smallestEnclosingRectangle",
                 [](const Convex &c) { return c.smallestEnclosingRectangle(); },
                 "The smallest-area enclosing rectangle, at whatever angle it turns out to "
                 "be -- so a HalfplaneIntersection (four half-planes) rather than a "
                 "Rectangle, which is axis-aligned by definition. Rotating calipers over "
                 "the hull, linear in its vertices.");
+        cls.def("smallestEnclosingSlab",
+                [](const Convex &c) { return c.smallestEnclosingSlab(); },
+                "The narrowest slab (strip between two parallel supporting lines) containing "
+                "the hull -- the other half of the rotating-calipers pair whose first half is "
+                "diameter(). Exact, and a HalfplaneIntersection (two half-planes) for the same "
+                "reason smallestEnclosingRectangle() is one: both lines are exact but the "
+                "distance between them divides by an edge length and takes a square root, so "
+                "the width is asked for separately with squaredMinimumWidth()/minimumWidth(). "
+                "The slab is unbounded, so it has no bbox() and no vertices; a hull of fewer "
+                "than three vertices comes back as its own region.");
+        cls.def("squaredMinimumWidth",
+                [](const Convex &c) { return c.squaredMinimumWidth(); },
+                "The squared width of smallestEnclosingSlab(), exact. The width itself is "
+                "generally irrational, but its square is the fraction (2*area)^2 / |edge|^2 -- "
+                "so this is the form to compare against a threshold or between hulls: fitting "
+                "through a gap of width w is squaredMinimumWidth() <= w*w, decided exactly. "
+                "Zero for a hull of fewer than three vertices.");
+        cls.def("minimumWidth",
+                [](const Convex &c) { return c.minimumWidth(); },
+                "The width of smallestEnclosingSlab() as a float -- the smallest distance "
+                "between two parallel supporting lines. Generally irrational, hence the float; "
+                "use squaredMinimumWidth() to compare widths exactly. Zero for a hull of fewer "
+                "than three vertices.");
         cls.def("smallestEnclosingDisk",
                 [](const Convex &c) { return c.smallestEnclosingDisk(); },
                 "The unique smallest closed Disk containing the hull -- the same answer "
@@ -426,6 +453,7 @@ void bind_polygons(nb::module_ &m) {
         // ResultNumber form to request).
         PGL_BIND_ALL_PREDICATES(cls, Convex);
         PGL_BIND_ALL_SQUARED_DISTANCE(cls, Convex);
+        PGL_BIND_ALL_CLOSEST(cls, Convex);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, Convex);
         PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Convex);
         PGL_BIND_ALL_SAME_POINT_SET(cls, Convex);

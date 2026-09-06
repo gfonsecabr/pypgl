@@ -192,6 +192,7 @@ void bind_polygonset(nb::module_ &m) {
     PGL_BIND_ALL_PREDICATES(cls, PolygonSet);
     PGL_BIND_INTERIOR_CONTAINS_INTERIOR(cls, PolygonSet);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, PolygonSet);
+    PGL_BIND_ALL_CLOSEST(cls, PolygonSet);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, PolygonSet);
     PGL_BIND_ALL_SAME_POINT_SET(cls, PolygonSet);
     // No Hausdorff family: pgl defines it only for the six bounded convex

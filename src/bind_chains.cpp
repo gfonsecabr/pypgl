@@ -105,6 +105,7 @@ namespace {
     PGL_BIND_INDEXING(cls, SelfT);                                                                                    \
     PGL_BIND_ALL_PREDICATES(cls, SelfT);                                                                              \
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, SelfT);                                                                        \
+    PGL_BIND_ALL_CLOSEST(cls, SelfT);                                                                                 \
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, SelfT);                                                                         \
     PGL_BIND_ALL_SAME_POINT_SET(cls, SelfT);                                                                          \
     PGL_BIND_INTERSECTION_CHAIN(cls, SelfT);                                                                          \

@@ -179,6 +179,7 @@ void bind_polygon(nb::module_ &m) {
     PGL_BIND_ALL_PREDICATES(cls, Polygon);
     PGL_BIND_INTERIOR_CONTAINS_INTERIOR(cls, Polygon);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Polygon);
+    PGL_BIND_ALL_CLOSEST(cls, Polygon);
     // Polygon has no squaredHausdorffDistance/hausdorffDistanceL1/LInf (pgl
     // excludes it from that family -- a non-convex polygon would need a
     // Voronoi-based approach; see PGL_BIND_ALL_HAUSDORFF_DISTANCE in

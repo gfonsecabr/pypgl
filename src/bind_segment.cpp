@@ -49,6 +49,7 @@ void bind_segment(nb::module_ &m) {
     PGL_BIND_PARALLEL(cls, Segment);
     PGL_BIND_ALL_PREDICATES(cls, Segment);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Segment);
+    PGL_BIND_ALL_CLOSEST(cls, Segment);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, Segment);
     PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, Segment);
     PGL_BIND_ALL_SAME_POINT_SET(cls, Segment);
@@ -109,6 +110,7 @@ void bind_oriented_segment(nb::module_ &m) {
     PGL_BIND_PARALLEL(cls, OrientedSegment);
     PGL_BIND_ALL_PREDICATES(cls, OrientedSegment);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, OrientedSegment);
+    PGL_BIND_ALL_CLOSEST(cls, OrientedSegment);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, OrientedSegment);
     PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, OrientedSegment);
     PGL_BIND_ALL_SAME_POINT_SET(cls, OrientedSegment);

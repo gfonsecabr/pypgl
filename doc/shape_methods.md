@@ -475,6 +475,34 @@ applied with a [`Transformation`](#transformations).
   wanted. The one exception is a distance involving a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), which is
   irrational in general and therefore returns a `float`.
 
+- `closestSegments(Shape)`: Returns the two elements that realize
+  `squaredDistance` — the receiver's first, the argument's second — as a list of
+  two [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label.")s, or `None` when the shapes meet. Each is one of the shape's own
+  edges, degenerate to a vertex where the shape has no edge, so the answer is
+  exact in the plain coordinate type: it is made of vertices the shapes already
+  store. It is `None` exactly when `squaredDistance` is zero, which includes one
+  shape nested inside the other. Defined for every pair among [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."),
+  [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label."), [`OrientedSegment`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedSegment.html "Directed segment preserving source-to-target order plus optional segment label."), [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."),
+  [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes.") and [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors.") —
+  the bounded polygonal shapes, the only ones whose distance is realized on an
+  edge or at a vertex. [`Line`](https://gfonsecabr.github.io/pgl/structpgl_1_1Line.html "Unoriented infinite line."), [`OrientedLine`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedLine.html "Directed infinite line with left/right side semantics plus optional line label."), [`Ray`](https://gfonsecabr.github.io/pgl/structpgl_1_1Ray.html "Half-infinite line starting from one source point plus optional ray label."), [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line."),
+  [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty.") and [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") do not have it; the unbounded ones among
+  them still have `closestPoints`.
+
+- `closestPoints(Shape)`: Returns the two points that realize
+  `squaredDistance`, the receiver's first, as a list of two [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.")s, or `None`
+  when the shapes meet. Where `closestSegments` is also defined this refines the
+  elements it names, so the two never disagree about which pair they describe.
+  Beyond those pairs it also takes an unbounded convex shape — [`Line`](https://gfonsecabr.github.io/pgl/structpgl_1_1Line.html "Unoriented infinite line."),
+  [`OrientedLine`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedLine.html "Directed infinite line with left/right side semantics plus optional line label."), [`Ray`](https://gfonsecabr.github.io/pgl/structpgl_1_1Ray.html "Half-infinite line starting from one source point plus optional ray label."), [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line.") or [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty.") — in either
+  position: such a shape realizes the distance at a point lying on no edge and
+  at no vertex, so there is no element to name, but there is still a point to
+  give, and it is still exact. Not defined with an unbounded shape on *both*
+  sides, since two parallel lines realize their distance along their whole
+  length with nothing to anchor a choice to, nor with a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), whose nearest
+  point is generally irrational. A point interior to an element comes from a
+  division and is a `Fraction` like any other coordinate.
+
 - `distanceL1(Shape)` / `distanceLInf(Shape)`: Return the exact Manhattan (L1) or
   Chebyshev (LInf) distance as a `Fraction`. Unlike the Euclidean case these are
   rational, so the distance itself is exposed rather than its square. Defined for

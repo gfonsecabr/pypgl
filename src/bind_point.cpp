@@ -83,6 +83,7 @@ void bind_point(nb::module_ &m) {
 
     // Exact squared distance against every shape (Fraction result).
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Point);
+    PGL_BIND_ALL_CLOSEST(cls, Point);
 
     // distanceL1/distanceLInf against every other non-Disk shape (Point's own
     // Point-Point pair above is exact/untemplated; every other pair here goes

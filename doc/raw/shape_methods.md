@@ -473,6 +473,34 @@ applied with a [`Transformation`](#transformations).
   wanted. The one exception is a distance involving a `Disk`, which is
   irrational in general and therefore returns a `float`.
 
+- `closestSegments(Shape)`: Returns the two elements that realize
+  `squaredDistance` — the receiver's first, the argument's second — as a list of
+  two `Segment`s, or `None` when the shapes meet. Each is one of the shape's own
+  edges, degenerate to a vertex where the shape has no edge, so the answer is
+  exact in the plain coordinate type: it is made of vertices the shapes already
+  store. It is `None` exactly when `squaredDistance` is zero, which includes one
+  shape nested inside the other. Defined for every pair among `Point`,
+  `Segment`, `OrientedSegment`, `Triangle`, `Rectangle`, `Convex`,
+  `MonotoneChain`, `Polyline`, `Polygon`, `PolygonWithHoles` and `PolygonSet` —
+  the bounded polygonal shapes, the only ones whose distance is realized on an
+  edge or at a vertex. `Line`, `OrientedLine`, `Ray`, `Halfplane`,
+  `HalfplaneIntersection` and `Disk` do not have it; the unbounded ones among
+  them still have `closestPoints`.
+
+- `closestPoints(Shape)`: Returns the two points that realize
+  `squaredDistance`, the receiver's first, as a list of two `Point`s, or `None`
+  when the shapes meet. Where `closestSegments` is also defined this refines the
+  elements it names, so the two never disagree about which pair they describe.
+  Beyond those pairs it also takes an unbounded convex shape — `Line`,
+  `OrientedLine`, `Ray`, `Halfplane` or `HalfplaneIntersection` — in either
+  position: such a shape realizes the distance at a point lying on no edge and
+  at no vertex, so there is no element to name, but there is still a point to
+  give, and it is still exact. Not defined with an unbounded shape on *both*
+  sides, since two parallel lines realize their distance along their whole
+  length with nothing to anchor a choice to, nor with a `Disk`, whose nearest
+  point is generally irrational. A point interior to an element comes from a
+  division and is a `Fraction` like any other coordinate.
+
 - `distanceL1(Shape)` / `distanceLInf(Shape)`: Return the exact Manhattan (L1) or
   Chebyshev (LInf) distance as a `Fraction`. Unlike the Euclidean case these are
   rational, so the distance itself is exposed rather than its square. Defined for

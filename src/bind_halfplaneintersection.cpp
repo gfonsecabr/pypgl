@@ -174,6 +174,7 @@ void bind_halfplane_intersection(nb::module_ &m) {
     // --- the shared matrices ---
     PGL_BIND_ALL_PREDICATES(cls, HalfplaneIntersection);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, HalfplaneIntersection);
+    PGL_BIND_CLOSEST_POINTS_UNBOUNDED(cls, HalfplaneIntersection);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, HalfplaneIntersection);
     PGL_BIND_ALL_SAME_POINT_SET(cls, HalfplaneIntersection);
     // No Hausdorff family: the region may be unbounded, so the distance to or

@@ -578,6 +578,8 @@ A convex polygon `c` has methods such as:
 - `c.insert(point)` / `c.insert(points)` / `c.insert(shape)`: Enlarges the hull in place so that it contains the given point, points, or shape. A shape must have vertices to take the hull of, so a `Disk` and the unbounded shapes raise a `TypeError`. (They are refused explicitly rather than by omission: every shape is iterable over its defining points, so without the guard `c.insert(disk)` would quietly insert the disk's three *boundary* points, whose hull the disk bulges straight past.)
 - `c.upperHull()` / `c.lowerHull()`: Return the upper and lower boundary chains as a [`MonotoneChain`](#monotonechain). Both run between the leftmost and rightmost vertices, and together they cover the boundary.
 - `c.smallestEnclosingDisk()` / `c.smallestEnclosingRectangle()`: The smallest enclosing [`Disk`](#disk), and the smallest-**area** enclosing rectangle — which comes back as a [`HalfplaneIntersection`](#halfplane-intersection), since the tightest one is generally tilted and a `Rectangle` is axis-aligned by definition. Both read a convex boundary, which is why they live here; every other shape reaches them through its own `convexHull()`. See [algorithms](algorithms.md#smallest-enclosing-shapes-of-a-convex-hull).
+- `c.smallestEnclosingSlab()`: The narrowest strip between two parallel supporting lines, as a [`HalfplaneIntersection`](#halfplane-intersection) of two half-planes — exact, like the enclosing rectangle and for the same reason, while the distance between the two lines is not. The slab is unbounded, so it has no `bbox()` and no corners. A hull of fewer than three vertices comes back as its own region.
+- `c.squaredMinimumWidth()` / `c.minimumWidth()`: The distance between those two lines, squared and exact as a `Fraction`, or plain as a `float`. The width is generally irrational, so the squared form is the one to compare against a threshold or between hulls.
 
 It knows how to convert itself to:
 - `c.asPolygon()`: Returns the polygon representation of the convex polygon.
@@ -586,7 +588,7 @@ It knows how to convert itself to:
 
 If the convex polygon `c` has $n$ vertices, then:
 
-- `c.diameter()` takes $O(n)$ time.
+- `c.diameter()`, `c.smallestEnclosingRectangle()`, `c.smallestEnclosingSlab()` and the two minimum-width methods each take $O(n)$ time, one rotating-calipers sweep apiece.
 - `c.intersects(s)` takes $O(\log n)$ time if `s` is a shape with $O(1)$ vertices (not including Disk).
 - `s.intersects(c)` takes $O(\log n)$ time if `s` is a shape with $O(1)$ vertices (not including Disk).
 - `c.intersects(c2)` takes $O(\min(n+m) \log(n+m))$ time if `c2` is a convex polygon with $m$ vertices.
