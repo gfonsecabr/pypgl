@@ -23,30 +23,30 @@ are those outputs, kept in [`figures/`](figures).
 <a href="example_canvas.py"><img src="figures/canvas_gallery.svg" width="100%"/></a>
 </td>
 <td width="33%" valign="top" align="center">
-<a href="example_enclosing.py"><img src="figures/example_enclosing.svg" width="100%"/></a>
+<a href="example_helloworld.py"><img src="figures/example_helloworld.svg" width="100%"/></a>
 </td>
 </tr>
 <tr>
 <td valign="top"><a href="example2.py"><code>example2</code></a> Draws shapes on a <a href="../doc/canvas.md"><code>Canvas</code></a>, styling each as it goes.</td>
 <td valign="top"><a href="example_canvas.py"><code>canvas</code></a> Every bounded shape on one grid, exported as <a href="figures/canvas_gallery.svg">SVG</a>, <a href="figures/canvas_gallery.pdf">PDF</a> and <a href="figures/canvas_gallery.ipe">IPE</a>.</td>
-<td valign="top"><a href="example_enclosing.py"><code>enclosing</code></a> The smallest disk and the smallest-area rectangle enclosing a point set.</td>
+<td valign="top"><a href="example_helloworld.py"><code>helloworld</code></a> Letters built from several shapes, two of them templates translated into place.</td>
 </tr>
 
 <tr>
+<td width="33%" valign="top" align="center">
+<a href="example_enclosing.py"><img src="figures/example_enclosing.svg" width="100%"/></a>
+</td>
 <td width="33%" valign="top" align="center">
 <a href="example_convex.py"><img src="figures/midpoint_polygon.svg" width="100%"/></a>
 </td>
 <td width="33%" valign="top" align="center">
 <a href="example_minkowskisum.py"><img src="figures/example_minkowskisum.svg" width="100%"/></a>
 </td>
-<td width="33%" valign="top" align="center">
-<a href="example_motion.py"><img src="figures/example_motion.svg" width="100%"/></a>
-</td>
 </tr>
 <tr>
+<td valign="top"><a href="example_enclosing.py"><code>enclosing</code></a> The smallest disk and the smallest-area rectangle enclosing a point set.</td>
 <td valign="top"><a href="example_convex.py"><code>convex</code></a> Iterates the midpoint map on a <a href="../doc/shapes.md#convex"><code>Convex</code></a> hull 100 times.</td>
 <td valign="top"><a href="example_minkowskisum.py"><code>minkowskisum</code></a> Grows a non-convex <a href="../doc/shapes.md#polygon"><code>Polygon</code></a> by a convex one.</td>
-<td valign="top"><a href="example_motion.py"><code>motion</code></a> Moves a polygonal robot through a room by eroding it and routing in the reduced visibility graph.</td>
 </tr>
 
 <tr>
@@ -74,24 +74,30 @@ are those outputs, kept in [`figures/`](figures).
 <a href="example_visibility.py"><img src="figures/example_visibility.svg" width="100%"/></a>
 </td>
 <td width="33%" valign="top" align="center">
-<a href="example_arrangement.py"><img src="figures/example_arrangement.svg" width="100%"/></a>
+<a href="example_motion.py"><img src="figures/example_motion.svg" width="100%"/></a>
 </td>
 </tr>
 <tr>
 <td valign="top"><a href="example_mst.py"><code>mst</code></a> Hands a triangulation over as a <a href="../doc/data_structures.md#graph"><code>Graph</code></a> and grows the Euclidean minimum spanning tree.</td>
 <td valign="top"><a href="example_visibility.py"><code>visibility</code></a> Uses the <a href="../doc/algorithms.md#visibility">visibility graph</a> to find the shortest path across a room with blocks.</td>
-<td valign="top"><a href="example_arrangement.py"><code>arrangement</code></a> Builds the <a href="../doc/data_structures.md#arrangement"><code>Arrangement</code></a> of crossing segments and walks its largest bounded face.</td>
+<td valign="top"><a href="example_motion.py"><code>motion</code></a> Moves a polygonal robot through a room by eroding it and routing in the reduced visibility graph.</td>
 </tr>
 
 <tr>
 <td width="33%" valign="top" align="center">
+<a href="example_arrangement.py"><img src="figures/example_arrangement.svg" width="100%"/></a>
+</td>
+<td width="33%" valign="top" align="center">
+<a href="example_dual_arrangement.py"><img src="figures/example_dual_arrangement_dual.svg" width="100%"/></a>
+</td>
+<td width="33%" valign="top" align="center">
 <a href="example_shapetree.py"><img src="figures/example_shapetree_triangles.svg" width="100%"/></a>
 </td>
-<td width="33%"></td>
 </tr>
 <tr>
+<td valign="top"><a href="example_arrangement.py"><code>arrangement</code></a> Builds the <a href="../doc/data_structures.md#arrangement"><code>Arrangement</code></a> of crossing segments and walks its largest bounded face.</td>
+<td valign="top"><a href="example_dual_arrangement.py"><code>dual_arrangement</code></a> Detects collinear points through the <a href="../doc/data_structures.md#arrangement"><code>Arrangement</code></a> of their <a href="../doc/shapes.md#point"><code>dual</code></a> lines; also <a href="figures/example_dual_arrangement_primal.svg">in the primal</a>.</td>
 <td valign="top"><a href="example_shapetree.py"><code>shapetree</code></a> A <a href="../doc/data_structures.md#shape-tree"><code>ShapeTree</code></a> indexes triangles to answer queries with another triangle; also <a href="figures/example_shapetree_points.svg">over points</a>.</td>
-<td></td>
 </tr>
 </table>
 

@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <defs>
+    <marker id="pgl-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" stroke="none"/>
+    </marker>
+  </defs>
+  
+  <line x1="223.5" y1="-129.5" x2="311.75" y2="135.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,6)--(-1,3)</title></line>
+  <line x1="311.75" y1="135.25" x2="333.812" y2="201.438" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1,3)--(-3/4,9/4)</title></line>
+  <line x1="333.812" y1="201.438" x2="370.583" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-3/4,9/4)--(-1/3,1)</title></line>
+  <line x1="370.583" y1="311.75" x2="377.938" y2="333.812" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/3,1)--(-1/4,3/4)</title></line>
+  <line x1="377.938" y1="333.812" x2="382.35" y2="347.05" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/4,3/4)--(-1/5,3/5)</title></line>
+  <line x1="382.35" y1="347.05" x2="429.417" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/5,3/5)--(1/3,-1)</title></line>
+  <line x1="429.417" y1="488.25" x2="435.3" y2="505.9" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/3,-1)--(2/5,-6/5)</title></line>
+  <line x1="435.3" y1="505.9" x2="452.95" y2="558.85" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(2/5,-6/5)--(3/5,-9/5)</title></line>
+  <line x1="452.95" y1="558.85" x2="488.25" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/5,-9/5)--(1,-3)</title></line>
+  <path d="M 488.25 664.75 L 510.792 732.375 L 533.333 800" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(1,-3)--(2,-6)-&gt;</title></path>
+  
+  <line x1="223.5" y1="-129.5" x2="370.583" y2="164.667" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,6)--(-1/3,8/3)</title></line>
+  <line x1="370.583" y1="164.667" x2="400" y2="223.5" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/3,8/3)--(0,2)</title></line>
+  <line x1="400" y1="223.5" x2="422.062" y2="267.625" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,2)--(1/4,3/2)</title></line>
+  <line x1="422.062" y1="267.625" x2="429.417" y2="282.333" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/4,3/2)--(1/3,4/3)</title></line>
+  <line x1="429.417" y1="282.333" x2="444.125" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/3,4/3)--(1/2,1)</title></line>
+  <line x1="444.125" y1="311.75" x2="488.25" y2="400" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/2,1)--(1,0)</title></line>
+  <line x1="488.25" y1="400" x2="510.312" y2="444.125" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,0)--(5/4,-1/2)</title></line>
+  <line x1="510.312" y1="444.125" x2="532.375" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(5/4,-1/2)--(3/2,-1)</title></line>
+  <line x1="532.375" y1="488.25" x2="620.625" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/2,-1)--(5/2,-3)</title></line>
+  <path d="M 620.625 664.75 L 654.438 732.375 L 688.25 800" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(5/2,-3)--(7/2,-5)-&gt;</title></path>
+  <path d="M 311.75 135.25 L 277.938 67.625 L 244.125 0" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(-1,3)--(-2,5)-&gt;</title></path>
+  <line x1="311.75" y1="135.25" x2="341.167" y2="194.083" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1,3)--(-2/3,7/3)</title></line>
+  <line x1="341.167" y1="194.083" x2="382.35" y2="276.45" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2/3,7/3)--(-1/5,7/5)</title></line>
+  <line x1="382.35" y1="276.45" x2="400" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/5,7/5)--(0,1)</title></line>
+  <line x1="400" y1="311.75" x2="466.188" y2="444.125" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,1)--(3/4,-1/2)</title></line>
+  <line x1="466.188" y1="444.125" x2="488.25" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/4,-1/2)--(1,-1)</title></line>
+  <line x1="488.25" y1="488.25" x2="576.5" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,-1)--(2,-3)</title></line>
+  <path d="M 576.5 664.75 L 610.312 732.375 L 644.125 800" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(2,-3)--(3,-5)-&gt;</title></path>
+  <path d="M 223.5 311.75 L 111.75 311.75 L 0 311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(-2,1)--(-3,1)-&gt;</title></path>
+  <line x1="223.5" y1="311.75" x2="370.583" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,1)--(-1/3,1)</title></line>
+  <line x1="370.583" y1="311.75" x2="400" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/3,1)--(0,1)</title></line>
+  <line x1="400" y1="311.75" x2="444.125" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,1)--(1/2,1)</title></line>
+  <line x1="444.125" y1="311.75" x2="532.375" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/2,1)--(3/2,1)</title></line>
+  <line x1="532.375" y1="311.75" x2="576.5" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/2,1)--(2,1)</title></line>
+  <path d="M 576.5 311.75 L 688.25 311.75 L 800 311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(2,1)--(3,1)-&gt;</title></path>
+  <path d="M 47 488.25 L 23.5 488.25 L 0 488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(-4,-1)--(-5,-1)-&gt;</title></path>
+  <line x1="47" y1="488.25" x2="223.5" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-4,-1)--(-2,-1)</title></line>
+  <line x1="223.5" y1="488.25" x2="311.75" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,-1)--(-1,-1)</title></line>
+  <line x1="311.75" y1="488.25" x2="429.417" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1,-1)--(1/3,-1)</title></line>
+  <line x1="429.417" y1="488.25" x2="444.125" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/3,-1)--(1/2,-1)</title></line>
+  <line x1="444.125" y1="488.25" x2="488.25" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/2,-1)--(1,-1)</title></line>
+  <line x1="488.25" y1="488.25" x2="532.375" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,-1)--(3/2,-1)</title></line>
+  <path d="M 532.375 488.25 L 666.188 488.25 L 800 488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(3/2,-1)--(5/2,-1)-&gt;</title></path>
+  
+  <line x1="-129.5" y1="664.75" x2="47" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-6,-3)--(-4,-3)</title></line>
+  <line x1="47" y1="664.75" x2="223.5" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-4,-3)--(-2,-3)</title></line>
+  <line x1="223.5" y1="664.75" x2="252.917" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,-3)--(-5/3,-3)</title></line>
+  <line x1="252.917" y1="664.75" x2="355.875" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-5/3,-3)--(-1/2,-3)</title></line>
+  <line x1="355.875" y1="664.75" x2="400" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/2,-3)--(0,-3)</title></line>
+  <line x1="400" y1="664.75" x2="488.25" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,-3)--(1,-3)</title></line>
+  <line x1="488.25" y1="664.75" x2="576.5" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,-3)--(2,-3)</title></line>
+  <line x1="576.5" y1="664.75" x2="620.625" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(2,-3)--(5/2,-3)</title></line>
+  <path d="M 620.625 664.75 L 710.312 664.75 L 800 664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(5/2,-3)--(7/2,-3)-&gt;</title></path>
+  
+  <line x1="-129.5" y1="664.75" x2="47" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-6,-3)--(-4,-1)</title></line>
+  <line x1="47" y1="488.25" x2="223.5" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-4,-1)--(-2,1)</title></line>
+  <line x1="223.5" y1="311.75" x2="333.812" y2="201.438" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,1)--(-3/4,9/4)</title></line>
+  <line x1="333.812" y1="201.438" x2="341.167" y2="194.083" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-3/4,9/4)--(-2/3,7/3)</title></line>
+  <line x1="341.167" y1="194.083" x2="370.583" y2="164.667" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2/3,7/3)--(-1/3,8/3)</title></line>
+  <line x1="370.583" y1="164.667" x2="444.125" y2="91.125" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/3,8/3)--(1/2,7/2)</title></line>
+  <line x1="444.125" y1="91.125" x2="576.5" y2="-41.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/2,7/2)--(2,5)</title></line>
+  <line x1="576.5" y1="-41.25" x2="841.25" y2="-306" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(2,5)--(5,8)</title></line>
+  <line x1="841.25" y1="-306" x2="929.5" y2="-394.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(5,8)--(6,9)</title></line>
+  
+  <path d="M 47 664.75 L 23.5 688.25 L 0 711.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(-4,-3)--(-5,-4)-&gt;</title></path>
+  <line x1="47" y1="664.75" x2="223.5" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-4,-3)--(-2,-1)</title></line>
+  <line x1="223.5" y1="488.25" x2="355.875" y2="355.875" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,-1)--(-1/2,1/2)</title></line>
+  <line x1="355.875" y1="355.875" x2="377.938" y2="333.812" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/2,1/2)--(-1/4,3/4)</title></line>
+  <line x1="377.938" y1="333.812" x2="400" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/4,3/4)--(0,1)</title></line>
+  <line x1="400" y1="311.75" x2="429.417" y2="282.333" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,1)--(1/3,4/3)</title></line>
+  <line x1="429.417" y1="282.333" x2="664.75" y2="47" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/3,4/3)--(3,4)</title></line>
+  <line x1="664.75" y1="47" x2="753" y2="-41.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3,4)--(4,5)</title></line>
+  
+  <path d="M 223.5 664.75 L 189.688 732.375 L 155.875 800" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(-2,-3)--(-3,-5)-&gt;</title></path>
+  <line x1="223.5" y1="664.75" x2="311.75" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,-3)--(-1,-1)</title></line>
+  <line x1="311.75" y1="488.25" x2="382.35" y2="347.05" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1,-1)--(-1/5,3/5)</title></line>
+  <line x1="382.35" y1="347.05" x2="400" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/5,3/5)--(0,1)</title></line>
+  <line x1="400" y1="311.75" x2="422.062" y2="267.625" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,1)--(1/4,3/2)</title></line>
+  <line x1="422.062" y1="267.625" x2="576.5" y2="-41.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/4,3/2)--(2,5)</title></line>
+  
+  
+  <line x1="47" y1="1282.5" x2="355.875" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-4,-10)--(-1/2,-3)</title></line>
+  <line x1="355.875" y1="664.75" x2="435.3" y2="505.9" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/2,-3)--(2/5,-6/5)</title></line>
+  <line x1="435.3" y1="505.9" x2="444.125" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(2/5,-6/5)--(1/2,-1)</title></line>
+  <line x1="444.125" y1="488.25" x2="466.188" y2="444.125" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/2,-1)--(3/4,-1/2)</title></line>
+  <line x1="466.188" y1="444.125" x2="488.25" y2="400" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/4,-1/2)--(1,0)</title></line>
+  <line x1="488.25" y1="400" x2="532.375" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,0)--(3/2,1)</title></line>
+  <line x1="532.375" y1="311.75" x2="664.75" y2="47" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/2,1)--(3,4)</title></line>
+  <line x1="664.75" y1="47" x2="841.25" y2="-306" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3,4)--(5,8)</title></line>
+  
+  
+  <line x1="-41.25" y1="1547.25" x2="400" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-5,-13)--(0,-3)</title></line>
+  <line x1="400" y1="664.75" x2="452.95" y2="558.85" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,-3)--(3/5,-9/5)</title></line>
+  <line x1="452.95" y1="558.85" x2="488.25" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/5,-9/5)--(1,-1)</title></line>
+  <line x1="488.25" y1="488.25" x2="510.312" y2="444.125" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,-1)--(5/4,-1/2)</title></line>
+  <line x1="510.312" y1="444.125" x2="576.5" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(5/4,-1/2)--(2,1)</title></line>
+  <line x1="576.5" y1="311.75" x2="753" y2="-41.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(2,1)--(4,5)</title></line>
+  <line x1="753" y1="-41.25" x2="929.5" y2="-394.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(4,5)--(6,9)</title></line>
+  
+  
+  <line x1="-41.25" y1="1547.25" x2="47" y2="1282.5" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-5,-13)--(-4,-10)</title></line>
+  <line x1="47" y1="1282.5" x2="252.917" y2="664.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-4,-10)--(-5/3,-3)</title></line>
+  <line x1="252.917" y1="664.75" x2="311.75" y2="488.25" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-5/3,-3)--(-1,-1)</title></line>
+  <line x1="311.75" y1="488.25" x2="355.875" y2="355.875" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1,-1)--(-1/2,1/2)</title></line>
+  <line x1="355.875" y1="355.875" x2="370.583" y2="311.75" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/2,1/2)--(-1/3,1)</title></line>
+  <line x1="370.583" y1="311.75" x2="382.35" y2="276.45" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/3,1)--(-1/5,7/5)</title></line>
+  <line x1="382.35" y1="276.45" x2="400" y2="223.5" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/5,7/5)--(0,2)</title></line>
+  <line x1="400" y1="223.5" x2="444.125" y2="91.125" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,2)--(1/2,7/2)</title></line>
+  <path d="M 444.125 91.125 L 459.312 45.5625 L 474.5 0" stroke="#94a3b8" fill="none" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke" marker-mid="url(#pgl-arrowhead)"><title>(1/2,7/2)--(3/2,13/2)-&gt;</title></path>
+  <circle cx="223.5" cy="-129.5" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,6)</title></circle>
+  <circle cx="311.75" cy="135.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1,3)</title></circle>
+  <circle cx="333.812" cy="201.438" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-3/4,9/4)</title></circle>
+  <circle cx="370.583" cy="311.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/3,1)</title></circle>
+  <circle cx="377.938" cy="333.812" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/4,3/4)</title></circle>
+  <circle cx="382.35" cy="347.05" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/5,3/5)</title></circle>
+  <circle cx="429.417" cy="488.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/3,-1)</title></circle>
+  <circle cx="435.3" cy="505.9" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(2/5,-6/5)</title></circle>
+  <circle cx="452.95" cy="558.85" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/5,-9/5)</title></circle>
+  <circle cx="488.25" cy="664.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,-3)</title></circle>
+  <circle cx="370.583" cy="164.667" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/3,8/3)</title></circle>
+  <circle cx="400" cy="223.5" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,2)</title></circle>
+  <circle cx="422.062" cy="267.625" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/4,3/2)</title></circle>
+  <circle cx="429.417" cy="282.333" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/3,4/3)</title></circle>
+  <circle cx="444.125" cy="311.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/2,1)</title></circle>
+  <circle cx="488.25" cy="400" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,0)</title></circle>
+  <circle cx="510.312" cy="444.125" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(5/4,-1/2)</title></circle>
+  <circle cx="532.375" cy="488.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/2,-1)</title></circle>
+  <circle cx="620.625" cy="664.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(5/2,-3)</title></circle>
+  <circle cx="341.167" cy="194.083" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2/3,7/3)</title></circle>
+  <circle cx="382.35" cy="276.45" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/5,7/5)</title></circle>
+  <circle cx="400" cy="311.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,1)</title></circle>
+  <circle cx="466.188" cy="444.125" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/4,-1/2)</title></circle>
+  <circle cx="488.25" cy="488.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,-1)</title></circle>
+  <circle cx="576.5" cy="664.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(2,-3)</title></circle>
+  <circle cx="223.5" cy="311.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,1)</title></circle>
+  <circle cx="532.375" cy="311.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3/2,1)</title></circle>
+  <circle cx="576.5" cy="311.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(2,1)</title></circle>
+  <circle cx="47" cy="488.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-4,-1)</title></circle>
+  <circle cx="223.5" cy="488.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,-1)</title></circle>
+  <circle cx="311.75" cy="488.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1,-1)</title></circle>
+  <circle cx="444.125" cy="488.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/2,-1)</title></circle>
+  <circle cx="-129.5" cy="664.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-6,-3)</title></circle>
+  <circle cx="47" cy="664.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-4,-3)</title></circle>
+  <circle cx="223.5" cy="664.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-2,-3)</title></circle>
+  <circle cx="252.917" cy="664.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-5/3,-3)</title></circle>
+  <circle cx="355.875" cy="664.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/2,-3)</title></circle>
+  <circle cx="400" cy="664.75" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,-3)</title></circle>
+  <circle cx="444.125" cy="91.125" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1/2,7/2)</title></circle>
+  <circle cx="576.5" cy="-41.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(2,5)</title></circle>
+  <circle cx="841.25" cy="-306" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(5,8)</title></circle>
+  <circle cx="929.5" cy="-394.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(6,9)</title></circle>
+  <circle cx="355.875" cy="355.875" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/2,1/2)</title></circle>
+  <circle cx="664.75" cy="47" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(3,4)</title></circle>
+  <circle cx="753" cy="-41.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(4,5)</title></circle>
+  <circle cx="47" cy="1282.5" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-4,-10)</title></circle>
+  <circle cx="-41.25" cy="1547.25" r="3" stroke="#334155" fill="#334155" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-5,-13)</title></circle>
+  <circle cx="370.583" cy="311.75" r="7" stroke="#e11d48" fill="#e11d48" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1/3,1)</title></circle>
+  <circle cx="400" cy="311.75" r="7" stroke="#2563eb" fill="#2563eb" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(0,1)</title></circle>
+  <circle cx="488.25" cy="488.25" r="7" stroke="#16a34a" fill="#16a34a" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(1,-1)</title></circle>
+  <circle cx="311.75" cy="488.25" r="7" stroke="#d97706" fill="#d97706" fill-opacity="1" stroke-opacity="1" stroke-width="1px" vector-effect="non-scaling-stroke"><title>(-1,-1)</title></circle>
+</svg>
