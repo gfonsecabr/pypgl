@@ -225,6 +225,11 @@ canvas.stroke("crimson").draw(pgl.Disk(pgl.Point(0, 0), 2))
 canvas                                    # displays the canvas
 ```
 
+[`examples/notebooks/`](../examples/notebooks) is built on this: four notebooks
+that show every intermediate result as a picture rather than writing one file at
+the end. They are committed with their outputs, so they read as finished pages
+without being run.
+
 You can still call `canvas.toSVG()` to obtain the SVG string explicitly (for
 tests, web responses, or your own output layer):
 

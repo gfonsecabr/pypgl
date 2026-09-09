@@ -1243,6 +1243,77 @@ for either addition. Every example's SVG and Ipe output is byte-identical to
 [examples/figures/](examples/figures/); only `canvas_gallery.pdf` differs, in
 its creation date, the standing exception.
 
+**Jupyter notebooks** (milestone 22): [examples/notebooks/](examples/notebooks/)
+holds four, and the directory is separate on purpose — [examples/](examples/)
+is one file per upstream C++ example, a mapping notebooks would break, and
+keeping them apart is also what lets a notebook cover something upstream has no
+example for. `tour.ipynb` covers the numerics and the core conventions,
+`booleans.ipynb` the boolean/Minkowski families, `bitmatrix.ipynb` the digital
+grid — the only worked treatment `BitMatrix` has anywhere in the repo, which is
+the gap milestone 18 deliberately left — and `motion.ipynb` translational motion
+planning end to end.
+
+**`motion.ipynb` is the one that overlaps a script**, and it earns the overlap by
+showing what [examples/example_motion.py](examples/example_motion.py) cannot: a
+figure per stage, and its claims *checked* rather than asserted. Three are worth
+keeping: the reduced visibility graph (50 edges) and the complete one (155) yield
+the same shortest path to the last decimal, as does Dijkstra against A\*; the
+free space has two holes where the workspace has three, the middle obstacle's
+C-space image reaching the bottom wall; and collision-freeness is certified
+exactly by `room.contains(Polyline(path).minkowskiSum(robot))` — the whole swept
+region, not the footprints at the waypoints, which is the stronger statement and
+the one a picture cannot make.
+
+**The audience is a graduate-level reader in CS or mathematics** (the user's
+instruction, after a first draft pitched far too low), and it is the standing
+register for the notebooks: no motivating exactness from first principles, no
+"the idiom worth picking up", and the vocabulary of the field used rather than
+paraphrased — r-sets and regularization, support functions, the dilation/erosion
+adjunction, opening and closing as idempotent, the 4/8 connectivity pairing,
+hv-convexity as the discrete-tomography condition. `doc/` and the scripts are
+written for a wider audience and are unaffected.
+
+**The float demonstration is the Kettner-Mehlhorn-Näher-Seel-Yap experiment**
+(CGTA 40(1), 2008), not a residual: the double-precision orientation determinant
+over a 256x256 grid of consecutive doubles around (1/2, 1/2) against fixed
+(12,12) and (24,24), tabulated as a 3x3 confusion matrix against
+`OrientedLine.orientation`. 11972 of 65536 triples get the wrong sign — 11300
+spurious collinearities and 672 outright reversals. **Getting the sign
+convention right is load-bearing here**: a first pass negated
+`orientation` and reported 98.6%, which is what the number becomes if the two
+conventions are crossed. They are not — `orient(p,q,r)` and
+`OrientedLine(q,r).orientation(p)` agree, verified both on an unambiguous triple
+and by checking the library against an exact `Fraction` determinant on all 65536
+points (zero disagreements).
+
+**What justifies the format is `_repr_svg_`** (milestone 3), which until now no
+example could show: every script ends in `writeSVG`, so the one-expression
+inline rendering was documented in [doc/canvas.md](doc/canvas.md) and
+demonstrated nowhere. Each notebook sets `pgl.REPR_SVG_SIZE` down from 500 in
+its first cell, which is also what keeps the committed SVGs small — a shape's
+one-shot canvas is ~300 bytes, so all three notebooks together are under 75 KB
+with every output baked in.
+
+**They are committed with their outputs**, so GitHub renders them as a second
+gallery, and [examples/notebooks/execute.py](examples/notebooks/execute.py)
+(`make notebooks`) re-runs them in place to keep that true across a re-pin —
+nbclient raises on the first failing cell, so a stale notebook fails loudly.
+**Re-running an unchanged notebook must produce no diff**, or committed outputs
+become unreadable in review, and two things had to be stripped for that: per-cell
+`execution` wall-clock metadata, and the `text/plain` fallback of a displayed
+`Canvas`, which is `<pypgl._pgl.Canvas at 0x…>` — a memory address, different
+every run (a `Canvas` has no `operator<<`, unlike every shape, whose textual
+repr is deterministic and is kept). Jupyter shows the SVG and never that
+fallback, so nothing is lost. The notebooks are excluded from the sdist as a
+directory, beside `examples/figures/`.
+
+**Writing them was itself an audit of the doc pages**, and it turned up nothing
+wrong but two things worth knowing: `Triangle` has no `perimeter()` (only
+`area`/`twiceArea`/`diameter`; the exact/inexact measure pair to demonstrate is
+`Segment.squaredLength()` against `length()`), and a `PolygonSet`'s components
+are reached with `component(i)`/`components()`, not the `get(i)` the
+fixed-extent shapes take.
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 

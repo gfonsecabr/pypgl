@@ -213,5 +213,6 @@ instead of the pinned upstream commit:
   styling, a shape gallery, `ShapeTree` queries, constrained triangulation,
   Minkowski sums, enclosing shapes, minimum spanning trees, visibility, robot
   motion planning, arrangements and Voronoi diagrams.
-- Shapes and canvases render inline in a Jupyter notebook — see [canvas.md](doc/canvas.md#inline-display-in-jupyter).
+- Shapes and canvases render inline in a Jupyter notebook — see [canvas.md](doc/canvas.md#inline-display-in-jupyter),
+  and [examples/notebooks/](examples/notebooks) for four worked notebooks built around it.
 - Check the [C++ version](https://github.com/gfonsecabr/pgl).

@@ -114,3 +114,11 @@ Jupyter without any of the file-writing above:
 import pypgl as pgl
 pgl.Convex([0, 0, 4, 0, 2, 3])   # draws itself
 ```
+
+[`notebooks/`](notebooks) is built around that: four notebooks that show every
+intermediate result as a picture rather than writing one file at the end — a
+[tour](notebooks/tour.ipynb) of the library, the
+[boolean and Minkowski operations](notebooks/booleans.ipynb), the
+[digital grid](notebooks/bitmatrix.ipynb), and
+[motion planning](notebooks/motion.ipynb) end to end. They are committed with
+their outputs, so GitHub renders them without your running anything.
