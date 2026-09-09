@@ -105,40 +105,6 @@ are those outputs, kept in [`figures/`](figures).
 can meet (`intersects`) without their interiors meeting
 (`interiorsIntersect`).
 
-## Things worth knowing
-
-**Styling chains.** Every canvas command returns the canvas:
-
-```python
-canvas.stroke("green").fill("red").fillOpacity("25%").draw(shape)
-```
-
-**`draw` takes a shape or a collection of them.** A whole construction can go
-over at once — `canvas.draw(polygon.edges())`,
-`canvas.draw(triangulation.triangles())`, `canvas.draw([tri, disk, point])` —
-with every element drawn in order, in the style active at the call. The elements
-may be of mixed types, and may be `None` (drawing nothing), so a result that may
-come back empty needs no guard.
-
-**Coordinates are exact, and `float` is rejected.** Coordinates are `int`,
-`fractions.Fraction`, or `"a/b"` strings — never `float`, so the exactness
-contract is never silently broken. Where an example computes a layout with
-trigonometry ([`example_polygon_triangulation.py`](example_polygon_triangulation.py)),
-it rounds to `int` before building the shape rather than letting an
-approximation in.
-
-**Every shape takes flat coordinates.** The fixed-size ones take them as
-arguments (`Segment(0, 0, 8, 8)`, `Triangle(0, 0, 8, 0, 4, 8)`); `Convex`,
-`Polygon`, `MonotoneChain` and `Polyline` take one flat list, read in `(x, y)`
-pairs, so a literal shape needs no `Point` per vertex:
-
-```python
-pgl.Polygon([0, 0, 8, 0, 8, 8, 4, 4, 0, 8])
-```
-
-A sequence of `Point` works just as well, which is what a computed layout
-usually has.
-
 ## In a notebook
 
 Every shape and canvas has a `_repr_svg_`, so a bare expression renders inline in
