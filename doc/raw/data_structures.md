@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/badge/license-MIT-rgb(216,134,42).svg)](https://opensource.org/licenses/MIT)
 <!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
-⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
+> ℹ️ **Pre-release**: pypgl is extensively tested, but the pgl API it mirrors has not had a stable release yet and may still change.
 
 ## Data Structures
 
@@ -70,7 +70,7 @@ Construction and predicates are exact. For a polygon, the triangles between it a
 
 - `locate(point)` returns the triangle containing `point`, or `None` if `point` lies outside the triangulated region (or the triangulation is empty). The walk that answers it starts where the previous query ended, which is fast for queries that follow one another.
 
-- `buildPointLocation()` gives that walk a better start instead: an index over a coarsening of the mesh, which the query descends to a cell before walking out of it. It changes what a query costs and never what it answers — a point strictly inside a triangle gets that triangle indexed or not, and one on an edge or a vertex gets an incident triangle either way. Expected $O(V \log V)$ time to build and $O(V / \log V)$ space. **The index survives every edit**: it only picks where the walk starts, so it stays correct across an `insert` or a `flip` and merely loses seed quality as the mesh grows away from it. Rebuilding is therefore the caller's decision — call it again to redraw the index against the mesh as it now stands, and `hasCurrentPointLocation()` says whether that would find anything new. `hasPointLocation()` says whether an index is in place at all, and `clearPointLocation()` gives it up, which is the only thing that does.
+- `buildPointLocation()` replaces that walk instead: a Kirkpatrick hierarchy over the mesh, which the query descends one triangle per level to the mesh triangle holding it. It changes what a query costs and never what it answers — a point strictly inside a triangle gets that triangle indexed or not, and one on an edge or a vertex gets an incident triangle either way. Expected $O(V)$ time and space to build, $O(\log V)$ per query. **The index survives every edit**: what the descent lands on is a triangle of this mesh whatever has happened to the mesh since, and the walk resumes from there — so it stays correct across an `insert` or a `flip`, and merely lengthens that walk as the mesh grows away from it. Rebuilding is therefore the caller's decision — call it again to redraw the index against the mesh as it now stands, and `hasCurrentPointLocation()` says whether that would find anything new. `hasPointLocation()` says whether an index is in place at all, and `clearPointLocation()` gives it up, which is the only thing that does.
 
 - Navigation: `otherTriangle(triangle, shared)` returns the triangle on the other side of the shared edge, or `None` on a boundary edge; `edgeAdjacentTriangles(triangle)` returns the (up to three) triangles sharing an edge with `triangle`; `vertexAdjacentTriangles(triangle)` returns the triangles sharing at least one vertex with `triangle` (excluding it); `incidentTriangles(edge)` returns the (up to two) triangles incident to `edge`, and `incidentTriangles(vertex)` returns every triangle around a vertex, in rotational order.
 

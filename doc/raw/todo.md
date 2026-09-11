@@ -11,7 +11,7 @@
 <!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
 
-⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
+> ℹ️ **Pre-release**: pypgl is extensively tested, but the pgl API it mirrors has not had a stable release yet and may still change.
 
 ## Missing Features
 

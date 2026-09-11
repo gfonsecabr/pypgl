@@ -236,23 +236,24 @@ void bind_triangulation(nb::module_ &m) {
             "index the walk starts where the previous query ended, which is fast "
             "for queries that follow one another; see buildPointLocation().");
 
-    // The index only picks where the walk starts, so it changes what a query
+    // The index only picks where the query lands, so it changes what a query
     // costs and never what it answers -- and, unlike the Arrangement trio this
-    // mirrors, it stays *correct* across insert()/flip(): a seed is a triangle
-    // of this mesh whatever has happened to the mesh since. What an edit costs
-    // is seed quality, which is what hasCurrentPointLocation() reports on.
+    // mirrors, it stays *correct* across insert()/flip(): what the descent
+    // lands on is a triangle of this mesh whatever has happened to the mesh
+    // since, and the walk resumes from there. What an edit costs is how long
+    // that walk is, which is what hasCurrentPointLocation() reports on.
     cls.def("buildPointLocation", [](Triangulation &t) { t.buildPointLocation(); },
-            "Build an arrangement-backed index over a coarsening of the mesh, "
-            "after which locate() starts its walk beside the query instead of at "
-            "the previous query's answer. Expected O(V log V) time and "
-            "O(V / log V) space. Calling it again redraws the index against the "
-            "mesh as it now stands (and does nothing if nothing has changed).");
+            "Build a Kirkpatrick hierarchy over the mesh, after which locate() "
+            "descends it to the triangle holding the query instead of walking "
+            "from the previous query's answer. Expected O(V) time and space, "
+            "O(log V) per query. Calling it again redraws the hierarchy against "
+            "the mesh as it now stands (and does nothing if nothing has changed).");
     cls.def("hasPointLocation", [](const Triangulation &t) { return t.hasPointLocation(); },
-            "Whether locate() currently starts from the point-location index.");
+            "Whether locate() currently goes through the point-location index.");
     cls.def("hasCurrentPointLocation", [](const Triangulation &t) { return t.hasCurrentPointLocation(); },
             "Whether the index is in place and was drawn against the mesh as it "
             "now stands. False once an edit has moved the mesh on from it, which "
-            "costs the walk seed quality and nothing else -- the index stays "
+            "costs the walk out of it and nothing else -- the index stays "
             "correct. This is the test of whether buildPointLocation() would do "
             "any work.");
     cls.def("clearPointLocation", [](Triangulation &t) { t.clearPointLocation(); },

@@ -122,6 +122,14 @@ def test_polyline_may_self_intersect():
     assert not crossing.isSimple()
     # A closed polyline (last vertex == first) is not simple either.
     assert not Polyline([Point(0, 0), Point(2, 0), Point(1, 2), Point(0, 0)]).isSimple()
+    # Nor is one that retraces an edge, which past eight vertices goes through
+    # the sweep: two equal segments used to collapse into one status node there.
+    retraced = Polyline([
+        Point(0, 0), Point(6, 0), Point(12, 0), Point(12, 6), Point(12, 12),
+        Point(6, 12), Point(0, 12), Point(0, 6), Point(3, 6), Point(0, 6),
+    ])
+    assert len(retraced.vertices()) > 8
+    assert not retraced.isSimple()
 
 
 def test_polyline_edges_and_lengths():

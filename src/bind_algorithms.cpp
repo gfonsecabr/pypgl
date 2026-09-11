@@ -7,6 +7,12 @@ namespace {
 void replace_points(nb::list points, const std::vector<Point> &sorted) {
     for (std::size_t i = 0; i < sorted.size(); ++i)
         points[i] = nb::cast(sorted[i]);
+    // sortDistinctPoints() drops the coincident points, so the reordering may be
+    // shorter than the list it came from; the rest are the ones it erased.
+    if (sorted.size() < nb::len(points) &&
+        PyList_SetSlice(points.ptr(), static_cast<Py_ssize_t>(sorted.size()),
+                        static_cast<Py_ssize_t>(nb::len(points)), nullptr) != 0)
+        throw nb::python_error();
 }
 
 }  // namespace
@@ -116,6 +122,22 @@ void bind_algorithms(nb::module_ &m) {
               nb::arg("shapes"), nb::arg("simple_boundaries") = false, doc);
     }
 
+    m.def("sortPoints",
+          [](nb::list points) {
+              auto sorted = nb::cast<std::vector<Point>>(points);
+              pgl::sortPoints(sorted);
+              replace_points(points, sorted);
+          },
+          nb::arg("points"), "Reorder a list of points lexicographically by (x, y).");
+    m.def("sortDistinctPoints",
+          [](nb::list points) {
+              auto sorted = nb::cast<std::vector<Point>>(points);
+              pgl::sortDistinctPoints(sorted);
+              replace_points(points, sorted);
+          },
+          nb::arg("points"),
+          "Reorder a list of points lexicographically by (x, y) and drop the "
+          "duplicates, shortening the list in place.");
     m.def("sortAround",
           [](nb::list points, const Point &center) {
               auto sorted = nb::cast<std::vector<Point>>(points);

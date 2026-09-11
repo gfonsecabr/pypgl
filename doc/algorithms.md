@@ -13,7 +13,7 @@
 <!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
 
-⚠️ **Work in Progress**: This library is still under construction and contains **bugs and missing features**. Use in production environments is not recommended.
+> ℹ️ **Pre-release**: pypgl is extensively tested, but the pgl API it mirrors has not had a stable release yet and may still change.
 
 ## Algorithms
 
@@ -221,8 +221,17 @@ here:
 
 ### Sorting points
 
-Both of these reorder the Python list you pass **in place** and return `None`,
-like `list.sort` does.
+All four of these reorder the Python list you pass **in place** and return
+`None`, like `list.sort` does.
+
+- [`sortPoints(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a337d89a430f1eaa7dcdb19286ca4b896 "Sorts points in place, lexicographically by (x, y)."): Reorders `points` lexicographically by $(x, y)$. Points
+  sharing both coordinates tie, and which comes first is unspecified.
+  Complexity $O(n \log n)$.
+
+- [`sortDistinctPoints(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a02c08dacc7b95a0081f1fb7484ebee8d "Sorts points in place lexicographically and drops the duplicates."): [`sortPoints(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a337d89a430f1eaa7dcdb19286ca4b896 "Sorts points in place, lexicographically by (x, y).") followed by dropping every
+  point whose coordinates repeat the one before it, so the survivors are
+  distinct. This is the one of the four that **shortens** the list.
+  Complexity $O(n \log n)$.
 
 - [`sortAround(points, p)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#aab7826153f78fb8c4468ad851564fd8f "Sorts points counterclockwise around a center point."): Reorders `points` counterclockwise around the center
   `p`, starting from the lexicographically smallest point and breaking ties by
@@ -241,6 +250,11 @@ points = [pgl.Point(1, 1), pgl.Point(-1, 1), pgl.Point(0, -1)]
 pgl.sortAround(points, pgl.Point(0, 0))
 print(points)
 # Output: [(-1,1), (0,-1), (1,1)]
+
+points = [pgl.Point(1, 1), pgl.Point(-1, 1), pgl.Point(1, 1)]
+pgl.sortDistinctPoints(points)
+print(points)
+# Output: [(-1,1), (1,1)]
 ```
 
 ### Polyominoes

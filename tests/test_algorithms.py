@@ -13,7 +13,8 @@ def test_algorithms_are_public():
     names = {
         "findIntersections", "findCrossings", "bruteForceIntersections",
         "bruteForceCrossings", "detectIntersections", "detectCrossings",
-        "convexHull", "convexHullExtended", "sortAround", "hilbertSort",
+        "convexHull", "convexHullExtended",
+        "sortPoints", "sortDistinctPoints", "sortAround", "hilbertSort",
         "polyominoes", "polyominoesUpTo",
         "smallestEnclosingDisk", "closestPair", "regularizedUnionOf",
     }
@@ -39,6 +40,32 @@ def test_segment_intersection_algorithms():
     assert not pypgl.detectCrossings([diagonal, touching])
 
 
+def test_segment_sweep_handles_repeated_segments():
+    # The Bentley-Ottmann sweep used to collapse two equal segments into one
+    # status node, whose second RIGHT event then found nothing -- a silently
+    # skipped event in a release build, and heap corruption in practice. Equal
+    # segments are now swept once and the rest reported as meeting that one.
+    a = Segment(0, 0, 4, 0)
+    crossing = Segment(2, -1, 2, 1)
+    segments = [a, a, crossing]
+
+    assert pypgl.findIntersections(segments) == [[a, a], [a, crossing]]
+    assert pypgl.detectIntersections(segments)
+    assert pypgl.findCrossings(segments) == [[a, crossing]]
+    assert pypgl.detectCrossings(segments)
+
+    # The brute-force pair enumeration counts each pair of positions, so a
+    # repeated segment gives it the same pair more than once; the sweep names
+    # each pair of distinct segments once. The two agree as sets.
+    def as_set(pairs):
+        return {frozenset(map(repr, pair)) for pair in pairs}
+
+    assert as_set(pypgl.findIntersections(segments)) == \
+        as_set(pypgl.bruteForceIntersections(segments))
+    assert as_set(pypgl.findCrossings(segments)) == \
+        as_set(pypgl.bruteForceCrossings(segments))
+
+
 def test_convex_hulls():
     points = [
         Point(0, 0), Point(1, 0), Point(2, 0), Point(2, 2), Point(0, 2),
@@ -50,6 +77,31 @@ def test_convex_hulls():
     assert pypgl.convexHullExtended(points) == [
         Point(0, 0), Point(1, 0), Point(2, 0), Point(2, 2), Point(0, 2),
     ]
+
+
+def test_sort_points_orders_lexicographically():
+    points = [Point(2, 0), Point(0, 2), Point(0, 0), Point(2, 2)]
+    assert pypgl.sortPoints(points) is None
+    assert points == [Point(0, 0), Point(0, 2), Point(2, 0), Point(2, 2)]
+
+
+def test_sort_distinct_points_shortens_the_list_in_place():
+    points = [Point(2, 2), Point(0, 0), Point(2, 2), Point(0, 0), Point(1, 1)]
+    original = points
+    assert pypgl.sortDistinctPoints(points) is None
+    # The same list object, not a replacement: the duplicates are erased from it.
+    assert points is original
+    assert points == [Point(0, 0), Point(1, 1), Point(2, 2)]
+
+    # Exact coordinates are ordered by value, not by how they were written.
+    points = [Point("3/2", 0), Point(Fraction(3, 2), 0), Point(1, 0)]
+    pypgl.sortDistinctPoints(points)
+    assert points == [Point(1, 0), Point(Fraction(3, 2), 0)]
+
+    for degenerate in ([], [Point(4, 4)], [Point(4, 4)] * 5):
+        points = list(degenerate)
+        pypgl.sortDistinctPoints(points)
+        assert points == sorted(set(degenerate))
 
 
 def test_sorting_algorithms_reorder_the_input_list():
@@ -67,6 +119,10 @@ def test_sorting_algorithms_require_a_mutable_list():
         pypgl.sortAround((Point(0, 0), Point(1, 1)), Point(0, 0))
     with pytest.raises(TypeError):
         pypgl.hilbertSort((Point(0, 0), Point(1, 1)))
+    with pytest.raises(TypeError):
+        pypgl.sortPoints((Point(0, 0), Point(1, 1)))
+    with pytest.raises(TypeError):
+        pypgl.sortDistinctPoints((Point(0, 0), Point(1, 1)))
 
 
 def test_polyominoes():

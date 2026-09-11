@@ -1314,6 +1314,88 @@ wrong but two things worth knowing: `Triangle` has no `perimeter()` (only
 are reached with `component(i)`/`components()`, not the `get(i)` the
 fixed-extent shapes take.
 
+**A shipped heap corruption, two sort functions, and a new point-location
+structure** (milestone 23, version 1.4.0): `.pgl-ref` re-pinned to `70b2dde`, 60
+upstream commits on from `ae4e7a3`. Nothing was renamed or removed and the batch
+is overwhelmingly performance — a red-black tree the sweeps address by node, a
+radix sort behind `sortPoints`/`convexHull`/`MonotoneChain`, filtered orientation
+signs, `ShapeTree` boxes aggregated from children and shadowed by double ones,
+`Rational` comparisons that neither reduce nor allocate. The build went through
+first try and all 1357 existing tests passed unchanged, so almost none of it
+needed binding. Three things did.
+
+**The headline is a bug pypgl shipped, and it was worse than a wrong answer.**
+Bentley-Ottmann held each segment by value and collapsed two *equal* segments
+into one status node, so the second copy's RIGHT event found nothing — an assert
+in debug, a skipped event in the release build pypgl ships. Against pgl's own
+pairwise check of 8,100 random rings the release build called 5,214 of them
+simple that were not, every one with a repeated edge. In pypgl it did not answer
+wrongly so much as **corrupt the heap**: a throwaway `g++` against a `git
+archive` of `ae4e7a3` (the milestone 20 method) aborts with `free(): invalid
+size` on a ten-vertex `Polyline` that retraces an edge, and with `free():
+invalid pointer` on `detectCrossings` over two equal segments. So
+`Polygon.isSimple()` / `Polyline.isSimple()` past eight vertices, and the whole
+`findIntersections`/`findCrossings`/`detect*` family, were unsafe on any input
+with a duplicated segment up to and including 1.3.0. Upstream now sweeps only
+the first of a run of equal segments and reports the rest as meeting it;
+[tests/test_algorithms.py](tests/test_algorithms.py),
+[tests/test_polygon.py](tests/test_polygon.py) and
+[tests/test_chains.py](tests/test_chains.py) pin all three. **This is the
+milestone 15 lesson in a third key**: what went untested was not a shape but an
+*input shape* — duplicate elements in a container the whole sweep family takes.
+
+**Two checks are worth repeating after any sweep change**, both run here from
+Python rather than C++: the sweep against `bruteForce*` over 2,000 random inputs
+seeded with duplicates (identical as *sets*), and `Polygon.isSimple` against an
+independent pairwise reference over 4,000 random rings (zero disagreements).
+**The set comparison is the one that has to be right**: `bruteForce*` enumerates
+pairs of *positions*, so a repeated segment gives it the same pair several
+times, while the sweep names each pair of distinct segments once — comparing
+them as lists reports hundreds of false mismatches. The one genuine residue is
+**pre-existing and upstream's**: a lone *zero-length* segment is reported by the
+sweep as intersecting itself, where `bruteForce*` reports nothing. `ae4e7a3`
+does the same, so it is not this re-pin's doing and nothing was changed here.
+
+**`sortPoints`/`sortDistinctPoints`** are the only new public API, bound in
+[src/bind_algorithms.cpp](src/bind_algorithms.cpp) beside `sortAround`/
+`hilbertSort`. Both reorder the passed list in place and return `None`;
+`sortDistinctPoints` also drops the coincident points, which makes it the one of
+the four that **shortens** the list — `replace_points` therefore erases the tail
+with `PyList_SetSlice` rather than assuming the reordering is the same length.
+The radix path they are built on never fires here (it wants an integral
+coordinate and pypgl instantiates `ERational` only), so for pypgl both are a
+plain comparison sort; the docstrings and [doc/raw/algorithms.md](doc/raw/algorithms.md)
+promise only the order, not how it is reached.
+
+**`Triangulation.buildPointLocation()` is now a Kirkpatrick hierarchy**, not the
+arrangement over a sampled coarsening milestone 17 bound. Same four methods,
+same contract — it still only chooses where a query lands, still survives every
+edit, and `hasCurrentPointLocation()` still reports whether redrawing would find
+anything — so nothing was rebound, only the docstrings and
+[doc/raw/data_structures.md](doc/raw/data_structures.md). What changed is the
+cost: expected *O(V)* time and space to build and *O(log V)* per query, where
+the old structure was *O(V log V)* time and *O(V / log V)* space, and a query
+now descends to its triangle rather than being seeded beside it.
+
+**Two example figures changed, and neither drawing did.** `ShapeTree`'s new
+split and box aggregation reorder the elements a query reports, so
+`example_shapetree_points.svg` and `example_shapetree_triangles.svg` emit the
+same circles and the same node rectangles in a different document order —
+verified by diffing the sorted sets of `<title>`s and of rect geometries, which
+match exactly. Both were refreshed under [examples/figures/](examples/figures/).
+Every other figure is byte-identical, the four notebooks re-run to no diff at
+all, and `canvas_gallery.pdf`'s creation date remains the standing exception.
+
+**The md disclaimer now follows pgl's** (user's instruction): upstream replaced
+its ⚠️ *Work in Progress* banner with `> ℹ️ **Pre-release**: … extensively
+tested, but it has not had a stable release yet and its API may still change.`,
+and all fifteen pypgl pages carry the same ℹ️ *Pre-release* form. **What it says
+is not pgl's sentence, and the difference is load-bearing**: pypgl has had a
+stable release — 1.0.0, milestone 17 — so what has not stabilized is the pgl API
+it mirrors, and that is what the line names. Copying pgl's wording verbatim with
+`pypgl` swapped in would have called the PyPI releases pre-releases. The line is
+also blockquoted now, as pgl's always was and pypgl's never had been.
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 

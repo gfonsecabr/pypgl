@@ -93,6 +93,26 @@ def test_isSimple_and_isConvex():
     assert not ell.isConvex()
 
 
+def test_a_retraced_edge_is_not_simple():
+    # Past eight vertices the check is a sweep rather than a pairwise scan, and
+    # the sweep used to lose the second of two equal segments -- so a ring that
+    # walks an edge out and back passed as simple (or corrupted the heap).
+    spur = Polygon([
+        Point(0, 0), Point(6, 0), Point(12, 0), Point(12, 6), Point(12, 12),
+        Point(6, 12), Point(0, 12), Point(0, 6), Point(3, 6), Point(0, 6),
+    ], trusted=True)
+    assert len(spur.vertices()) > 8
+    assert not spur.isSimple()
+
+    # The same shape below the sweep's threshold, where the pairwise scan
+    # always got it right.
+    small = Polygon(
+        [Point(0, 0), Point(4, 0), Point(4, 4), Point(2, 2), Point(4, 4)],
+        trusted=True,
+    )
+    assert not small.isSimple()
+
+
 def test_untangle_makes_bowtie_simple():
     bowtie = Polygon([Point(0, 0), Point(2, 2), Point(2, 0), Point(0, 2)], trusted=True)
     assert not bowtie.isSimple()
