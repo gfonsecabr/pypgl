@@ -1315,7 +1315,7 @@ are reached with `component(i)`/`components()`, not the `get(i)` the
 fixed-extent shapes take.
 
 **A shipped heap corruption, two sort functions, and a new point-location
-structure** (milestone 23, version 1.4.0): `.pgl-ref` re-pinned to `70b2dde`, 60
+structure** (milestone 23, version 1.4.0): `.pgl-ref` re-pinned to `b76e01f`, 61
 upstream commits on from `ae4e7a3`. Nothing was renamed or removed and the batch
 is overwhelmingly performance — a red-black tree the sweeps address by node, a
 radix sort behind `sortPoints`/`convexHull`/`MonotoneChain`, filtered orientation
@@ -1337,7 +1337,8 @@ invalid pointer` on `detectCrossings` over two equal segments. So
 `Polygon.isSimple()` / `Polyline.isSimple()` past eight vertices, and the whole
 `findIntersections`/`findCrossings`/`detect*` family, were unsafe on any input
 with a duplicated segment up to and including 1.3.0. Upstream now sweeps only
-the first of a run of equal segments and reports the rest as meeting it;
+one of a run of equal segments — the status tree cannot hold two — and expands
+the pairs it finds back over the copies at the end;
 [tests/test_algorithms.py](tests/test_algorithms.py),
 [tests/test_polygon.py](tests/test_polygon.py) and
 [tests/test_chains.py](tests/test_chains.py) pin all three. **This is the
@@ -1345,16 +1346,33 @@ milestone 15 lesson in a third key**: what went untested was not a shape but an
 *input shape* — duplicate elements in a container the whole sweep family takes.
 
 **Two checks are worth repeating after any sweep change**, both run here from
-Python rather than C++: the sweep against `bruteForce*` over 2,000 random inputs
-seeded with duplicates (identical as *sets*), and `Polygon.isSimple` against an
-independent pairwise reference over 4,000 random rings (zero disagreements).
-**The set comparison is the one that has to be right**: `bruteForce*` enumerates
-pairs of *positions*, so a repeated segment gives it the same pair several
-times, while the sweep names each pair of distinct segments once — comparing
-them as lists reports hundreds of false mismatches. The one genuine residue is
-**pre-existing and upstream's**: a lone *zero-length* segment is reported by the
-sweep as intersecting itself, where `bruteForce*` reports nothing. `ae4e7a3`
-does the same, so it is not this re-pin's doing and nothing was changed here.
+Python rather than C++: the sweep against `bruteForce*` over random inputs
+seeded with duplicates and zero-length segments, and `Polygon.isSimple` against
+an independent pairwise reference over 4,000 random rings (zero disagreements).
+
+**Cross-checking the sweep turned up two more upstream bugs, and both were fixed
+in a second re-pin** — `.pgl-ref` is at `b76e01f`, one commit on from `70b2dde`,
+and the numbers above are from that. The first check initially reported
+hundreds of mismatches, all of them *multiplicity*: `bruteForce*` enumerates
+pairs of *positions*, so a segment given three times crossing another was three
+pairs there and one from the sweep, which reported each pair of *values* once
+and always as the first copy. Comparing as **sets** was what made the runs
+agree — and comparing as sets then left exactly one real residue, a lone
+*zero-length* segment reported by the sweep as intersecting itself (the pass
+over shared endpoints listed both ends of every segment, and a point's two ends
+are one point, so `detectIntersections` answered `True` with nothing to report).
+Upstream now expands each found pair into every pairing of the copies it stands
+for and lists a point's ends once, so all six functions agree with brute force
+**as multisets**, over 3,000 random inputs full of repeats and points. That is
+now the documented contract — one pair per two positions of the input that meet
+— and it is what [tests/test_algorithms.py](tests/test_algorithms.py) asserts
+literally rather than up to multiplicity.
+
+**The lesson is about the comparison, not the sweep**: relaxing a differential
+check until it passes is how a real bug survives one. The set comparison hid a
+multiplicity bug and was itself only *almost* right; the multiset comparison
+that replaced it is the one with no slack left in it, and it is what the tests
+and any future re-pin should use.
 
 **`sortPoints`/`sortDistinctPoints`** are the only new public API, bound in
 [src/bind_algorithms.cpp](src/bind_algorithms.cpp) beside `sortAround`/

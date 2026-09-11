@@ -55,6 +55,13 @@ print(pgl.detectCrossings(segments))
 # Output: True
 ```
 
+All of them report one pair per two positions of the list that meet, so every
+function returns the same pairs as its brute-force counterpart, in some order. A
+segment given several times counts once per copy: its copies intersect each other
+(they never cross), and each copy is paired with every segment it meets. A
+zero-length segment is a point — it intersects the segments passing through it,
+crosses none, and is never paired with itself.
+
 These functions use the same predicate conventions documented in
 [Predicates](shape_methods.md#predicates).
 

@@ -1,6 +1,7 @@
 """Free algorithms documented by Pangolin's algorithms reference."""
 
 import math
+from collections import Counter
 from fractions import Fraction
 
 import pytest
@@ -40,30 +41,50 @@ def test_segment_intersection_algorithms():
     assert not pypgl.detectCrossings([diagonal, touching])
 
 
+def _pair_multiset(pairs):
+    """The reported pairs, order-insensitively, multiplicities kept."""
+    return Counter(tuple(sorted(map(repr, pair))) for pair in pairs)
+
+
 def test_segment_sweep_handles_repeated_segments():
     # The Bentley-Ottmann sweep used to collapse two equal segments into one
     # status node, whose second RIGHT event then found nothing -- a silently
-    # skipped event in a release build, and heap corruption in practice. Equal
-    # segments are now swept once and the rest reported as meeting that one.
+    # skipped event in a release build, and heap corruption in practice. Every
+    # function now reports one pair per two positions of the input that meet,
+    # so a repeated segment counts once per copy.
     a = Segment(0, 0, 4, 0)
     crossing = Segment(2, -1, 2, 1)
     segments = [a, a, crossing]
 
-    assert pypgl.findIntersections(segments) == [[a, a], [a, crossing]]
+    assert pypgl.findIntersections(segments) == [[a, a], [a, crossing], [a, crossing]]
     assert pypgl.detectIntersections(segments)
-    assert pypgl.findCrossings(segments) == [[a, crossing]]
+    assert pypgl.findCrossings(segments) == [[a, crossing], [a, crossing]]
     assert pypgl.detectCrossings(segments)
 
-    # The brute-force pair enumeration counts each pair of positions, so a
-    # repeated segment gives it the same pair more than once; the sweep names
-    # each pair of distinct segments once. The two agree as sets.
-    def as_set(pairs):
-        return {frozenset(map(repr, pair)) for pair in pairs}
+    # The two copies of `a` intersect each other but do not cross.
+    assert _pair_multiset(pypgl.findIntersections(segments)) == \
+        _pair_multiset(pypgl.bruteForceIntersections(segments))
+    assert _pair_multiset(pypgl.findCrossings(segments)) == \
+        _pair_multiset(pypgl.bruteForceCrossings(segments))
 
-    assert as_set(pypgl.findIntersections(segments)) == \
-        as_set(pypgl.bruteForceIntersections(segments))
-    assert as_set(pypgl.findCrossings(segments)) == \
-        as_set(pypgl.bruteForceCrossings(segments))
+
+def test_a_zero_length_segment_is_a_point_not_a_self_intersection():
+    # The pass pairing segments that share an endpoint listed both ends of each
+    # segment, and a point's two ends are one point -- so a lone point came back
+    # paired with itself and detectIntersections answered True with nothing to
+    # report. A zero-length segment intersects what passes through it, crosses
+    # nothing, and is never paired with itself.
+    point = Segment(4, 1, 4, 1)
+    assert pypgl.findIntersections([point]) == []
+    assert not pypgl.detectIntersections([point])
+    assert not pypgl.detectCrossings([point])
+
+    through = Segment(0, 0, 2, 2)
+    on_it = Segment(1, 1, 1, 1)
+    assert pypgl.findIntersections([through, on_it]) == [[through, on_it]]
+    assert pypgl.findCrossings([through, on_it]) == []
+    assert pypgl.detectIntersections([through, on_it])
+    assert not pypgl.detectCrossings([through, on_it])
 
 
 def test_convex_hulls():
