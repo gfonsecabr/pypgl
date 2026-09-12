@@ -90,7 +90,9 @@ Construction and predicates are exact. For a polygon, the triangles between it a
 
 - `asGraph()` returns the 1-skeleton as a [`Graph`](#graph): its vertices are the `numVertices()` stored points and its edges the `numEdges()` edges of the visible mesh. A point identifies a vertex here, so the graph is keyed by the points themselves. A vertex with no in-domain edge comes back isolated; the ghost vertex closing the mesh at infinity is internal and is not one of them.
 
-- `voronoiDiagram()` returns the unbounded [`Arrangement`](#arrangement) dual to the triangulation, which must be non-empty and Delaunay. Each face is labelled with the point that generated its Voronoi cell, so `diagram.label(diagram.locateFace(q))` is the site nearest to `q`. At a Voronoi edge or vertex `locateFace` picks one tied site by its infinitesimal-perturbation rule; `locateCell` plus the incident faces recovers all of them. Exact: the vertices are rationals.
+- `voronoiDiagram()` returns the unbounded [`Arrangement`](#arrangement) of the circumcentric dual of the triangulation, which must be non-empty. When the triangulation is Delaunay that dual is the Voronoi diagram: each face is labelled with the point that generated its cell, so `diagram.label(diagram.locateFace(q))` is the site nearest to `q`. At a Voronoi edge or vertex `locateFace` picks one tied site by its infinitesimal-perturbation rule; `locateCell` plus the incident faces recovers all of them. A triangulation that is not Delaunay dualizes to edges that cross, which are cut against each other, and its face labels are then unspecified. Exact: the vertices are rationals. The free function [`voronoiDiagram(points)`](algorithms.md#voronoi-and-power-diagrams) builds the triangulation itself.
+
+- `voronoiEdges()` returns the `Segment`s and `Ray`s that diagram is made of, in no particular order, without assembling the arrangement around them. While the triangulation is Delaunay they meet only at shared endpoints, so a caller that only wants to draw the diagram can stop here.
 
 - `convexPartition()` cuts the domain into [`Convex`](shapes.md#convex) pieces with pairwise disjoint interiors, each the union of one or more triangles, within a factor of four of the fewest possible. A constrained edge is never deleted, so the constraints shape the partition. `convexCovering()` instead grows one candidate per triangle and greedily selects and thins them, so the pieces may overlap. `Polygon` and `PolygonWithHoles` have both as shorthands.
 
@@ -196,8 +198,16 @@ default-constructed one is the invalid handle.
 - Tracing a directed curve: `reportIntersecting(curve)` returns the cells the curve meets, in order along it, `firstIntersecting(curve)` only the first, and `emptyIntersecting(curve)` whether it meets none. The curve may be an `OrientedSegment`, `OrientedLine`, `Ray`, `MonotoneChain` or `Polyline`. Where the curve meets an edge only at one of its endpoints, the vertex there stands for the contact.
 - `asGraph()` returns the vertex-edge incidence structure as an `ArrangementGraph`, a [`Graph`](#graph) over vertex handles rather than points — the vertex at infinity has no position, so it could not be keyed by one.
 
-A [Voronoi diagram](#triangulation) is an `Arrangement` whose faces carry their
-generating site as a label, so the two share this whole interface.
+A [Voronoi diagram](algorithms.md#voronoi-and-power-diagrams) is an
+`Arrangement` whose faces carry their generating site as a label, so the two
+share this whole interface. The order-$k$ and power diagrams label their faces
+with something a `Point` cannot hold, so each comes back as a class of its own
+with the same interface and a different label type: `PointListArrangement`
+(a list of points, from `voronoiDiagram(sites, k)`), `DiskArrangement` (a
+`Disk`, from `powerDiagram(disks)`) and `DiskListArrangement` (a list of disks,
+from `powerDiagram(disks, k)`). None of the three is built from shapes, and all
+four classes share the one family of `VertexId`, `HalfedgeId` and `FaceId`
+handles.
 
 - Other methods:
 

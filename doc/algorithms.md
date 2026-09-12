@@ -155,6 +155,37 @@ print(strip.squaredMinimumWidth(), strip.bbox().width(), strip.bbox().height())
   $O(n \log n)$ on ordinary inputs. Only squared distances are compared, so the
   answer is exact; ties are broken arbitrarily. Needs at least two points.
 
+### Voronoi and power diagrams
+
+Each of these returns an unbounded [arrangement](data_structures.md#arrangement)
+whose every face is labeled with the sites that own it, so locating a query and
+reading the label *is* the nearest-site query:
+`diagram.label(diagram.locateFace(q))`. The construction is exact — the diagram's
+vertices are rational — and the edge labels are default-constructed and carry no
+meaning. On a diagram edge or vertex the query ties, and `locateFace` picks one
+of the tied faces by its infinitesimal-perturbation rule; `locateCell`, followed
+by the faces around the cell it returns, recovers every tied answer.
+
+- [`voronoiDiagram(sites)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a6cc9b13abeb83be524eebae5c690fe2a "Computes the Voronoi diagram of a set of points.") returns the Voronoi diagram of a list of points as an [`Arrangement`](data_structures.md#arrangement), every face labeled with the one site nearest to it. It is the dual of the Delaunay triangulation and is computed that way, in $O(n \log n)$; a caller already holding a `Triangulation` of the same points can call its own `voronoiDiagram()` instead. Repeated sites share a cell, which carries one of them. Raises `ValueError` for an empty list.
+
+- [`voronoiDiagram(sites, k)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a6cc9b13abeb83be524eebae5c690fe2a "Computes the Voronoi diagram of a set of points.") returns the order-$k$ diagram as a [`PointListArrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes."): each face is labeled with the **list** of the $k$ sites nearest to it, in their order in `sites`. A face is the region where one set of $k$ sites is nearer than every other site, and neighboring faces differ by a single swap; empty cells never appear, so there are far fewer faces than $k$-element subsets. The orders are built one on top of the next by Lee's refinement, at $O(k^2 n \log n)$ for cells with boundedly many neighbors; repeated or all-collinear sites fall back to cutting every bisector against every site, at $O(n^3 \log n)$. `k` must be between 1 and `len(sites)`, and `k = 1` still answers a [`PointListArrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes."), of one-element lists.
+
+- [`farthestVoronoiDiagram(sites)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#acd245756f72c23fd64d5354a65c7d39b "Computes the farthest-point Voronoi diagram of a set of points.") returns the farthest-point Voronoi diagram as an [`Arrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes."), every face labeled with the one site **farthest** from it. Only a vertex of the convex hull owns a cell — a site the hull contains is strictly farthest nowhere — and every cell is unbounded, so the diagram is a tree of segments and rays with no bounded face. $O(n \log n + h^3)$ for $h$ hull vertices.
+
+- [`powerDiagram(disks)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#acdaa70fea88f1688d348bf191da38f13 "Computes the power diagram of a set of disks.") is the Voronoi diagram of a list of [`Disk`](shapes.md#disk)s under the power distance $|x - c|^2 - r^2$, returned as a `DiskArrangement` whose faces carry the disk that owns them. Its cells are still convex, but a disk its neighbors swallow owns no cell at all and a disk's center may fall outside its own cell; disks of equal radius give the Voronoi diagram of their centers. Only squared radii are used, so it is exact even for a disk through three points, whose radius is irrational. $O(n^3 \log n)$.
+
+- [`powerDiagram(disks, k)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#acdaa70fea88f1688d348bf191da38f13 "Computes the power diagram of a set of disks.") is the order-$k$ power diagram, a [`DiskListArrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes.") whose faces carry the list of the $k$ disks of least power, in their order in `disks`. $O(n^3 \log n)$ for every $k$.
+
+```python
+sites = [pgl.Point(0,0), pgl.Point(6,0), pgl.Point(3,5), pgl.Point(8,6)]
+q = pgl.Point(4,2)
+nearest = pgl.voronoiDiagram(sites)
+two = pgl.voronoiDiagram(sites, 2)
+far = pgl.farthestVoronoiDiagram(sites)
+print(nearest.label(nearest.locateFace(q)), two.label(two.locateFace(q)), far.label(far.locateFace(q)))
+# Output: (6,0) [(6,0), (3,5)] (8,6)
+```
+
 ### Visibility
 
 [`Polygon`](shapes.md#polygon), [`PolygonWithHoles`](shapes.md#polygon-with-holes)

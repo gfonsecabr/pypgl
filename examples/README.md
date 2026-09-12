@@ -115,10 +115,11 @@ import pypgl as pgl
 pgl.Convex([0, 0, 4, 0, 2, 3])   # draws itself
 ```
 
-[`notebooks/`](notebooks) is built around that: four notebooks that show every
+[`notebooks/`](notebooks) is built around that: five notebooks that show every
 intermediate result as a picture rather than writing one file at the end — a
 [tour](notebooks/tour.ipynb) of the library, the
 [boolean and Minkowski operations](notebooks/booleans.ipynb), the
-[digital grid](notebooks/bitmatrix.ipynb), and
-[motion planning](notebooks/motion.ipynb) end to end. They are committed with
+[digital grid](notebooks/bitmatrix.ipynb),
+[motion planning](notebooks/motion.ipynb) end to end, and
+[Voronoi diagrams and point location](notebooks/voronoi.ipynb). They are committed with
 their outputs, so GitHub renders them without your running anything.

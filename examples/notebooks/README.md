@@ -6,6 +6,7 @@
 | [`booleans.ipynb`](booleans.ipynb) | The regularized set operations on r-sets, Minkowski sums, and the adjoint erosion — result types, the loss of connectivity under erosion, and the support-function reading of a convex receiver. |
 | [`bitmatrix.ipynb`](bitmatrix.ipynb) | Digital sets over $\mathbb{Z}^2$: digitization, packed set algebra, the region/lattice-point duality, morphological opening and closing, and connectivity under the 4/8 pairing. |
 | [`motion.ipynb`](motion.ipynb) | Translational motion planning by the Lozano-Pérez–Wesley reduction: the configuration space as an erosion, the reduced visibility graph against the complete one, A\*, and two exact certificates that the motion is collision-free. |
+| [`voronoi.ipynb`](voronoi.ipynb) | Nearest-site queries as planar point location: the Delaunay triangulation and why locating in it is not a nearest-neighbor query, the Voronoi diagram as its dual, the order-2 diagram and its bijection with the Delaunay edges, the farthest-point diagram with the smallest enclosing disk on its tree, and exact enumeration of ties at a Voronoi vertex. |
 
 Each is self-contained and runs top to bottom. They complement the scripts in
 [`examples/`](..) rather than restating them: a script writes one SVG at the end,

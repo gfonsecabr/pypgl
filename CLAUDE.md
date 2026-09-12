@@ -28,7 +28,8 @@ configuration to style. The fluent self-returns
 use `nb::rv_policy::reference_internal`. `_repr_svg_` is added Python-side in
 [pypgl/__init__.py](pypgl/__init__.py) — on the canvas it returns `toSVG()`, on
 every shape it renders a one-shot `Canvas().draw(self)` — so shapes and canvases
-display inline in Jupyter.
+display inline in Jupyter. (Milestone 24 added `Text`/`TextFit` and a
+`fontSize` style command, drawn with the same `draw`.)
 
 **Type stubs done** (milestone 4): `_pgl.pyi` is generated at build time by
 `nanobind_add_stub` in [CMakeLists.txt](CMakeLists.txt) — from the *bare* `_pgl`
@@ -1414,6 +1415,131 @@ it mirrors, and that is what the line names. Copying pgl's wording verbatim with
 `pypgl` swapped in would have called the PyPI releases pre-releases. The line is
 also blockquoted now, as pgl's always was and pypgl's never had been.
 
+**Voronoi, order-k, farthest-point and power diagrams** (milestone 24, version
+1.5.0): `.pgl-ref` re-pinned to `b6b2d1f`, 28 upstream commits on from
+`b76e01f`. Most of the batch is about `Shape` — one dispatcher forwarding the
+whole shape interface, `separates` against the empty shape, Minkowski members
+constrained on the template parameter — and, per the user's instruction, none of
+it was looked at further, since `Shape` is not bound (the `casters.h` caster
+never calls its members). The build went through and all 1362 existing tests
+passed unchanged. The new API is `algorithm/voronoi.hpp`'s five free functions,
+and all five are bound.
+
+**The free functions return four label types, and pypgl had bound one.**
+`voronoiDiagram(sites)` and `farthestVoronoiDiagram(sites)` label a face with a
+`Point`, which is the existing `Arrangement<Point, Point>`. But
+`voronoiDiagram(sites, k)` labels with `std::vector<Point>`, `powerDiagram(disks)`
+with `Disk` and `powerDiagram(disks, k)` with `std::vector<Disk>`, so milestone
+12's "one instantiation" decision had to give. The binding moved into a template,
+[src/bind_arrangement.h](src/bind_arrangement.h) (the `bind_graph.h` precedent),
+instantiated as `Arrangement` (in [src/bind_arrangement.cpp](src/bind_arrangement.cpp),
+the only one with constructors), `PointListArrangement`
+([src/bind_voronoi.cpp](src/bind_voronoi.cpp)), and `DiskArrangement`/
+`DiskListArrangement` ([src/bind_powerdiagram.cpp](src/bind_powerdiagram.cpp)),
+split so the heavy instantiations compile in parallel. Names are by label type,
+not by diagram: k = 1 through the order-k overload still answers a
+`PointListArrangement` of one-element lists, since which overload is called
+decides the result type in C++ too.
+
+**The handles are the part worth remembering.** pgl nests `VertexTag`/
+`HalfedgeTag`/`FaceTag` *inside* the class template, so every label type has its
+own three handle types — distinct C++ types nanobind would have to bind as
+distinct Python classes, and `isinstance(cell, pgl.FaceId)` would then depend on
+which diagram the cell came from. All of them are the same `detail::Handle`
+around a `uint32_t` with the same invalid state, so Python keeps the one family
+bound over `Arrangement<Point, Point>`, and every other instantiation converts
+by index at the boundary (`Handles<A>::toPy`/`fromPy`, including through the
+`CellId`/`IntersectionId` variants, the vector and nested-vector results, and
+`asGraph`, rebuilt as an `ArrangementGraph`). For the `Point` instantiation the
+conversion is the identity and `asGraph` is passed straight through.
+
+Also bound: **`Triangulation.voronoiEdges()`**, narrowed from pgl's
+`std::vector<Shape>` to `list[Segment | Ray]` — the erased return would
+otherwise put the whole 17-shape union in the stub — with a throwing fallback
+rather than an unchecked dereference, should a third alternative ever appear.
+`Triangulation.voronoiDiagram()`'s docstring follows upstream's weakened
+precondition (a non-Delaunay triangulation now dualizes to the circumcentric
+dual, with unspecified labels, instead of being undefined).
+
+**Canvas text is bound too** (the user's follow-up, "not the rest"): `Text` and
+the `TextFit` enum in [src/bind_canvas.cpp](src/bind_canvas.cpp), drawn with
+`canvas.draw(text)` like a shape, plus `fontSize` as a length style command (a
+string or a number, like `strokeWidth`). The three constructors mirror pgl's —
+at a point in the canvas's pixel `fontSize`, at a point with a size in plane
+units, in a box with `TextFit.fill`/`shrink` — and `text()`/`size()`/`fit()`
+read one back. `position()`/`box()` are **not** bound: pgl stores both in
+double precision, and a `Point<double>` has no caster, the `Disk.fbox()` call. A
+size in plane units takes a `float`, since it is a rendering length like the
+other canvas lengths rather than a coordinate. The typed `draw(Text)` overload
+sits with the shape overloads, ahead of the `nb::iterable` one, so a list mixing
+shapes and texts draws through the collection overload unchanged.
+[tests/test_canvas_text.py](tests/test_canvas_text.py) asserts the exact SVG
+fragments pgl's own `tests/unit/canvas.cpp` pins (baseline, fitted sizes, the
+pixel padding, the fill fallback in all three backends), which is the check that
+the binding forwards every constructor and style command untouched.
+[examples/example2.py](examples/example2.py) now follows upstream's
+`example2.cpp` and labels the origin, and its SVG is **byte-identical to
+upstream's own `examples/figures/example2.svg`** — worth checking that way
+whenever a port can be; [examples/figures/example2.svg](examples/figures/example2.svg)
+was refreshed. `Text` gets `_repr_svg_` in [pypgl/__init__.py](pypgl/__init__.py)
+like the drawable non-shapes.
+
+**A pre-existing stub bug fixed alongside:** the generic `\.[A-Z]\w*\.__suffix__`
+rule in [src/stubgen_patterns.txt](src/stubgen_patterns.txt) matches *enums*
+too, so the milestone 18 `GridAdjacency` enum had been shipping
+`__len__`/`__getitem__`/`__iter__` over `Point` in the stub. `TextFit` would have
+been the second; both are now shielded, as is `Text`, and
+[tests/test_stubs.py](tests/test_stubs.py)'s no-point-sugar test covers all
+three (it fails with the shielding lines removed). Any future `nb::enum_` needs
+its own empty rule.
+
+Still not bound: the **`Arrangement(shapes, disjointInteriors)`** constructor
+flag, and **`Triangulation.dualDiagram(labelOf)`**, whose label type is whatever
+a C++ callable returns — the user's call.
+
+**Power diagrams are exact for every disk.** A site is weighted by its squared
+radius, which pgl keeps exact even for a disk through three points, so unlike
+the milestone 12/16 `Disk` Minkowski pairs nothing here needs the radius itself;
+a test pins it with such a disk. `std::invalid_argument` (no sites, `k` out of
+range) reaches Python as `ValueError` through nanobind's default translation.
+
+**Testing the diagrams against brute force needs a tie rule, and the first one
+was wrong twice.** [tests/test_voronoi.py](tests/test_voronoi.py) locates a grid
+of off-lattice queries and compares each label with the k nearest by exact
+squared distance. Requiring the *whole* distance order to be strict failed at
+once (far sites tie all the time), and requiring only the k-th boundary to be
+strict still hit a genuine coincidence — a rational query exactly equidistant
+from two integer sites. The rule that holds is the geometric one: a tie at the
+k-th boundary means the query is on a diagram edge, where any incident face is
+correct, so those queries are skipped, and the test asserts that at least 90% of
+the grid was actually compared. The grid also has to be *wide*: the first one
+spanned a few units against sites spread over ±20 and reached a handful of
+cells.
+
+[doc/raw/doxylink.py](doc/raw/doxylink.py) gained an `ALIASES` map so the three
+new class names link to pgl's `Arrangement` page rather than reporting
+`no-doxygen`; the regenerated [doc/shapes.md](doc/shapes.md) also picked up
+tooltip changes from the new headers, the milestone 20 lesson again. Every
+example figure is byte-identical except `canvas_gallery.pdf`'s creation date.
+
+**A fifth notebook, [examples/notebooks/voronoi.ipynb](examples/notebooks/voronoi.ipynb)**,
+in the milestone 22 register, takes one query point through the Delaunay
+triangulation, the Voronoi diagram, the order-2 diagram and the farthest-point
+diagram, drawing the located cell and oriented segments to its representative
+sites, and ends with a tie enumerated at a Voronoi vertex. The query point was
+*chosen* so that its nearest site is not a vertex of the Delaunay triangle
+containing it (four of ~500 grid candidates are), which is the section's point:
+Delaunay point location is not a nearest-neighbor query. Every claim in its
+prose is an assertion in a cell — the Euler counts of the duality, the order-2
+cells in bijection with the Delaunay edges, the farthest diagram's owners being
+the hull with h−2 vertices and 2h−3 edges, the smallest enclosing disk's center
+on a farthest-diagram *edge* as the midpoint of two sites, and the order-(n−1)
+labels being the complements of the farthest ones — so a re-pin that changed any
+of them fails `make notebooks` rather than shipping stale prose. It re-runs to no
+diff, and so did the other four after this re-pin. Each located cell is filled
+through `halfplaneIntersection(face)`, which `Canvas.view` clips when the cell
+is unbounded — no bounding box has to be invented for the diagram.
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 
@@ -1481,7 +1607,7 @@ methods), pickling, and `_repr_svg_` for inline Jupyter rendering via `Canvas`.
 
 **Translation units:** one `bind_*.cpp` per shape group (point, segment, lines,
 polygons, polygon, region, polygonset, chains, canvas, and one per data
-structure: triangulation, shapetree, bitmatrix, intervaltree, arrangement, graph) so heavy template instantiation compiles in parallel and objects
+structure: triangulation, shapetree, bitmatrix, intervaltree, arrangement, voronoi, powerdiagram, graph) so heavy template instantiation compiles in parallel and objects
 stay small. A `PGL_BIND_PREDICATES(cls, OtherTypes...)` macro in `src/common.h`
 keeps the seven uniform predicates (`contains`, `boundaryContains`,
 `interiorContains`, `intersects`, `interiorsIntersect`, `separates`, `crosses`)

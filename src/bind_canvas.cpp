@@ -13,10 +13,11 @@ using namespace pypgl;
 //   - configuration   — scale/width/height/size/margin/borders (all fluent: they
 //                        return self), which describe the whole exported image;
 //   - style           — stroke/fill/fillOpacity/strokeOpacity/strokeWidth/
-//                        pointRadius, each applied to the *current* style, so
+//                        pointRadius/fontSize, each applied to the *current* style, so
 //                        (exactly like the C++ stream) only shapes drawn
 //                        afterwards see it;
-//   - draw(shape)      — one overload per bound shape, equivalent to `<< shape`;
+//   - draw(shape)      — one overload per bound shape, equivalent to `<< shape`,
+//                        plus one for Text;
 //   - to*/write*       — serialize to a string (bytes, for PDF) / to a file.
 //
 // strokeWidth and pointRadius used to be canvas-wide configuration taking a
@@ -25,6 +26,17 @@ using namespace pypgl;
 // style group here. Each is bound twice -- once taking the SVG length string pgl
 // itself takes, once taking a plain number, which is what a caller almost always
 // has (the two argument types are disjoint, so the overloads never collide).
+//
+// Text (a line of text at a point or in a box) is bound as its own small class
+// with the TextFit enum, mirroring pgl::Text: it is not a shape, only an
+// instruction to the canvas, and like a shape it is drawn with draw(), capturing
+// the style active at that moment -- the stroke color, or the fill when the
+// stroke is "none", and the fontSize command, which joins the style group. Its
+// position and box are stored in double precision (rendering never needed
+// more), so the Point<double>/Rectangle<Point<double>> accessors are not bound,
+// for the same reason Disk.fbox() is not; text(), size() and fit() are. A size
+// in plane units is a rendering length like strokeWidth's, not a coordinate, so
+// it takes a float like the other lengths do.
 //
 // Every fluent method returns the same canvas (reference_internal keeps the
 // canvas alive behind the returned handle), so `Canvas().size(...).draw(s)`
@@ -77,6 +89,60 @@ std::string lengthToString(double value) {
 }  // namespace
 
 void bind_canvas(nb::module_ &m) {
+    nb::enum_<pgl::TextFit>(m, "TextFit",
+                            "How a Text placed in a box chooses its font size.")
+        .value("fill", pgl::TextFit::fill, "The largest size at which the text fits inside the box.")
+        .value("shrink", pgl::TextFit::shrink,
+               "The canvas font size, reduced only when the text would not fit inside the box.");
+
+    nb::class_<pgl::Text> text(m, "Text",
+        "A single line of text for a Canvas, centered on a point or inside a box. It is "
+        "not a shape: canvas.draw(text) writes it with the style active at that moment, "
+        "in the stroke color (the fill color when the stroke is 'none').");
+    text.def("__init__",
+             [](pgl::Text *self, std::string value, const Point &position) {
+                 new (self) pgl::Text(std::move(value), position);
+             },
+             nb::arg("text"), nb::arg("position"),
+             "Center the text on a point, at the canvas's current fontSize in pixels, so it "
+             "keeps its size however the drawing is scaled.");
+    text.def("__init__",
+             [](pgl::Text *self, std::string value, const Point &position, double size) {
+                 new (self) pgl::Text(std::move(value), position, size);
+             },
+             nb::arg("text"), nb::arg("position"), nb::arg("size"),
+             "Center the text on a point, at a font size in plane units, so it scales with "
+             "the drawing as the shapes do. Raises ValueError unless size is strictly "
+             "positive.");
+    text.def("__init__",
+             [](pgl::Text *self, std::string value, const Rectangle &box, pgl::TextFit fit) {
+                 new (self) pgl::Text(std::move(value), box, fit);
+             },
+             nb::arg("text"), nb::arg("box"), nb::arg("fit") = pgl::TextFit::fill,
+             "Center the text inside a box: at the largest size that fits (TextFit.fill), "
+             "or at the canvas's current fontSize reduced only when it would not fit "
+             "(TextFit.shrink). A box with no height, or an empty text, draws nothing.");
+    text.def("text", [](const pgl::Text &t) { return t.text(); }, "The text drawn.");
+    text.def("size", [](const pgl::Text &t) { return t.size(); },
+             "The font size in plane units, or None when the text takes its size from the "
+             "canvas or from a box.");
+    text.def("fit", [](const pgl::Text &t) { return t.fit(); },
+             "How the font size is chosen from the box, when there is one.");
+    text.def("__repr__", [](const pgl::Text &t) {
+        std::ostringstream out;
+        out << "Text(" << nb::cast<std::string>(nb::repr(nb::str(t.text().c_str())));
+        if (t.box()) {
+            out << ", box=" << *t.box() << ", fit="
+                << (t.fit() == pgl::TextFit::fill ? "fill" : "shrink");
+        } else {
+            out << ", position=" << t.position();
+            if (t.size())
+                out << ", size=" << *t.size();
+        }
+        out << ")";
+        return out.str();
+    });
+
     nb::class_<pgl::Canvas> cls(m, "Canvas");
     cls.def(nb::init<>(), "Create an empty canvas with the default style and viewport.");
 
@@ -119,6 +185,9 @@ void bind_canvas(nb::module_ &m) {
     CANVAS_STYLE_LENGTH(cls, pointRadius, pgl::pointRadius,
                         "Set the current rendered radius of Point primitives in pixels (>0); "
                         "captured by shapes drawn afterwards.");
+    CANVAS_STYLE_LENGTH(cls, fontSize, pgl::fontSize,
+                        "Set the current font size in pixels (>0) of Text that takes its size from "
+                        "the canvas; captured by text drawn afterwards. The default is 16.");
 
     // --- Draw (one overload per bound shape) ---
     CANVAS_DRAW(cls, Point);
@@ -152,6 +221,16 @@ void bind_canvas(nb::module_ &m) {
     // touching cells merge into one path and the individual cell edges do not
     // show. canvas.draw(matrix.rectangles()) draws them as separate elements.
     CANVAS_DRAW(cls, BitMatrix);
+    // Text takes part in fitting: a box, or the extent of text sized in plane
+    // units, joins the bounding box, and text sized in pixels widens the
+    // padding around the drawing as a point's radius does.
+    cls.def("draw",
+            [](pgl::Canvas &c, const pgl::Text &t) -> pgl::Canvas & {
+                c << t;
+                return c;
+            },
+            nb::arg("text"), nb::rv_policy::reference_internal,
+            "Write a Text with the current style and return the canvas.");
 
     // draw(collection) draws every element in order, each with the current
     // style, so a whole construction can be handed over at once:
@@ -196,7 +275,7 @@ void bind_canvas(nb::module_ &m) {
                     return c;
                 std::string name = nb::cast<std::string>(nb::str(shape.type().attr("__name__")));
                 throw nb::type_error(
-                    ("Canvas.draw() expects a pypgl shape or None, got " + name).c_str());
+                    ("Canvas.draw() expects a pypgl shape, a Text or None, got " + name).c_str());
             },
             nb::arg("shape").none(), nb::rv_policy::reference_internal,
             "Drawing None is a no-op (returns the canvas), so an empty construction "

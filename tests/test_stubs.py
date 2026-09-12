@@ -47,7 +47,8 @@ def test_stub_declares_every_public_class():
         "Polyline", "Polygon", "PolygonWithHoles", "PolygonSet",
         "HalfplaneIntersection", "Disk", "Triangulation", "ShapeTree",
         "IntervalTree", "IntervalTreeY", "Graph", "Arrangement",
-        "ArrangementGraph", "VertexId", "HalfedgeId", "FaceId", "Canvas",
+        "PointListArrangement", "DiskArrangement", "DiskListArrangement",
+        "ArrangementGraph", "VertexId", "HalfedgeId", "FaceId", "Canvas", "Text",
         "Transformation",
     ):
         assert name in classes, f"{name} missing from stub"
@@ -91,7 +92,10 @@ def test_canvas_has_no_point_sugar():
     assert "__contains__" not in methods
 
 
-@pytest.mark.parametrize("cls_name", ["Triangulation", "Arrangement", "VertexId"])
+@pytest.mark.parametrize("cls_name", [
+    "Triangulation", "Arrangement", "PointListArrangement", "DiskArrangement",
+    "DiskListArrangement", "VertexId", "Text", "TextFit", "GridAdjacency",
+])
 def test_non_shapes_have_no_point_sugar(cls_name):
     # None of these is a fixed-extent shape (no contains(Point)/index/get), so
     # they opt out of the sugar every shape gets.

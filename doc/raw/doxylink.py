@@ -209,6 +209,15 @@ def load_briefs(xml_dir):
     return anchor_brief, page_brief
 
 
+# Bound classes whose name is not pgl's: one C++ class template bound once per
+# instantiation, each under a name of its own, all documented by the template.
+ALIASES = {
+    "PointListArrangement": "Arrangement",
+    "DiskArrangement": "Arrangement",
+    "DiskListArrangement": "Arrangement",
+}
+
+
 class Index:
     """Everything needed to resolve a mention: what pypgl binds, where pgl documents it."""
 
@@ -224,7 +233,7 @@ class Index:
         # simply maps to None and never links.
         by_norm = {norm(f.split("::")[-1]): f for f in class_page
                    if f.startswith("pgl::") and "::" not in f[len("pgl::"):]}
-        self.cxx = {c: by_norm.get(norm(c)) for c in classes}
+        self.cxx = {c: by_norm.get(norm(ALIASES.get(c, c))) for c in classes}
         self.by_norm = {norm(c): c for c in classes}   # heading text -> bound class
 
     def member_anchors(self, cls, method):

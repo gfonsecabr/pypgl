@@ -105,11 +105,57 @@ Each style method takes an SVG string and returns the canvas:
 | [`canvas.strokeOpacity("value")`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a7c60899586c30e2ea3c3aacfc192228e "Creates a command that changes the current stroke opacity.") | Sets the stroke opacity for subsequent shapes. |
 | [`canvas.strokeWidth(width)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a49586374ddc1970a6253da193b279526 "Creates a command that changes the current stroke width.") | Sets the stroke width in pixels for subsequent shapes. |
 | [`canvas.pointRadius(radius)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e29fcb65cc1bf621121dac846204aeb "Creates a command that changes the current point radius.") | Sets the rendered radius of [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") primitives in pixels for subsequent shapes. |
+| [`canvas.fontSize(size)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e47d77c1d6e252ad9b8c85497bb659d "Creates a command that changes the current text font size, in pixels.") | Sets the font size, in pixels, of subsequent [`Text`](https://gfonsecabr.github.io/pgl/classpgl_1_1Text.html "Text drawn on a Canvas, at a point or inside a box.") that takes its size from the canvas (see [Writing text](#writing-text)). The default is `16`. |
 
-[`strokeWidth`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a49586374ddc1970a6253da193b279526 "Creates a command that changes the current stroke width.") and [`pointRadius`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e29fcb65cc1bf621121dac846204aeb "Creates a command that changes the current point radius.") are lengths rather than colors, so they take
-either an SVG length string (`"4"`) or a plain number (`4`). Like every other
-style command they apply per shape: only the shapes drawn *after* the call
+[`strokeWidth`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a49586374ddc1970a6253da193b279526 "Creates a command that changes the current stroke width."), [`pointRadius`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e29fcb65cc1bf621121dac846204aeb "Creates a command that changes the current point radius.") and [`fontSize`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e47d77c1d6e252ad9b8c85497bb659d "Creates a command that changes the current text font size, in pixels.") are lengths rather than colors, so
+they take either an SVG length string (`"4"`) or a plain number (`4`). Like every
+other style command they apply per shape: only the shapes drawn *after* the call
 capture them.
+
+### Writing text
+
+A [`Text`](https://gfonsecabr.github.io/pgl/classpgl_1_1Text.html "Text drawn on a Canvas, at a point or inside a box.") writes a line of text on the canvas, centered either on a point or
+inside a box. It is not a shape, only an instruction to the canvas, and like a
+shape it is drawn with `draw` and captures the style active at that moment: the
+text is painted in the current stroke color and stroke opacity, or in the fill
+color and fill opacity when the stroke is `"none"`.
+
+```python
+from fractions import Fraction
+canvas = pgl.Canvas()
+p, q = pgl.Point(0, 0), pgl.Point(10, 6)
+box = pgl.Rectangle(pgl.Point(2, 1), pgl.Point(8, 3))
+
+canvas.stroke("crimson").draw(pgl.Text("p", p))            # 16 pixels, the default
+canvas.fontSize(24).draw(pgl.Text("q", q))                 # 24 pixels
+canvas.draw(pgl.Text("scales", pgl.Point(5, Fraction(9, 2)), 0.5))  # 0.5 plane units
+canvas.stroke("royalblue").draw(pgl.Text("Fill the box", box))
+canvas.draw(pgl.Text("at most 24 pixels", box, pgl.TextFit.shrink))
+```
+
+The constructor decides where the font size comes from:
+
+| Constructor | Font size |
+| --- | --- |
+| `Text(text, point)` | The current [`fontSize`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e47d77c1d6e252ad9b8c85497bb659d "Creates a command that changes the current text font size, in pixels."), in pixels. The text keeps its size however the drawing is scaled. |
+| `Text(text, point, size)` | The given size, in plane units, so the text scales with the drawing as the shapes do. It must be strictly positive, and like the other lengths it may be a `float`. |
+| `Text(text, box)` | The largest size at which the text fits inside `box`. Same as passing [`TextFit.fill`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ac8cbf973d67ef1569c611788f93f6761 "Creates a command that changes the current fill color."). |
+| `Text(text, box, TextFit.shrink)` | The current [`fontSize`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e47d77c1d6e252ad9b8c85497bb659d "Creates a command that changes the current text font size, in pixels."), reduced only when the text would not fit inside `box`. |
+
+[`text()`](https://gfonsecabr.github.io/pgl/classpgl_1_1Text.html#a9ce59f0bcc07a22d617c89363cfcce56 "The text drawn."), [`size()`](https://gfonsecabr.github.io/pgl/classpgl_1_1Text.html#af58763eaa0c13f2521b0e79118edb8ab "The font size in plane units, if one was given.") (the size in plane units, or `None`) and [`fit()`](https://gfonsecabr.github.io/pgl/classpgl_1_1Text.html#a49885a266718d556cfcfb0ed7aa0e98c "How the font size is chosen from the box, when there is one.") read a
+[`Text`](https://gfonsecabr.github.io/pgl/classpgl_1_1Text.html "Text drawn on a Canvas, at a point or inside a box.") back. A box with no height, or an empty text, draws nothing.
+
+Text takes part in fitting. A box, or the extent of text sized in plane units,
+is part of the bounding box. Text sized in pixels widens the padding around the
+drawing, as a point's radius does, so text on the edge of the drawing is not
+cut off.
+
+All three backends lay the text out with the metrics of Helvetica. The SVG asks
+for Helvetica, then Arial, which has the same widths, so text fitted to a box
+fills it in every format. PDF uses the standard Helvetica font, whose
+encoding covers Latin-1: any other character prints as `?`. Ipe typesets the
+text with LaTeX, in Helvetica (`\fontfamily{phv}`), with LaTeX's special
+characters escaped so that the text prints exactly as written.
 
 Example:
 

@@ -20,6 +20,8 @@ void bind_algorithms(nb::module_ &m);
 void bind_graph(nb::module_ &m);
 void bind_intervaltree(nb::module_ &m);
 void bind_arrangement(nb::module_ &m);
+void bind_voronoi(nb::module_ &m);
+void bind_power_diagram(nb::module_ &m);
 
 NB_MODULE(_pgl, m) {
     m.doc() = "Compiled core of pypgl: Python bindings for the Pangolin (pgl) "
@@ -46,5 +48,7 @@ NB_MODULE(_pgl, m) {
     bind_graph(m);
     bind_intervaltree(m);
     bind_arrangement(m);
+    bind_voronoi(m);
+    bind_power_diagram(m);
     bind_algorithms(m);
 }

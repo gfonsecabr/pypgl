@@ -328,13 +328,36 @@ void bind_triangulation(nb::module_ &m) {
             "comes back isolated; the ghost vertex closing the mesh at infinity is "
             "internal and is not one of them.");
     cls.def("voronoiDiagram", [](const Triangulation &t) { return t.voronoiDiagram(); },
-            "The unbounded Arrangement dual to this triangulation. The triangulation must "
-            "be non-empty and its real triangles must form the Delaunay triangulation of "
-            "all its vertices. Each face is labelled with the point that generated its "
-            "Voronoi cell, so diagram.label(diagram.locateFace(q)) is the site nearest to "
-            "q; on a Voronoi edge or vertex locateFace() picks one tied site by its "
+            "The unbounded Arrangement of the circumcentric dual of this triangulation, "
+            "which must be non-empty. When the triangulation is Delaunay that dual is the "
+            "Voronoi diagram: each face is labelled with the point that generated its "
+            "cell, so diagram.label(diagram.locateFace(q)) is the site nearest to q; on a "
+            "Voronoi edge or vertex locateFace() picks one tied site by its "
             "infinitesimal-perturbation rule, and locateCell() plus the incident faces "
-            "recovers all of them. Exact: the vertices are rational.");
+            "recovers all of them. A triangulation that is not Delaunay dualizes to edges "
+            "that cross, which are cut against each other; its faces then outnumber the "
+            "vertices and the face labels are unspecified. Exact: the vertices are "
+            "rational.");
+    // pgl answers with the erased Shape; the pieces are only ever a Segment or a
+    // Ray, so they are narrowed to that variant and the stub says as much.
+    cls.def("voronoiEdges",
+            [](const Triangulation &t) {
+                std::vector<std::variant<Segment, Ray>> result;
+                for (const auto &piece : t.voronoiEdges()) {
+                    if (const auto *segment = piece.template getIfHolds<Segment>())
+                        result.emplace_back(*segment);
+                    else if (const auto *ray = piece.template getIfHolds<Ray>())
+                        result.emplace_back(*ray);
+                    else
+                        throw std::logic_error("voronoiEdges: a dual edge is neither a segment nor a ray");
+                }
+                return result;
+            },
+            "The Segments and Rays voronoiDiagram() is made of, in no particular order, "
+            "without assembling the Arrangement around them: one Segment per interior "
+            "edge whose two circumcenters differ and one outward Ray per convex-hull edge. "
+            "While the triangulation is Delaunay they meet only at shared endpoints, so "
+            "this is all it takes to draw the diagram.");
     cls.def("convexPartition", [](const Triangulation &t) { return t.convexPartition(); },
             "Cut the domain into Convex pieces with pairwise disjoint interiors, each the "
             "union of one or more triangles, using at most four times the fewest pieces "

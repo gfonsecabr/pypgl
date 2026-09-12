@@ -33,11 +33,16 @@ from ._pgl import (
     IntervalTreeY,
     Graph,
     Arrangement,
+    PointListArrangement,
+    DiskArrangement,
+    DiskListArrangement,
     ArrangementGraph,
     VertexId,
     HalfedgeId,
     FaceId,
     Canvas,
+    Text,
+    TextFit,
     Transformation,
     findIntersections,
     findCrossings,
@@ -60,6 +65,9 @@ from ._pgl import (
     polyominoRegionsUpTo,
     innerRaster,
     outerRaster,
+    voronoiDiagram,
+    farthestVoronoiDiagram,
+    powerDiagram,
 )
 
 try:
@@ -93,11 +101,16 @@ __all__ = [
     "IntervalTreeY",
     "Graph",
     "Arrangement",
+    "PointListArrangement",
+    "DiskArrangement",
+    "DiskListArrangement",
     "ArrangementGraph",
     "VertexId",
     "HalfedgeId",
     "FaceId",
     "Canvas",
+    "Text",
+    "TextFit",
     "Transformation",
     "findIntersections",
     "findCrossings",
@@ -120,13 +133,16 @@ __all__ = [
     "polyominoRegionsUpTo",
     "innerRaster",
     "outerRaster",
+    "voronoiDiagram",
+    "farthestVoronoiDiagram",
+    "powerDiagram",
 ]
 
 
 # --- Pythonic sugar added in the thin Python layer (cheap here, not in C++) ---
 #
-# Triangulation, ShapeTree, BitMatrix, IntervalTree, Graph and Arrangement are
-# deliberately absent from every loop below: unlike the fixed-extent shapes, none
+# Triangulation, ShapeTree, BitMatrix, IntervalTree, Graph and the four
+# Arrangement classes are deliberately absent from every loop below: unlike the fixed-extent shapes, none
 # of them has contains(Point)/pointInside/index/get to hang `in` or indexing off
 # of. The container ones bind their own has()/__contains__/__len__/__iter__ in
 # C++, over what they actually hold -- stored shapes for the two trees, vertices
@@ -275,10 +291,12 @@ for _cls in (
     Disk,
     # Triangulation, ShapeTree and BitMatrix are not "shapes" (see the loops
     # above), but Canvas.draw() accepts them just like every bound shape, so the
-    # same one-shot rendering applies here too.
+    # same one-shot rendering applies here too -- and to a Text, which a canvas
+    # draws the same way.
     Triangulation,
     ShapeTree,
     BitMatrix,
+    Text,
 ):
     _cls._repr_svg_ = _shape_repr_svg_
 

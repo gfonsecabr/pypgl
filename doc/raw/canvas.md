@@ -103,11 +103,57 @@ Each style method takes an SVG string and returns the canvas:
 | `canvas.strokeOpacity("value")` | Sets the stroke opacity for subsequent shapes. |
 | `canvas.strokeWidth(width)` | Sets the stroke width in pixels for subsequent shapes. |
 | `canvas.pointRadius(radius)` | Sets the rendered radius of `Point` primitives in pixels for subsequent shapes. |
+| `canvas.fontSize(size)` | Sets the font size, in pixels, of subsequent `Text` that takes its size from the canvas (see [Writing text](#writing-text)). The default is `16`. |
 
-`strokeWidth` and `pointRadius` are lengths rather than colors, so they take
-either an SVG length string (`"4"`) or a plain number (`4`). Like every other
-style command they apply per shape: only the shapes drawn *after* the call
+`strokeWidth`, `pointRadius` and `fontSize` are lengths rather than colors, so
+they take either an SVG length string (`"4"`) or a plain number (`4`). Like every
+other style command they apply per shape: only the shapes drawn *after* the call
 capture them.
+
+### Writing text
+
+A `Text` writes a line of text on the canvas, centered either on a point or
+inside a box. It is not a shape, only an instruction to the canvas, and like a
+shape it is drawn with `draw` and captures the style active at that moment: the
+text is painted in the current stroke color and stroke opacity, or in the fill
+color and fill opacity when the stroke is `"none"`.
+
+```python
+from fractions import Fraction
+canvas = pgl.Canvas()
+p, q = pgl.Point(0, 0), pgl.Point(10, 6)
+box = pgl.Rectangle(pgl.Point(2, 1), pgl.Point(8, 3))
+
+canvas.stroke("crimson").draw(pgl.Text("p", p))            # 16 pixels, the default
+canvas.fontSize(24).draw(pgl.Text("q", q))                 # 24 pixels
+canvas.draw(pgl.Text("scales", pgl.Point(5, Fraction(9, 2)), 0.5))  # 0.5 plane units
+canvas.stroke("royalblue").draw(pgl.Text("Fill the box", box))
+canvas.draw(pgl.Text("at most 24 pixels", box, pgl.TextFit.shrink))
+```
+
+The constructor decides where the font size comes from:
+
+| Constructor | Font size |
+| --- | --- |
+| `Text(text, point)` | The current `fontSize`, in pixels. The text keeps its size however the drawing is scaled. |
+| `Text(text, point, size)` | The given size, in plane units, so the text scales with the drawing as the shapes do. It must be strictly positive, and like the other lengths it may be a `float`. |
+| `Text(text, box)` | The largest size at which the text fits inside `box`. Same as passing `TextFit.fill`{TextFit}. |
+| `Text(text, box, TextFit.shrink)` | The current `fontSize`, reduced only when the text would not fit inside `box`. |
+
+`text()`{Text}, `size()`{Text} (the size in plane units, or `None`) and `fit()`{Text} read a
+`Text` back. A box with no height, or an empty text, draws nothing.
+
+Text takes part in fitting. A box, or the extent of text sized in plane units,
+is part of the bounding box. Text sized in pixels widens the padding around the
+drawing, as a point's radius does, so text on the edge of the drawing is not
+cut off.
+
+All three backends lay the text out with the metrics of Helvetica. The SVG asks
+for Helvetica, then Arial, which has the same widths, so text fitted to a box
+fills it in every format. PDF uses the standard Helvetica font, whose
+encoding covers Latin-1: any other character prints as `?`. Ipe typesets the
+text with LaTeX, in Helvetica (`\fontfamily{phv}`), with LaTeX's special
+characters escaped so that the text prints exactly as written.
 
 Example:
 
