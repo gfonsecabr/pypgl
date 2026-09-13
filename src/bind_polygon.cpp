@@ -39,19 +39,16 @@ void bind_polygon(nb::module_ &m) {
     nb::class_<Polygon> cls(m, "Polygon");
     cls.def(nb::init<>(), "Create an empty polygon (no vertices).");
     // The C++ range constructor is a template; bind it via a placement-new
-    // factory like Convex's. Unlike Convex (which always hull-scans), Polygon's
-    // normalization only reorders to canonical form (CCW, lexicographically
-    // smallest vertex first) — it does not check simplicity — so `trusted` is
-    // exposed too, matching the C++ default.
+    // factory like Convex's. pgl's trusted (canonical-input) path is not bound.
     cls.def("__init__",
-            [](Polygon *self, const std::vector<Point> &points, bool trusted) {
-                new (self) Polygon(points, trusted);
+            [](Polygon *self, const std::vector<Point> &points) {
+                new (self) Polygon(points);
             },
-            nb::arg("points"), nb::arg("trusted") = false,
-            "Create a polygon from vertices given in boundary order. Unless "
-            "trusted is set, the vertices are normalized to canonical form (CCW, "
-            "lexicographically smallest vertex first); normalization does not "
-            "check simplicity -- use isSimple() to verify.");
+            nb::arg("points"),
+            "Create a polygon from vertices given in boundary order. The vertices "
+            "are normalized to canonical form (CCW, lexicographically smallest "
+            "vertex first); normalization does not check simplicity -- use "
+            "isSimple() to verify.");
     // The same constructor spelled as a flat coordinate list, mirroring pgl's
     // initializer_list<Number> one: Polygon([0,0, 4,0, 4,4]) instead of
     // Polygon([Point(0,0), Point(4,0), Point(4,4)]). Registered after the point
@@ -60,10 +57,10 @@ void bind_polygon(nb::module_ &m) {
     // Point has no numerator/denominator so it is not a coordinate, and a number
     // is not a Point.
     cls.def("__init__",
-            [](Polygon *self, const std::vector<Num> &coords, bool trusted) {
-                new (self) Polygon(pointsFromCoords(coords), trusted);
+            [](Polygon *self, const std::vector<Num> &coords) {
+                new (self) Polygon(pointsFromCoords(coords));
             },
-            nb::arg("coords"), nb::arg("trusted") = false,
+            nb::arg("coords"),
             "Create a polygon from a flat coordinate list of its boundary "
             "vertices, read in (x, y) pairs: Polygon([0,0, 4,0, 4,4]).");
 

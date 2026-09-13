@@ -717,7 +717,13 @@ collides — a `Point` has no `numerator`/`denominator`, so the `ERational` cast
 refuses it, and a number is not a `Point`. `Convex`'s *point* constructor also
 picked up the `trusted` flag it had always had in C++ (and which
 [doc/raw/shapes.md](doc/raw/shapes.md) had been documenting), so the two
-overloads agree.
+overloads agree. (Since removed: upstream pgl `766d92d` replaced every
+constructor's `bool trusted` — `bool minmax` on `Rectangle` — with a `pgl::Trust`
+tag, and rather than follow, pypgl dropped the parameter from `Convex`, `Polygon`,
+`MonotoneChain`, `PolygonWithHoles` and `PolygonSet` altogether, so every
+constructor normalizes. The internal `Rectangle(min, max, true)` calls lost their
+flag too, which keeps the sources compiling on both sides of that commit.
+Version 1.5.1.)
 
 **`Canvas.draw` now takes a collection** and draws its elements one by one, each
 capturing the style active at the call: `canvas.draw(polygon.edges())`,

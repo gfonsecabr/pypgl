@@ -41,17 +41,16 @@ void bind_region(nb::module_ &m) {
             "Create a hole-free region from an outer simple polygon.");
     cls.def("__init__",
             [](PolygonWithHoles *self, const Polygon &outer,
-               const std::vector<Polygon> &holes, bool trusted) {
-                new (self) PolygonWithHoles(outer, holes, trusted);
+               const std::vector<Polygon> &holes) {
+                new (self) PolygonWithHoles(outer, holes);
             },
-            nb::arg("outer"), nb::arg("holes"), nb::arg("trusted") = false,
+            nb::arg("outer"), nb::arg("holes"),
             "Create a region from an outer simple polygon and its holes. The holes are "
             "stored in canonical (sorted) order, so the order they are given in does not "
             "affect equality, ordering or hashing, and a zero-area hole removes nothing "
             "and is dropped. Structural validity -- every ring simple, every hole inside "
             "the outer polygon, hole interiors pairwise disjoint -- is a precondition, "
-            "not a check; call isValid() to test it. Set trusted to skip the canonical "
-            "reordering when the holes are already in it.");
+            "not a check; call isValid() to test it.");
 
     // --- rings ---
     cls.def("outer", [](const PolygonWithHoles &a) { return a.outer(); },

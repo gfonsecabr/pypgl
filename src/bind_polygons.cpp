@@ -248,13 +248,10 @@ void bind_polygons(nb::module_ &m) {
         // The C++ range constructor is a template; bind it via a placement-new
         // factory taking a list of points (Graham-scanned into a convex hull).
         cls.def("__init__",
-                [](Convex *self, const std::vector<Point> &points, bool trusted) {
-                    new (self) Convex(points, trusted);
+                [](Convex *self, const std::vector<Point> &points) {
+                    new (self) Convex(points);
                 },
-                nb::arg("points"), nb::arg("trusted") = false,
-                "Create the convex hull of the given points. Set trusted only if "
-                "they already are the hull vertices in counterclockwise order from "
-                "the leftmost one, in which case they are stored as given.");
+                nb::arg("points"), "Create the convex hull of the given points.");
         // The same constructor spelled as a flat coordinate list, mirroring
         // pgl's initializer_list<Number> one: Convex([0,0, 8,0, 4,6]) instead of
         // Convex([Point(0,0), Point(8,0), Point(4,6)]). Registered after the
@@ -263,10 +260,10 @@ void bind_polygons(nb::module_ &m) {
         // otherwise: a Point has no numerator/denominator so it is not a
         // coordinate, and a number is not a Point.
         cls.def("__init__",
-                [](Convex *self, const std::vector<Num> &coords, bool trusted) {
-                    new (self) Convex(pointsFromCoords(coords), trusted);
+                [](Convex *self, const std::vector<Num> &coords) {
+                    new (self) Convex(pointsFromCoords(coords));
                 },
-                nb::arg("coords"), nb::arg("trusted") = false,
+                nb::arg("coords"),
                 "Create the convex hull of the points spelled by a flat coordinate "
                 "list, read in (x, y) pairs: Convex([0,0, 8,0, 4,6]).");
 

@@ -86,7 +86,7 @@ BitMatrix rasterize(const AnyShape &shape, const pgl::Rectangle<Cell> &window, b
         for (int i = 0; i < result.width(); ++i) {
             const std::int64_t x = result.origin().x() + i;
             const std::int64_t y = result.origin().y() + j;
-            const Rectangle cell(Point(x, y), Point(x + 1, y + 1), true);
+            const Rectangle cell(Point(x, y), Point(x + 1, y + 1));
             if (inner ? shape.contains(cell) : shape.intersects(cell)) result.set(x, y);
         }
     }
@@ -123,7 +123,7 @@ pgl::Rectangle<Cell> boundingWindow(const AnyShape &shape) {
     const Rectangle box(shape.bbox());
     if (box.empty()) return pgl::Rectangle<Cell>();
     return pgl::Rectangle<Cell>(Cell(floorTo(box.min().x()), floorTo(box.min().y())),
-                                Cell(ceilTo(box.max().x()), ceilTo(box.max().y())), true);
+                                Cell(ceilTo(box.max().x()), ceilTo(box.max().y())));
 }
 
 // A Python iterable of cells -> the cells themselves, in the lattice-point

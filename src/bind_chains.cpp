@@ -121,24 +121,23 @@ void bind_chains(nb::module_ &m) {
         nb::class_<MonotoneChain> cls(m, "MonotoneChain");
         cls.def(nb::init<>(), "Create an empty chain (no vertices).");
         cls.def("__init__",
-                [](MonotoneChain *self, const std::vector<Point> &points, bool trusted) {
-                    new (self) MonotoneChain(points, trusted);
+                [](MonotoneChain *self, const std::vector<Point> &points) {
+                    new (self) MonotoneChain(points);
                 },
-                nb::arg("points"), nb::arg("trusted") = false,
+                nb::arg("points"),
                 "Create the weakly x-monotone chain through a set of points. The "
-                "points are treated as a set, not as a pre-linked chain: unless "
-                "trusted is set they are sorted lexicographically (by x, ties "
-                "broken by y) and deduplicated, so any input order gives the same "
-                "chain.");
+                "points are treated as a set, not as a pre-linked chain: they are "
+                "sorted lexicographically (by x, ties broken by y) and "
+                "deduplicated, so any input order gives the same chain.");
         // The same constructor spelled as a flat coordinate list, mirroring
         // pgl's initializer_list<Number> one: MonotoneChain([0,0, 4,3, 8,1]).
         // Registered after the point overload, which is what disambiguates the
         // empty list (both match it; either builds the same empty chain).
         cls.def("__init__",
-                [](MonotoneChain *self, const std::vector<Num> &coords, bool trusted) {
-                    new (self) MonotoneChain(pointsFromCoords(coords), trusted);
+                [](MonotoneChain *self, const std::vector<Num> &coords) {
+                    new (self) MonotoneChain(pointsFromCoords(coords));
                 },
-                nb::arg("coords"), nb::arg("trusted") = false,
+                nb::arg("coords"),
                 "Create the chain through the points spelled by a flat coordinate "
                 "list, read in (x, y) pairs: MonotoneChain([0,0, 4,3, 8,1]).");
 

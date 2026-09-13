@@ -114,7 +114,7 @@ inline Cell toCell(const Point &p) {
 // directly -- which is what BitMatrix's own Rectangle constructor does with it.
 inline pgl::Rectangle<Cell> toGridWindow(const Rectangle &box) {
     if (box.empty()) return pgl::Rectangle<Cell>();
-    return pgl::Rectangle<Cell>(toCell(box.min()), toCell(box.max()), true);
+    return pgl::Rectangle<Cell>(toCell(box.min()), toCell(box.max()));
 }
 
 // An affine transformation of the plane (core/transformation.hpp), templated

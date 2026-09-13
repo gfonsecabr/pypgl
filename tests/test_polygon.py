@@ -2,7 +2,7 @@
 
 Mirrors Convex's storage (vertices + a lazy translation) but makes no
 convexity assumption, so it is mutable/unhashable the same way. Covers
-construction (trusted vs. normalized), measures, isSimple/isConvex/untangle,
+construction (normalization), measures, isSimple/isConvex/untangle,
 indexing, mutability, transforms, the predicate/squared-distance matrix
 (including against Disk, which sits outside the shared matrix macro), and
 intersection (list-of-pieces results, unlike Convex's single optional piece).
@@ -39,12 +39,6 @@ def test_construction_normalizes_to_ccw_lex_min_first():
     p = Polygon([Point(4, 4), Point(0, 4), Point(0, 0), Point(4, 0)])
     assert p == _square()
     assert p.vertices()[0] == Point(0, 0)
-
-
-def test_trusted_skips_normalization():
-    # Already-canonical vertices given with trusted=True are stored as-is.
-    p = Polygon([Point(0, 0), Point(4, 0), Point(4, 4), Point(0, 4)], trusted=True)
-    assert p.vertices() == [Point(0, 0), Point(4, 0), Point(4, 4), Point(0, 4)]
 
 
 def test_coordinates_accept_fraction_and_string():
@@ -84,7 +78,7 @@ def test_isSimple_and_isConvex():
     assert square.isConvex()
 
     # A self-crossing "bowtie" quadrilateral is not simple.
-    bowtie = Polygon([Point(0, 0), Point(2, 2), Point(2, 0), Point(0, 2)], trusted=True)
+    bowtie = Polygon([Point(0, 0), Point(2, 2), Point(2, 0), Point(0, 2)])
     assert not bowtie.isSimple()
 
     # An L-shape is simple but not convex.
@@ -100,7 +94,7 @@ def test_a_retraced_edge_is_not_simple():
     spur = Polygon([
         Point(0, 0), Point(6, 0), Point(12, 0), Point(12, 6), Point(12, 12),
         Point(6, 12), Point(0, 12), Point(0, 6), Point(3, 6), Point(0, 6),
-    ], trusted=True)
+    ])
     assert len(spur.vertices()) > 8
     assert not spur.isSimple()
 
@@ -108,13 +102,12 @@ def test_a_retraced_edge_is_not_simple():
     # always got it right.
     small = Polygon(
         [Point(0, 0), Point(4, 0), Point(4, 4), Point(2, 2), Point(4, 4)],
-        trusted=True,
     )
     assert not small.isSimple()
 
 
 def test_untangle_makes_bowtie_simple():
-    bowtie = Polygon([Point(0, 0), Point(2, 2), Point(2, 0), Point(0, 2)], trusted=True)
+    bowtie = Polygon([Point(0, 0), Point(2, 2), Point(2, 0), Point(0, 2)])
     assert not bowtie.isSimple()
     assert bowtie.untangle() is None  # in-place mutator returns None
     assert bowtie.isSimple()

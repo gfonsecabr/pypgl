@@ -52,15 +52,14 @@ void bind_polygonset(nb::module_ &m) {
     cls.def(nb::init<PolygonWithHoles>(), nb::arg("component"),
             "Create a set with a single region as its only component.");
     cls.def("__init__",
-            [](PolygonSet *self, const std::vector<PolygonWithHoles> &components, bool trusted) {
-                new (self) PolygonSet(components, trusted);
+            [](PolygonSet *self, const std::vector<PolygonWithHoles> &components) {
+                new (self) PolygonSet(components);
             },
-            nb::arg("components"), nb::arg("trusted") = false,
+            nb::arg("components"),
             "Create a set from a list of regions. They are stored in canonical (sorted) "
             "order, so the order they are given in does not affect equality, ordering or "
             "hashing; zero-area components are dropped and duplicates erased. Pairwise "
-            "disjoint interiors are a precondition, not a check -- call isValid(). Set "
-            "trusted to skip the canonical reordering when they are already in it.");
+            "disjoint interiors are a precondition, not a check -- call isValid().");
 
     // --- components ---
     cls.def("componentCount", [](const PolygonSet &a) { return a.componentCount(); },

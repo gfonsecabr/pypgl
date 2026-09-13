@@ -70,34 +70,16 @@ def test_coordinates_stay_exact(cls):
     assert Point(Fraction(1, 3), 2) in list(shape.vertices())
 
 
-# --- `trusted`, on the three shapes whose C++ constructor has it -------------
+# --- no `trusted` parameter ---------------------------------------------------
 
-@pytest.mark.parametrize("cls", [Convex, Polygon, MonotoneChain])
-def test_trusted_stores_the_coordinates_verbatim(cls):
-    # Canonical order for all three is CCW from the lexicographically smallest
-    # vertex, which this list is not in: untrusted, it gets reordered.
-    rotated = [8, 6, 0, 6, 0, 0, 8, 0]
-    assert list(cls(rotated, trusted=True).vertices()) == [
-        Point(8, 6), Point(0, 6), Point(0, 0), Point(8, 0)
-    ]
-    assert list(cls(rotated).vertices()) != list(cls(rotated, trusted=True).vertices())
-
-
-def test_convex_points_constructor_also_takes_trusted():
-    hull = [Point(0, 0), Point(8, 0), Point(8, 6), Point(0, 6)]
-    assert Convex(hull, trusted=True) == Convex(hull)
-    # Trusted skips the hull scan, so an interior point survives -- which is the
-    # caller's promise to keep, exactly as in C++.
-    with_interior = hull + [Point(4, 3)]
-    assert len(Convex(with_interior, trusted=True)) == 5
-    assert len(Convex(with_interior)) == 4
-
-
-def test_polyline_has_no_trusted_parameter():
-    # pgl's Polyline stores its vertices verbatim already, so there is nothing
-    # to trust: its coordinate constructor takes the list alone.
+@pytest.mark.parametrize("cls", [Convex, Polygon, MonotoneChain, Polyline])
+def test_no_trusted_parameter(cls):
+    # The unchecked canonical-input path is not exposed: every vertex list is
+    # normalized, so a shape cannot be stored out of its canonical form.
     with pytest.raises(TypeError):
-        Polyline([0, 0, 4, 4], trusted=True)
+        cls([0, 0, 4, 0, 4, 4], trusted=True)
+    with pytest.raises(TypeError):
+        cls([Point(0, 0), Point(4, 0), Point(4, 4)], trusted=True)
 
 
 # --- the collapse a flat list makes possible ---------------------------------
