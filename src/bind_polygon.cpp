@@ -79,6 +79,9 @@ void bind_polygon(nb::module_ &m) {
             "The same polygon as a hole-free PolygonWithHoles region.");
     cls.def("asPolygonSet", [](const Polygon &p) { return p.asPolygonSet(); },
             "The same polygon as a one-component PolygonSet.");
+    cls.def("boundary", [](const Polygon &p) { return p.boundary(); },
+            "The closed Polyline through the vertices in order, the first repeated "
+            "at the end. Simplicity is not checked.");
     cls.def("empty", [](const Polygon &p) { return p.empty(); },
             "Whether the polygon covers no point at all: a polygon with no vertex, "
             "which is the empty set. Distinct from isDegenerate(), which is a polygon "

@@ -18,6 +18,13 @@ using namespace pypgl;
 //                        afterwards see it;
 //   - draw(shape)      — one overload per bound shape, equivalent to `<< shape`,
 //                        plus one for Text;
+//   - tooltips         — tooltips(enabled), pgl::tooltips(bool): whether shapes
+//                        drawn afterwards get their output string as a tooltip;
+//   - draw(shape, tip) — one overload per shape, `<< std::pair(shape, tip)`: the
+//                        shape with its own tooltip, even while tooltips are
+//                        off. pgl's "range of pairs" is a collection holding
+//                        (shape, tooltip) tuples, which draw(collection) routes
+//                        here;
 //   - to*/write*       — serialize to a string (bytes, for PDF) / to a file.
 //
 // strokeWidth and pointRadius used to be canvas-wide configuration taking a
@@ -63,6 +70,20 @@ std::string lengthToString(double value) {
             },                                                               \
             nb::arg("shape"), nb::rv_policy::reference_internal,             \
             "Draw a shape with the current style and return the canvas.")
+
+// The same shape paired with its own tooltip, replacing its output string --
+// pgl's `canvas << std::pair(shape, tooltip)`. pgl constrains that pair to
+// AnyShapeConcept, so the three drawable non-shapes (Triangulation, ShapeTree,
+// BitMatrix) and Text take no tooltip.
+#define CANVAS_DRAW_TOOLTIP(cls, T)                                          \
+    cls.def("draw",                                                          \
+            [](pgl::Canvas &c, const T &s, const std::string &tooltip) -> pgl::Canvas & { \
+                c << std::pair<T, std::string>(s, tooltip);                   \
+                return c;                                                     \
+            },                                                               \
+            nb::arg("shape"), nb::arg("tooltip"), nb::rv_policy::reference_internal, \
+            "Draw a shape with the current style and its own tooltip, shown even "  \
+            "while tooltips are off (an empty tooltip gives none), and return the canvas.")
 
 // One style command (stroke/fill/...) applied to the current style, returning
 // self. `Maker` is the pgl free function (pgl::stroke, pgl::fill, ...).
@@ -189,6 +210,18 @@ void bind_canvas(nb::module_ &m) {
                         "Set the current font size in pixels (>0) of Text that takes its size from "
                         "the canvas; captured by text drawn afterwards. The default is 16.");
 
+    // The tooltip a shape gets unless draw(shape, tooltip) names one: its output
+    // string (a <title> in SVG, a non-painting annotation in PDF). A shape drawn
+    // while tooltips are off gets none in any format.
+    cls.def("tooltips",
+            [](pgl::Canvas &c, bool enabled) -> pgl::Canvas & {
+                c << pgl::tooltips(enabled);
+                return c;
+            },
+            nb::arg("enabled") = true, nb::rv_policy::reference_internal,
+            "Turn tooltips on or off for shapes drawn afterwards. A shape's tooltip is its "
+            "textual form, shown on hover (an SVG <title>, a PDF annotation). On by default.");
+
     // --- Draw (one overload per bound shape) ---
     CANVAS_DRAW(cls, Point);
     CANVAS_DRAW(cls, Segment);
@@ -221,6 +254,25 @@ void bind_canvas(nb::module_ &m) {
     // touching cells merge into one path and the individual cell edges do not
     // show. canvas.draw(matrix.rectangles()) draws them as separate elements.
     CANVAS_DRAW(cls, BitMatrix);
+
+    // --- Draw with a tooltip (one overload per shape) ---
+    CANVAS_DRAW_TOOLTIP(cls, Point);
+    CANVAS_DRAW_TOOLTIP(cls, Segment);
+    CANVAS_DRAW_TOOLTIP(cls, OrientedSegment);
+    CANVAS_DRAW_TOOLTIP(cls, Line);
+    CANVAS_DRAW_TOOLTIP(cls, OrientedLine);
+    CANVAS_DRAW_TOOLTIP(cls, Ray);
+    CANVAS_DRAW_TOOLTIP(cls, Halfplane);
+    CANVAS_DRAW_TOOLTIP(cls, Triangle);
+    CANVAS_DRAW_TOOLTIP(cls, Rectangle);
+    CANVAS_DRAW_TOOLTIP(cls, Convex);
+    CANVAS_DRAW_TOOLTIP(cls, MonotoneChain);
+    CANVAS_DRAW_TOOLTIP(cls, Polyline);
+    CANVAS_DRAW_TOOLTIP(cls, Polygon);
+    CANVAS_DRAW_TOOLTIP(cls, PolygonWithHoles);
+    CANVAS_DRAW_TOOLTIP(cls, PolygonSet);
+    CANVAS_DRAW_TOOLTIP(cls, HalfplaneIntersection);
+    CANVAS_DRAW_TOOLTIP(cls, Disk);
     // Text takes part in fitting: a box, or the extent of text sized in plane
     // units, joins the bounding box, and text sized in pixels widens the
     // padding around the drawing as a point's radius does.
@@ -245,11 +297,23 @@ void bind_canvas(nb::module_ &m) {
     // two coordinates rather than as itself. A str is iterable too and would
     // recurse forever (a one-character string iterates to itself), so it is
     // passed on to the fallback, which reports it as the type error it is.
+    //
+    // A (shape, str) tuple is not a collection of two things to draw -- a str
+    // was never drawable -- but a shape with its tooltip, pgl's
+    // std::pair(shape, tooltip); a collection of such tuples is pgl's range of
+    // pairs, each element reaching this overload in turn.
     cls.def("draw",
             [](nb::object self, nb::iterable shapes) -> nb::object {
                 if (nb::isinstance<nb::str>(shapes) || nb::isinstance<nb::bytes>(shapes))
                     throw nb::next_overload();
                 nb::object draw = self.attr("draw");
+                if (nb::isinstance<nb::tuple>(shapes) && nb::len(shapes) == 2) {
+                    nb::tuple pair = nb::borrow<nb::tuple>(shapes);
+                    if (nb::isinstance<nb::str>(pair[1])) {
+                        draw(pair[0], pair[1]);
+                        return self;
+                    }
+                }
                 for (nb::handle shape : shapes)
                     draw(shape);
                 return self;
@@ -261,7 +325,8 @@ void bind_canvas(nb::module_ &m) {
             nb::sig("def draw(self, shapes: collections.abc.Iterable) -> Canvas"),
             "Draw every shape in a collection, in order, each with the current "
             "style, and return the canvas. Elements may be of mixed types, may be "
-            "None, and may themselves be collections.");
+            "None, and may themselves be collections. A (shape, tooltip) tuple "
+            "draws the shape with that tooltip.");
 
     // draw(None) is a no-op that still returns the canvas, so the result of a
     // construction (e.g. an `intersection` that may be empty -> None) can be
@@ -280,6 +345,18 @@ void bind_canvas(nb::module_ &m) {
             nb::arg("shape").none(), nb::rv_policy::reference_internal,
             "Drawing None is a no-op (returns the canvas), so an empty construction "
             "result can be drawn without a None check.");
+    cls.def("draw",
+            [](pgl::Canvas &c, nb::object shape, nb::object tooltip) -> pgl::Canvas & {
+                if (shape.is_none())
+                    return c;
+                std::string name = nb::cast<std::string>(nb::str(shape.type().attr("__name__")));
+                std::string tip = nb::cast<std::string>(nb::str(tooltip.type().attr("__name__")));
+                throw nb::type_error(
+                    ("Canvas.draw(shape, tooltip) expects a pypgl shape or None and a str, got " +
+                     name + " and " + tip).c_str());
+            },
+            nb::arg("shape").none(), nb::arg("tooltip").none(), nb::rv_policy::reference_internal,
+            "Drawing None with a tooltip is a no-op (returns the canvas).");
 
     // --- Output ---
     //

@@ -76,8 +76,8 @@ void bind_polygonset(nb::module_ &m) {
             nb::arg("index"), "Remove component i, by its index in the canonical order.");
     cls.def("eraseComponent", [](PolygonSet &a, const PolygonWithHoles &c) { return a.eraseComponent(c); },
             nb::arg("component"),
-            "Remove the given component, returning whether one was found to remove "
-            "(O(log k) comparisons, since the components are sorted).");
+            "Remove the given component, returning whether one was found to remove. "
+            "O(k + s log k) time for k components and a component of s vertices.");
 
     // --- holes, vertices and edges, over every ring of every component ---
     cls.def("holeCount", [](const PolygonSet &a) { return a.holeCount(); },

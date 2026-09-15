@@ -18,30 +18,36 @@ void replace_points(nb::list points, const std::vector<Point> &sorted) {
 }  // namespace
 
 void bind_algorithms(nb::module_ &m) {
+    // pgl picks the method per input (a scan over bounding boxes or the
+    // Bentley-Ottmann sweep, abandoning the scan when it outgrows the sweep), so
+    // the docstrings promise the bound rather than naming an algorithm. The
+    // quadratic bruteForce* references moved into pgl::detail upstream and are
+    // no longer bound.
     m.def("findIntersections",
           [](const std::vector<Segment> &segments) { return pgl::findIntersections(segments); },
           nb::arg("segments"),
-          "Return all intersecting pairs of segments using Bentley-Ottmann.");
+          "Return all intersecting pairs of segments, in O((n + k) log n) time.");
     m.def("findCrossings",
           [](const std::vector<Segment> &segments) { return pgl::findCrossings(segments); },
           nb::arg("segments"),
-          "Return all properly crossing pairs of segments using Bentley-Ottmann.");
-    m.def("bruteForceIntersections",
-          [](const std::vector<Segment> &segments) { return pgl::bruteForceIntersections(segments); },
+          "Return all properly crossing pairs of segments, in O((n + k) log n) time.");
+    m.def("findInteriorIntersections",
+          [](const std::vector<Segment> &segments) { return pgl::findInteriorIntersections(segments); },
           nb::arg("segments"),
-          "Return all intersecting pairs of segments by exhaustive search.");
-    m.def("bruteForceCrossings",
-          [](const std::vector<Segment> &segments) { return pgl::bruteForceCrossings(segments); },
-          nb::arg("segments"),
-          "Return all properly crossing pairs of segments by exhaustive search.");
+          "Return all pairs of segments whose relative interiors intersect (they cross, "
+          "or overlap along a stretch of positive length), in O((n + k) log n) time.");
     m.def("detectIntersections",
           [](const std::vector<Segment> &segments) { return pgl::detectIntersections(segments); },
           nb::arg("segments"),
-          "Whether any two segments intersect, using Bentley-Ottmann.");
+          "Whether any two segments intersect, in O(n log n) time.");
     m.def("detectCrossings",
           [](const std::vector<Segment> &segments) { return pgl::detectCrossings(segments); },
           nb::arg("segments"),
-          "Whether any two segments properly cross, using Bentley-Ottmann.");
+          "Whether any two segments properly cross, in O(n log n) time.");
+    m.def("detectInteriorIntersections",
+          [](const std::vector<Segment> &segments) { return pgl::detectInteriorIntersections(segments); },
+          nb::arg("segments"),
+          "Whether the relative interiors of any two segments intersect, in O(n log n) time.");
 
     m.def("convexHull",
           [](const std::vector<Point> &points) { return pgl::convexHull(points); },
@@ -75,7 +81,7 @@ void bind_algorithms(nb::module_ &m) {
           },
           nb::arg("points"),
           "Return a Segment joining two of the given points at minimum distance from "
-          "each other. O(n log n) on ordinary inputs; ties are broken arbitrarily.");
+          "each other. O(n log n); ties are broken arbitrarily.");
 
     // The union of many regions in one arrangement, rather than one arrangement
     // per step as folding regularizedUnion over the list would build. Bound once

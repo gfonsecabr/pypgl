@@ -211,7 +211,9 @@ def test_a_self_overlapping_polygon_is_undefined():
 
 @pytest.mark.parametrize(
     "shape",
-    COLLAPSED_TO_A_POINT + COLLAPSED_TO_A_SEGMENT,
+    # A Polyline collapsed to a point is closed, hence all interior (see the
+    # test below), so it is left out here.
+    [s for s in COLLAPSED_TO_A_POINT + COLLAPSED_TO_A_SEGMENT if not isinstance(s, Polyline)],
     ids=lambda s: f"{type(s).__name__}-{'pt' if s.isPoint() else 'seg'}",
 )
 def test_a_collapsed_shape_has_empty_interior(shape):
@@ -225,6 +227,17 @@ def test_a_collapsed_shape_has_empty_interior(shape):
     assert shape.boundaryContains(probe)
     assert not shape.interiorContains(probe)
     assert not shape.interiorsIntersect(shape)
+
+
+def test_a_polyline_collapsed_to_a_point_is_closed_and_all_interior():
+    # Its first vertex equals its last, so it is a loop: no boundary, and the
+    # point it covers is its relative interior.
+    shape = Polyline([Point(2, 2), Point(2, 2)])
+    assert shape.isPoint()
+    assert shape.isClosed()
+    assert shape.contains(Point(2, 2))
+    assert not shape.boundaryContains(Point(2, 2))
+    assert shape.interiorContains(Point(2, 2))
 
 
 # --- PolygonWithHoles, which has the tests but no getIf* pair ---------------

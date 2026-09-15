@@ -139,6 +139,37 @@ def test_insert_removes_the_constraints_it_makes_redundant():
     assert len(k) == 1
 
 
+def test_insert_changes_predicts_insert_without_changing_the_region():
+    candidates = [
+        _upper(),                                   # redundant
+        Halfplane(Point(0, 5), Point(1, 5)),        # y >= 5: narrows
+        Halfplane(Point(0, -1), Point(-1, -1)),     # y <= -1: empties
+        Halfplane(Point(2, 2), Point(2, 2)),        # undefined
+        Halfplane(Point(0, 0), Point(0, -1)),       # x >= 0: narrows
+    ]
+    for h in candidates:
+        k = HalfplaneIntersection(_upper())
+        before = list(k)
+        predicted = k.insertChanges(h)
+        assert list(k) == before
+        assert predicted is k.insert(h)
+
+
+def test_insert_changes_is_false_on_the_empty_region():
+    # The empty region lies inside every half-plane, so nothing changes it.
+    k = HalfplaneIntersection(_upper())
+    k.insert(Halfplane(Point(0, -1), Point(-1, -1)))
+    assert k.empty()
+    assert k.insertChanges(Halfplane(Point(0, 5), Point(1, 5))) is False
+
+
+def test_insert_changes_tests_whether_the_halfplane_contains_the_region():
+    square = _unit_square()
+    for h in (Halfplane(Point(0, -1), Point(1, -1)), Halfplane(Point(5, 0), Point(5, 1)),
+              Halfplane(Point(0, 0), Point(1, 1))):
+        assert square.insertChanges(h) is not h.contains(square.asConvex())
+
+
 # --- the classification family ----------------------------------------------
 
 def test_a_bounded_region_is_none_of_the_named_cases():

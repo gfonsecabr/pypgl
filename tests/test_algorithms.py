@@ -12,8 +12,8 @@ from pypgl import Point, Segment
 
 def test_algorithms_are_public():
     names = {
-        "findIntersections", "findCrossings", "bruteForceIntersections",
-        "bruteForceCrossings", "detectIntersections", "detectCrossings",
+        "findIntersections", "findCrossings", "findInteriorIntersections",
+        "detectIntersections", "detectCrossings", "detectInteriorIntersections",
         "convexHull", "convexHullExtended",
         "sortPoints", "sortDistinctPoints", "sortAround", "hilbertSort",
         "polyominoes", "polyominoesUpTo",
@@ -21,6 +21,22 @@ def test_algorithms_are_public():
     }
     assert names <= set(pypgl.__all__)
     assert all(callable(getattr(pypgl, name)) for name in names)
+
+
+def test_brute_force_references_are_not_public():
+    # Upstream moved the quadratic references into pgl::detail.
+    assert not hasattr(pypgl, "bruteForceIntersections")
+    assert not hasattr(pypgl, "bruteForceCrossings")
+
+
+def _brute_force(segments, predicate):
+    """One pair per two positions of the input that meet, as the sweep reports."""
+    return [
+        sorted((a, b), key=repr)
+        for i, a in enumerate(segments)
+        for b in segments[i + 1:]
+        if predicate(a, b)
+    ]
 
 
 def test_segment_intersection_algorithms():
@@ -32,9 +48,7 @@ def test_segment_intersection_algorithms():
     expected_intersections = expected_crossings + [[diagonal, touching]]
 
     assert pypgl.findIntersections(segments) == expected_intersections
-    assert pypgl.bruteForceIntersections(segments) == expected_intersections
     assert pypgl.findCrossings(segments) == expected_crossings
-    assert pypgl.bruteForceCrossings(segments) == expected_crossings
     assert pypgl.detectIntersections(segments)
     assert pypgl.detectCrossings(segments)
     assert not pypgl.detectIntersections([diagonal])
@@ -63,9 +77,57 @@ def test_segment_sweep_handles_repeated_segments():
 
     # The two copies of `a` intersect each other but do not cross.
     assert _pair_multiset(pypgl.findIntersections(segments)) == \
-        _pair_multiset(pypgl.bruteForceIntersections(segments))
+        _pair_multiset(_brute_force(segments, Segment.intersects))
     assert _pair_multiset(pypgl.findCrossings(segments)) == \
-        _pair_multiset(pypgl.bruteForceCrossings(segments))
+        _pair_multiset(_brute_force(segments, Segment.crosses))
+    assert _pair_multiset(pypgl.findInteriorIntersections(segments)) == \
+        _pair_multiset(_brute_force(segments, Segment.interiorsIntersect))
+
+
+def test_interior_intersections_are_crossings_and_overlaps():
+    # interiorsIntersect: the pairs that cross, and the pairs that overlap
+    # along a stretch of positive length -- not the ones that merely touch.
+    base = Segment(0, 0, 4, 0)
+    overlapping = Segment(2, 0, 6, 0)
+    touching = Segment(4, 0, 4, 3)
+    crossing = Segment(1, -1, 1, 1)
+    segments = [base, overlapping, touching, crossing]
+
+    assert pypgl.findInteriorIntersections(segments) == [[base, crossing], [base, overlapping]]
+    assert pypgl.detectInteriorIntersections(segments)
+    assert pypgl.findCrossings(segments) == [[base, crossing]]
+    assert len(pypgl.findIntersections(segments)) == 4
+
+    # Touching at an endpoint, or collinear and sharing only an endpoint, is
+    # an intersection with no interior to it.
+    assert not pypgl.detectInteriorIntersections([base, touching])
+    assert not pypgl.detectInteriorIntersections([base, Segment(4, 0, 8, 0)])
+    assert pypgl.findInteriorIntersections([base, Segment(4, 0, 8, 0)]) == []
+
+
+def test_segment_pair_functions_agree_with_brute_force():
+    # pgl now picks its method per input (a bounding-box scan or the sweep), so
+    # compare both a sparse and a dense input, with repeats and points mixed in,
+    # against the quadratic reference as multisets.
+    import random
+
+    rng = random.Random(20260914)
+    for count, spread in ((40, 60), (40, 6)):
+        segments = [
+            Segment(rng.randint(0, spread), rng.randint(0, spread),
+                    rng.randint(0, spread), rng.randint(0, spread))
+            for _ in range(count)
+        ]
+        segments += segments[:5] + [Segment(3, 3, 3, 3)]
+        for find, detect, predicate in (
+            (pypgl.findIntersections, pypgl.detectIntersections, Segment.intersects),
+            (pypgl.findCrossings, pypgl.detectCrossings, Segment.crosses),
+            (pypgl.findInteriorIntersections, pypgl.detectInteriorIntersections,
+             Segment.interiorsIntersect),
+        ):
+            expected = _brute_force(segments, predicate)
+            assert _pair_multiset(find(segments)) == _pair_multiset(expected)
+            assert detect(segments) == bool(expected)
 
 
 def test_a_zero_length_segment_is_a_point_not_a_self_intersection():

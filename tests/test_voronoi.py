@@ -167,12 +167,36 @@ def test_order_out_of_range_raises(k):
         voronoiDiagram(_sites(), k)
 
 
-def test_order_k_diagram_of_collinear_sites_takes_the_bisector_route():
+def test_order_k_diagram_of_collinear_sites_is_a_run_of_strips():
     sites = [Point(0, 0), Point(1, 0), Point(3, 0), Point(7, 0)]
     diagram = voronoiDiagram(sites, 2)
     # Order-2 cells along a line: {0,1}, {1,3}, {3,7} -- three strips.
     assert diagram.faceCount() == 3
     assert diagram.label(diagram.locateFace(Point(2, 9))) == [Point(1, 0), Point(3, 0)]
+
+
+@pytest.mark.parametrize("k", [1, 2, 3, 5, 8])
+def test_diagram_of_collinear_sites_labels_each_strip_with_the_k_nearest(k):
+    # Sites all on one line are sorted along it rather than dualized or cut
+    # bisector by bisector; a tilted line and a shuffled input exercise both the
+    # sort and the input-order labels.
+    sites = [Point(x, 2 * x + 1) for x in (-9, -5, -4, 0, 1, 3, 7, 12)]
+    random.Random(k).shuffle(sites)
+    diagram = voronoiDiagram(sites, k)
+    # The k nearest are k consecutive sites, one strip per run.
+    assert diagram.faceCount() == len(sites) - k + 1
+    _checked(
+        (diagram.label(diagram.locateFace(q)), _pick(sites, _least([_sq(s, q) for s in sites], k), k))
+        for q in _queries())
+
+
+def test_diagram_of_repeated_collinear_sites_shares_a_strip_between_the_copies():
+    sites = [Point(0, 0), Point(2, 0), Point(0, 0)]
+    assert voronoiDiagram(sites).faceCount() == 2
+    diagram = voronoiDiagram(sites, 2)
+    assert (diagram.faceCount(), diagram.edgeCount()) == (2, 1)
+    assert diagram.label(diagram.locateFace(Point(-5, 3))) == [Point(0, 0), Point(0, 0)]
+    assert diagram.label(diagram.locateFace(Point(5, 3))) == [Point(0, 0), Point(2, 0)]
 
 
 # --- the farthest-point diagram ------------------------------------------------

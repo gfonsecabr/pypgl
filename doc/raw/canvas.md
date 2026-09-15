@@ -22,8 +22,8 @@ optionally change the drawing style in between, and then export the result as
 
 The canvas automatically fits the drawn geometry into the output image,
 preserves aspect ratio, clips infinite primitives to the visible viewport, and
-stores an SVG `<title>` for each drawn element so that exported images keep a
-human-readable tooltip.
+gives each drawn element a [tooltip](#tooltips) so that exported shapes can be
+identified precisely.
 
 In Jupyter / IPython every shape and every canvas renders itself inline (through
 `_repr_svg_`), so simply evaluating a shape or a canvas as the last expression in
@@ -104,6 +104,7 @@ Each style method takes an SVG string and returns the canvas:
 | `canvas.strokeWidth(width)` | Sets the stroke width in pixels for subsequent shapes. |
 | `canvas.pointRadius(radius)` | Sets the rendered radius of `Point` primitives in pixels for subsequent shapes. |
 | `canvas.fontSize(size)` | Sets the font size, in pixels, of subsequent `Text` that takes its size from the canvas (see [Writing text](#writing-text)). The default is `16`. |
+| `canvas.tooltips(enabled=True)` | Turns [tooltips](#tooltips) on or off for subsequent shapes. A shape drawn while they are off has no tooltip in any format. They are on by default. Takes a `bool`, not a string. |
 
 `strokeWidth`, `pointRadius` and `fontSize` are lengths rather than colors, so
 they take either an SVG length string (`"4"`) or a plain number (`4`). Like every
@@ -205,6 +206,31 @@ canvas.stroke("teal").draw(polygon.triangulation().triangles())
 Any iterable works — a list, a tuple, a generator expression — and its elements
 may be of mixed types, may be `None`, and may themselves be collections (a list
 of lists draws flattened).
+
+### Tooltips
+
+A shape's tooltip is its printed form, unless `canvas.tooltips(False)` turned
+tooltips off. Pass a string as a second argument to `draw` to give a shape that
+tooltip instead, even while tooltips are off. An empty tooltip gives none.
+
+```python
+canvas = pgl.Canvas()
+s = pgl.Segment(0, 0, 4, 3)
+p = pgl.Point(4, 3)
+
+canvas.tooltips(False).draw(s)   # no tooltip
+canvas.draw(p, "endpoint")       # the tooltip "endpoint"
+```
+
+In a collection, a `(shape, tooltip)` tuple stands for the shape with its own
+tooltip, so every shape can carry one:
+
+```python
+canvas.draw([(pgl.Point(0, 0), "origin"), (pgl.Point(4, 0), "east")])
+```
+
+Only a shape takes a tooltip: a `Text`, which is already on display, and a
+`Triangulation`, `ShapeTree` or `BitMatrix` do not.
 
 ### Configuration
 
@@ -315,6 +341,10 @@ stay visually constant even when the geometry is scaled to fit the output box.
 - Because style is captured when a shape is drawn, it is easy to layer highlights
   on top of a base drawing by switching style right before drawing the
   highlighted object.
+- A shape's [tooltip](#tooltips) is shown when you hover over the shape: in SVG
+  as a `<title>`, and in PDF as an annotation that draws nothing (not every PDF
+  viewer shows it on hover). Text has no tooltip, since it is already on
+  display.
 - `Halfplane` fill and `Rectangle` fill are often easier to read when combined
   with a translucent `fillOpacity(...)`.
 - `Triangle` supports both stroke and fill just like `Rectangle`.

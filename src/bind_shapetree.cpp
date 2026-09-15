@@ -85,7 +85,8 @@ void bind_shapetree(nb::module_ &m) {
 
     // ---- mutation ---------------------------------------------------------
     cls.def("insert", [](ShapeTree &t, const AnyShape &shape) { t.insert(shape); }, nb::arg("shape"),
-            "Insert a shape without rebalancing the existing tree (raises if it "
+            "Insert a shape without rebalancing the existing tree, so insertions can drive "
+            "the height to Theta(n) until rebuild() (raises if it "
             "is unbounded -- Line/OrientedLine/Ray/Halfplane have no bbox()).");
     cls.def("rebuild", [](ShapeTree &t, std::size_t leafSize) { t.rebuild(leafSize); }, nb::arg("leaf_size") = 0,
             "Rebuild from the stored shapes, restoring tree quality after many "

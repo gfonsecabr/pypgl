@@ -46,7 +46,7 @@ void bind_halfplane_intersection(nb::module_ &m) {
             nb::arg("halfplanes"),
             "Create the intersection of the given half-planes. They are stored sorted "
             "counterclockwise by boundary direction, with redundant half-planes dropped "
-            "and at most one kept per direction.");
+            "and at most one kept per direction. O(n log n) for n half-planes.");
     cls.def(nb::init<Halfplane>(), nb::arg("halfplane"),
             "Create the region bounded by a single half-plane.");
     cls.def(nb::init<Rectangle>(), nb::arg("rectangle"),
@@ -63,7 +63,16 @@ void bind_halfplane_intersection(nb::module_ &m) {
             "the half-plane is discarded -- because it is redundant, or undefined (a "
             "degenerate half-plane bounds no side, so it carries no constraint). When it "
             "empties the region, the region switches to a sticky empty state; otherwise "
-            "it is stored and the stored half-planes it makes redundant are removed.");
+            "it is stored and the stored half-planes it makes redundant are removed. "
+            "O(n) time for n stored half-planes.");
+    cls.def("insertChanges",
+            [](const HalfplaneIntersection &k, const Halfplane &h) { return k.insertChanges(h); },
+            nb::arg("halfplane"),
+            "What insert() would return for the half-plane, without changing the "
+            "region. False exactly when the half-plane is undefined or the region "
+            "already lies inside it (the empty region lies inside every half-plane), so "
+            "this is also the test of whether the half-plane contains the region. "
+            "O(log n) time for n stored half-planes.");
     cls.def("size", [](const HalfplaneIntersection &k) { return k.size(); },
             "Number of stored half-planes. Note these, not the vertices, are this "
             "shape's indexable elements.");

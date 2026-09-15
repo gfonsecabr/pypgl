@@ -38,7 +38,10 @@ void bind_voronoi(nb::module_ &m) {
           "edge or vertex the query ties, and locateFace() picks one tied face by its "
           "infinitesimal-perturbation rule; locateCell() plus the incident faces "
           "recovers all of them. Repeated sites share a cell, which carries one of them. "
-          "Exact: the vertices are rational. O(n log n); raises ValueError for no sites.");
+          "Sites all on one line are sorted along it, the diagram being the parallel slabs "
+          "between the bisectors of consecutive sites. Exact: the vertices are rational. "
+          "The time of the Delaunay triangulation plus O(n log n) for sites in general "
+          "position, O(n log n) for collinear ones; raises ValueError for no sites.");
     m.def("voronoiDiagram",
           [](const std::vector<Point> &sites, int k) { return pgl::voronoiDiagram(sites, k); },
           nb::arg("sites"), nb::arg("k"),
@@ -47,9 +50,10 @@ void bind_voronoi(nb::module_ &m) {
           "it, in their order in sites. A face is the region where one set of k sites is "
           "nearer than every other site, and the sites of two neighboring faces differ by "
           "a single swap; empty cells never appear, so there are far fewer faces than "
-          "k-element subsets. Built by Lee's refinement, O(k^2 n log n) for sites whose "
-          "cells have boundedly many neighbors; repeated or all-collinear sites fall back "
-          "to cutting every bisector against every site, O(n^3 log n). Raises ValueError "
+          "k-element subsets. Built by Lee's refinement. Sites all on one line are sorted "
+          "along it instead, the k nearest being k consecutive sites, in "
+          "O(n log n + (n - k + 1) k log k); repeated sites not all on one line fall "
+          "back to cutting every bisector against every site. Raises ValueError "
           "unless 1 <= k <= len(sites).");
     m.def("farthestVoronoiDiagram",
           [](const std::vector<Point> &sites) { return pgl::farthestVoronoiDiagram(sites); },

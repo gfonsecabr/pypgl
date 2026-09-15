@@ -27,24 +27,31 @@ Given a list of $n$ segments, these functions report the pairs that meet.
 *Intersecting* means the two segments share at least one point; *crossing* is the
 stricter relation where each one passes from one side of the other to the other
 side (a shared endpoint, or a collinear overlap, intersects but does not cross).
+Between the two, the *interiors* of two segments intersect when they cross or
+when they overlap along a stretch of positive length — exactly
+`a.interiorsIntersect(b)` — so two segments that merely touch do not count.
 
 The reporting functions return a list of pairs, each pair a list of the two
 [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label.") objects involved.
 
-- [`findIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#adcd493466342b027a48fe7bf0718434b "Finds all intersecting segment pairs with Bentley-Ottmann."): All intersecting pairs, using the
-  Bentley-Ottmann sweep line. Runs in $O((n+k) \log n)$ time for $k$ reported
-  pairs.
+- [`findIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#adcd493466342b027a48fe7bf0718434b "Finds all intersecting segment pairs."): All intersecting pairs. Runs in
+  $O((n+k) \log n)$ time for $k$ reported pairs.
 
-- [`findCrossings(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#abf691f267558aaeea543045e723d292e "Finds all proper crossing segment pairs with Bentley-Ottmann."): All crossing pairs, same sweep line and same
+- [`findCrossings(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#abf691f267558aaeea543045e723d292e "Finds all proper crossing segment pairs."): All crossing pairs, in the same
   $O((n+k) \log n)$ time.
 
-- [`bruteForceIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a390afa6b90488531f4702bc242322d46 "Finds all intersecting segment pairs by brute force.") / [`bruteForceCrossings(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#aac3ae3a0e91834aef9525388948417c4 "Finds all crossing segment pairs by brute force."): The same
-  two results, computed by testing every pair. They take $O(n^2)$ time, but are
-  faster in practice when the output is large.
+- [`findInteriorIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#afa45af9bbf50aeb1be08b8eabcae4679 "Finds all segment pairs whose relative interiors intersect."): All pairs whose interiors intersect —
+  the crossing pairs plus the pairs overlapping along a segment of positive
+  length — in the same $O((n+k) \log n)$ time.
 
-- [`detectIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#adea0ebb84e7d7ada3ae27ae23ea116bc "Detects whether any two segments intersect.") / [`detectCrossings(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ade9af54c89044d728daf207e9c534759 "Detects whether any two segments properly cross."): Return `True` as
-  soon as one intersecting (respectively crossing) pair exists, in
-  $O(n \log n)$ time, without reporting it.
+- [`detectIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#adea0ebb84e7d7ada3ae27ae23ea116bc "Detects whether any two segments intersect.") / [`detectCrossings(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ade9af54c89044d728daf207e9c534759 "Detects whether any two segments properly cross.") /
+  [`detectInteriorIntersections(segments)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a33953e6d8ed9058ea92baf93e65e47cc "Detects whether the relative interiors of any two segments intersect."): Return `True` as soon as one such
+  pair exists, in $O(n \log n)$ time, without reporting it.
+
+No algorithm has to be chosen: each function samples its input and picks
+between a scan over bounding boxes and the Bentley-Ottmann sweep line,
+abandoning the scan for the sweep should it grow more expensive, so the bounds
+above hold whichever runs. The pairs come back in the same order either way.
 
 ```python
 segments = [pgl.Segment(0, 0, 4, 4), pgl.Segment(0, 4, 4, 0), pgl.Segment(5, 0, 6, 0)]
@@ -56,7 +63,8 @@ print(pgl.detectCrossings(segments))
 ```
 
 All of them report one pair per two positions of the list that meet, so every
-function returns the same pairs as its brute-force counterpart, in some order. A
+function returns the same pairs as testing every pair of positions with the
+matching predicate, in some order. A
 segment given several times counts once per copy: its copies intersect each other
 (they never cross), and each copy is paired with every segment it meets. A
 zero-length segment is a point — it intersects the segments passing through it,
@@ -152,7 +160,7 @@ print(strip.squaredMinimumWidth(), strip.bbox().width(), strip.bbox().height())
 
 - [`closestPair(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a9d03d057595b9229d8cc245045ce4df4 "Computes a closest pair of points by divide and conquer."): Returns a [`Segment`](shapes.md#segment) joining two of
   the given points at minimum distance from each other, by divide and conquer in
-  $O(n \log n)$ on ordinary inputs. Only squared distances are compared, so the
+  $O(n \log n)$. Only squared distances are compared, so the
   answer is exact; ties are broken arbitrarily. Needs at least two points.
 
 ### Voronoi and power diagrams
@@ -166,15 +174,15 @@ meaning. On a diagram edge or vertex the query ties, and `locateFace` picks one
 of the tied faces by its infinitesimal-perturbation rule; `locateCell`, followed
 by the faces around the cell it returns, recovers every tied answer.
 
-- [`voronoiDiagram(sites)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a6cc9b13abeb83be524eebae5c690fe2a "Computes the Voronoi diagram of a set of points.") returns the Voronoi diagram of a list of points as an [`Arrangement`](data_structures.md#arrangement), every face labeled with the one site nearest to it. It is the dual of the Delaunay triangulation and is computed that way, in $O(n \log n)$; a caller already holding a `Triangulation` of the same points can call its own `voronoiDiagram()` instead. Repeated sites share a cell, which carries one of them. Raises `ValueError` for an empty list.
+- [`voronoiDiagram(sites)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a6cc9b13abeb83be524eebae5c690fe2a "Computes the Voronoi diagram of a set of points.") returns the Voronoi diagram of a list of points as an [`Arrangement`](data_structures.md#arrangement), every face labeled with the one site nearest to it. It is the dual of the Delaunay triangulation and is computed that way, in the time of that triangulation plus $O(n \log n)$ for sites in general position; a caller already holding a `Triangulation` of the same points can call its own `voronoiDiagram()` instead. Sites that all lie on one line have no dual to borrow and are sorted along it instead, in $O(n \log n)$, the diagram being the parallel slabs between the bisectors of consecutive sites. Repeated sites share a cell, which carries one of them. Raises `ValueError` for an empty list.
 
-- [`voronoiDiagram(sites, k)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a6cc9b13abeb83be524eebae5c690fe2a "Computes the Voronoi diagram of a set of points.") returns the order-$k$ diagram as a [`PointListArrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes."): each face is labeled with the **list** of the $k$ sites nearest to it, in their order in `sites`. A face is the region where one set of $k$ sites is nearer than every other site, and neighboring faces differ by a single swap; empty cells never appear, so there are far fewer faces than $k$-element subsets. The orders are built one on top of the next by Lee's refinement, at $O(k^2 n \log n)$ for cells with boundedly many neighbors; repeated or all-collinear sites fall back to cutting every bisector against every site, at $O(n^3 \log n)$. `k` must be between 1 and `len(sites)`, and `k = 1` still answers a [`PointListArrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes."), of one-element lists.
+- [`voronoiDiagram(sites, k)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a6cc9b13abeb83be524eebae5c690fe2a "Computes the Voronoi diagram of a set of points.") returns the order-$k$ diagram as a [`PointListArrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes."): each face is labeled with the **list** of the $k$ sites nearest to it, in their order in `sites`. A face is the region where one set of $k$ sites is nearer than every other site, and neighboring faces differ by a single swap; empty cells never appear, so there are far fewer faces than $k$-element subsets. The orders are built one on top of the next by Lee's refinement. Sites that all lie on one line are sorted along it instead — the $k$ nearest are then always $k$ consecutive sites, and the diagram is the slabs where one run hands over to the next — in $O(n \log n + (n - k + 1)\, k \log k)$. Repeated sites not all on one line have no refinement to take and fall back to cutting every bisector against every site. `k` must be between 1 and `len(sites)`, and `k = 1` still answers a [`PointListArrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes."), of one-element lists.
 
 - [`farthestVoronoiDiagram(sites)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#acd245756f72c23fd64d5354a65c7d39b "Computes the farthest-point Voronoi diagram of a set of points.") returns the farthest-point Voronoi diagram as an [`Arrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes."), every face labeled with the one site **farthest** from it. Only a vertex of the convex hull owns a cell — a site the hull contains is strictly farthest nowhere — and every cell is unbounded, so the diagram is a tree of segments and rays with no bounded face. $O(n \log n + h^3)$ for $h$ hull vertices.
 
 - [`powerDiagram(disks)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#acdaa70fea88f1688d348bf191da38f13 "Computes the power diagram of a set of disks.") is the Voronoi diagram of a list of [`Disk`](shapes.md#disk)s under the power distance $|x - c|^2 - r^2$, returned as a `DiskArrangement` whose faces carry the disk that owns them. Its cells are still convex, but a disk its neighbors swallow owns no cell at all and a disk's center may fall outside its own cell; disks of equal radius give the Voronoi diagram of their centers. Only squared radii are used, so it is exact even for a disk through three points, whose radius is irrational. $O(n^3 \log n)$.
 
-- [`powerDiagram(disks, k)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#acdaa70fea88f1688d348bf191da38f13 "Computes the power diagram of a set of disks.") is the order-$k$ power diagram, a [`DiskListArrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes.") whose faces carry the list of the $k$ disks of least power, in their order in `disks`. $O(n^3 \log n)$ for every $k$.
+- [`powerDiagram(disks, k)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#acdaa70fea88f1688d348bf191da38f13 "Computes the power diagram of a set of disks.") is the order-$k$ power diagram, a [`DiskListArrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes.") whose faces carry the list of the $k$ disks of least power, in their order in `disks`, built by cutting every radical axis against every site.
 
 ```python
 sites = [pgl.Point(0,0), pgl.Point(6,0), pgl.Point(3,5), pgl.Point(8,6)]
@@ -281,7 +289,7 @@ All four of these reorder the Python list you pass **in place** and return
   so points close in the plane stay close in the sequence — a useful
   preprocessing step for incremental algorithms such as
   [`Triangulation.insertDelaunay`](data_structures.md#triangulation). Uses only
-  coordinate comparisons. Complexity $O(n \log n)$.
+  coordinate comparisons.
 
 ```python
 points = [pgl.Point(1, 1), pgl.Point(-1, 1), pgl.Point(0, -1)]

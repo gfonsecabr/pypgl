@@ -287,6 +287,9 @@ void bind_polygons(nb::module_ &m) {
         cls.def("asPolygon", [](const Convex &c) { return c.asPolygon(); }, "The same hull as a Polygon.");
         cls.def("asPolygonSet", [](const Convex &c) { return c.asPolygonSet(); },
                 "The same hull as a one-component PolygonSet.");
+        cls.def("boundary", [](const Convex &c) { return c.boundary(); },
+                "The closed Polyline through the vertices in counterclockwise order, "
+                "the first repeated at the end.");
         cls.def("asPolygonWithHoles", [](const Convex &c) { return c.asPolygonWithHoles(); },
                 "The same hull as a hole-free PolygonWithHoles region.");
         cls.def("asHalfplaneIntersection", [](const Convex &c) { return c.asHalfplaneIntersection(); },

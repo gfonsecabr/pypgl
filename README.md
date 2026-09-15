@@ -141,9 +141,10 @@ canvas.writeSVG("example2.svg")
 Pangolin includes [fundamental algorithms](doc/algorithms.md):
 
 - **Convex hull** computed with Graham scan.
-- Line segment intersection: **Bentley-Ottmann sweep line** using rational numbers.
+- Line segment intersection: **Bentley-Ottmann sweep line** and other algorithms.
 - **Minkowski sum**, **Minkowski erosion** and **boolean operations**.
 - **Visibility** graph and visibility polygon.
+- Hertel-Mehlhorn **convex partition**.
 - Find the **closest pair** of points using divide and conquer.
 - Smallest **enclosing disk and rectangle**.
 - Sort points by angle or Hilbert order.

@@ -120,8 +120,10 @@ def test_polyline_may_self_intersect():
     # An X-shaped chain crosses itself.
     crossing = Polyline([Point(0, 0), Point(2, 2), Point(2, 0), Point(0, 2)])
     assert not crossing.isSimple()
-    # A closed polyline (last vertex == first) is not simple either.
-    assert not Polyline([Point(0, 0), Point(2, 0), Point(1, 2), Point(0, 0)]).isSimple()
+    # A closed polyline tracing a simple cycle is simple: its first and last
+    # edges are adjacent. An open one whose ends touch is not.
+    assert Polyline([Point(0, 0), Point(2, 0), Point(1, 2), Point(0, 0)]).isSimple()
+    assert not Polyline([Point(0, 0), Point(2, 0), Point(1, 2), Point(0, 0), Point(1, -1)]).isSimple()
     # Nor is one that retraces an edge, which past eight vertices goes through
     # the sweep: two equal segments used to collapse into one status node there.
     retraced = Polyline([
@@ -130,6 +132,46 @@ def test_polyline_may_self_intersect():
     ])
     assert len(retraced.vertices()) > 8
     assert not retraced.isSimple()
+
+
+def test_a_closed_polyline_is_a_loop():
+    loop = Polyline([0, 0, 4, 0, 2, 3, 0, 0])
+    assert loop.isClosed()
+    assert not Polyline([0, 0, 4, 0, 2, 3]).isClosed()
+    assert Polyline([Point(1, 1)]).isClosed()
+    assert not Polyline([]).isClosed()
+
+    # Equal up to reversal and, being closed, up to the starting vertex.
+    assert loop == Polyline([4, 0, 2, 3, 0, 0, 4, 0])
+    assert loop == Polyline([0, 0, 2, 3, 4, 0, 0, 0])
+    assert Polyline([0, 0, 4, 0, 2, 3]) != Polyline([4, 0, 2, 3, 0, 0])
+
+    # Its boundary is empty, so the repeated vertex is interior like any other.
+    assert not loop.boundaryContains(Point(0, 0))
+    assert loop.interiorContains(Point(0, 0))
+    opened = Polyline([0, 0, 4, 0, 2, 3])
+    assert opened.boundaryContains(Point(0, 0))
+    assert not opened.interiorContains(Point(0, 0))
+
+    # A polyline whose vertices all coincide is closed, and that point is its
+    # interior.
+    point = Polyline([2, 2, 2, 2])
+    assert point.isClosed()
+    assert point.interiorContains(Point(2, 2))
+    assert not point.boundaryContains(Point(2, 2))
+
+
+def test_polygon_boundaries_are_closed_polylines():
+    square = [0, 0, 4, 0, 4, 4, 0, 4]
+    ring = Polyline([0, 0, 4, 0, 4, 4, 0, 4, 0, 0])
+    assert Convex(square).boundary() == ring
+    assert Polygon(square).boundary() == ring
+    assert Polygon(square).boundary().vertices() == ring.vertices()
+    assert Convex(square).boundary().isClosed()
+    assert Polygon(square).boundary().length() == 16
+    # Simplicity is not checked: a bow-tie's boundary is closed and not simple.
+    bowtie = Polygon([0, 0, 4, 4, 4, 0, 0, 4]).boundary()
+    assert bowtie.isClosed() and not bowtie.isSimple()
 
 
 def test_polyline_edges_and_lengths():

@@ -27,7 +27,7 @@ The following shapes are supported by Pangolin:
 - [`Line`](#line) Infinite straight line.
 - [`OrientedLine`](#oriented-line) Infinite oriented straight line.
 - [`Ray`](#ray) Half-line.
-- [`Polyline`](#polyline) Open polygonal chain, possibly self-intersecting.
+- [`Polyline`](#polyline) Open or closed polygonal chain, possibly self-intersecting.
 - [`MonotoneChain`](#monotonechain) Weakly x-monotone polygonal chain.
 
 ##### 2-dimensional shapes:
@@ -56,7 +56,7 @@ A sequence of `Point` is accepted just as well, which is what a computed vertex 
 All shapes contain their boundaries (that is, they are closed in the topological sense). The boundary of a shape is the *manifold boundary*, that is:
 
 - A point has no boundary.
-- The boundary of a 1-dimensional shape is the set of (at most two) extreme points of the curve. The boundary of a segment are its two vertices. The boundary of a ray is its one vertex. A line has no boundary.
+- The boundary of a 1-dimensional shape is the set of (at most two) extreme points of the curve. The boundary of a segment are its two vertices. The boundary of a ray is its one vertex. A line has no boundary, and neither does a closed `Polyline`.
 - The boundary of a 2-dimensional shape is defined in the usual way. The boundary of a triangle is its perimeter, the boundary of a halfplane is the line that defines it.
 
 
@@ -99,7 +99,10 @@ t.interiorContains(pgl.Point(2,2)) # False: no interior left
 A `MonotoneChain` or `Polyline` is the exception worth knowing: a straight one
 *is* a segment, so `isSegment()` holds, but a chain is one-dimensional to begin
 with and has dropped nothing. It keeps its own boundary (its two extreme
-vertices) and its relative interior, and `isDegenerate()` is `False`.
+vertices) and its relative interior, and `isDegenerate()` is `False`. A
+`Polyline` whose vertices all coincide is a point, but its first vertex equals
+its last, so it is [closed](#polyline): it has no boundary, and the point is its
+interior.
 
 ### Point
 
@@ -345,9 +348,11 @@ It knows how to convert itself with an explicit cast to:
 
 ### Polyline
 
-The class `Polyline` represents an open polygonal chain: a sequence of vertices joined in traversal order, with $n - 1$ edges for $n$ vertices and no closing edge back to the first vertex. Unlike a `Polygon`, it may cross itself.
+The class `Polyline` represents a polygonal chain: a sequence of vertices joined in traversal order, with $n - 1$ edges for $n$ vertices and no implicit closing edge back to the first vertex. Unlike a `Polygon`, it may cross itself.
 
-The constructor keeps the vertex order you give it, canonicalizing only the *direction* (the sequence is reversed when the reversal compares lexicographically smaller), so a polyline equals its own reverse but not a different traversal of the same vertices:
+A polyline is **open** or **closed**. An open polyline's boundary is its two extreme vertices and its relative interior is everything else — the same convention as `Segment`. A closed polyline, whose first vertex equals its last, is a loop: its boundary is empty and it is its own interior. A loop is written by repeating the first vertex at the end; this includes a polyline whose vertices are all equal.
+
+The constructor stores the vertices exactly as given, but neither the direction nor, for a closed polyline, the starting vertex is part of its identity: a polyline equals its own reverse, and a loop equals the same loop started elsewhere. It does not equal a different traversal of the same vertices:
 
 ```python
 p = pgl.Polyline([0, 0, 2, 2, 2, 0])
@@ -355,20 +360,24 @@ print(p)
 # Output: Polyline[(0,0),(2,2),(2,0)]
 print(p == pgl.Polyline([2, 0, 2, 2, 0, 0]))
 # Output: True  (the same chain, traversed backwards)
+loop = pgl.Polyline([0, 0, 2, 2, 2, 0, 0, 0])
+print(loop.isClosed(), loop == pgl.Polyline([2, 2, 2, 0, 0, 0, 2, 2]))
+# Output: True True  (the same loop, started at another vertex)
 ```
 
 Like `Polygon` and `Convex`, a polyline stores a lazy translation, so translating it is $O(1)$; it is mutable and therefore unhashable.
 
 A polyline `p` has methods such as:
 
-- `p.isSimple()`: Returns true if the chain does not touch or cross itself. A *closed* polyline (last vertex equal to the first) is not simple.
+- `p.isClosed()`: Returns true if the first vertex equals the last (in particular for a single-vertex polyline), and false for an empty polyline.
+- `p.isSimple()`: Returns true if the chain does not touch or cross itself: edges meet only at the shared vertex of consecutive edges. The first and last edges are consecutive exactly when the polyline is closed, so a loop tracing a simple cycle is simple, while an open polyline whose ends touch is not.
 - `p.isDegenerate()`: Returns true if every vertex coincides.
 - `p.length()`: Returns the Euclidean length (a `float`: a sum of square roots is irrational in general).
 - `p.lengthL1()` / `p.lengthLInf()`: Return the exact Manhattan / Chebyshev length.
 - `p.pointInside()`: Returns an exact point in the relative interior (the midpoint of the first edge).
 - `p.latticePoints()`: The integer points on `p`, edge by edge in traversal order, each of them once — a shared vertex, a crossing and a retraced stretch are all reported only where the polyline first reaches them.
 
-As a 1-dimensional shape, its boundary is its two extreme vertices and its relative interior is everything else — the same convention as `Segment`. `p.intersection(s)` returns a *list* of `Point` and `Segment` pieces, since a chain can meet even a line in arbitrarily many disjoint places. It is not defined against `Disk` or `Polygon`.
+`p.intersection(s)` returns a *list* of `Point` and `Segment` pieces, since a chain can meet even a line in arbitrarily many disjoint places. It is not defined against `Disk` or `Polygon`.
 
 - Other methods:
 
@@ -397,7 +406,7 @@ The sorted order buys $O(\log n)$ vertical queries, which no other shape has. Ea
 
 It is also the only chain that can grow: `c.insert(point)` or `c.insert(points)` splices new vertices into the sorted sequence (a duplicate is ignored).
 
-Otherwise it behaves exactly like a [`Polyline`](#polyline): $n - 1$ edges, `Segment`'s boundary convention, a lazy $O(1)$ translation, mutable and therefore unhashable, `length`/`lengthL1`/`lengthLInf`/`pointInside`, and a list-valued `intersection` that is not defined against `Disk` or `Polygon`.
+Otherwise it behaves exactly like an open [`Polyline`](#polyline): $n - 1$ edges, `Segment`'s boundary convention, a lazy $O(1)$ translation, mutable and therefore unhashable, `length`/`lengthL1`/`lengthLInf`/`pointInside`, and a list-valued `intersection` that is not defined against `Disk` or `Polygon`.
 
 - Other methods:
 
@@ -553,6 +562,7 @@ A polygon `P` has methods such as:
 - `P.isStarShaped()`: Returns true if some point of the polygon sees every other point of it.
 - `P.getStarShapedKernel()`: Returns the *kernel* — every point that sees the whole polygon — as a [`HalfplaneIntersection`](#halfplane-intersection), or `None` when the polygon is not star-shaped. For a convex polygon the kernel is the polygon itself.
 - `P.asPolygonWithHoles()`: Returns the polygon as a hole-free [`PolygonWithHoles`](#polygon-with-holes) region.
+- `P.boundary()`: Returns the closed [`Polyline`](#polyline) through the vertices in order, the first repeated at the end. Simplicity is not checked. Takes $O(n)$ time.
 
 A `Polygon` also carries the [boolean operations](shape_methods.md#boolean-operations) `difference`, `regularizedUnion` and `symmetricDifference` — each answering with a [`PolygonSet`](#polygon-set) — and the region-returning [Minkowski sum](shape_methods.md#minkowski-sum). It has `regularizedIntersection` only against a shape that can hold the answer, a `PolygonWithHoles` or a `PolygonSet`.
 
@@ -569,7 +579,7 @@ A `Polygon` also carries the [boolean operations](shape_methods.md#boolean-opera
 
 ### Convex
 
-The class template `Convex` represents a convex polygon. It can be constructed for any number of points in a container and will construct the convex hull. The vertices are stored in counterclockwise order starting from the minimum vertex (minimum x, breaking ties by minimum y). If the container already has the vertices in order, a second constructor parameter can be set to true to avoid computing the convex hull.
+The class template `Convex` represents a convex polygon. It can be constructed for any number of points in a container and will construct the convex hull. The vertices are stored in counterclockwise order starting from the minimum vertex (minimum x, breaking ties by minimum y).
 
 A convex polygon `c` has methods such as:
 
@@ -577,6 +587,7 @@ A convex polygon `c` has methods such as:
 - `c.centroid()`: Returns the centroid.
 - `c.insert(point)` / `c.insert(points)` / `c.insert(shape)`: Enlarges the hull in place so that it contains the given point, points, or shape. A shape must have vertices to take the hull of, so a `Disk` and the unbounded shapes raise a `TypeError`. (They are refused explicitly rather than by omission: every shape is iterable over its defining points, so without the guard `c.insert(disk)` would quietly insert the disk's three *boundary* points, whose hull the disk bulges straight past.)
 - `c.upperHull()` / `c.lowerHull()`: Return the upper and lower boundary chains as a [`MonotoneChain`](#monotonechain). Both run between the leftmost and rightmost vertices, and together they cover the boundary.
+- `c.boundary()`: Returns the closed [`Polyline`](#polyline) through the vertices in counterclockwise order, the first repeated at the end. Takes $O(n)$ time.
 - `c.smallestEnclosingDisk()` / `c.smallestEnclosingRectangle()`: The smallest enclosing [`Disk`](#disk), and the smallest-**area** enclosing rectangle — which comes back as a [`HalfplaneIntersection`](#halfplane-intersection), since the tightest one is generally tilted and a `Rectangle` is axis-aligned by definition. Both read a convex boundary, which is why they live here; every other shape reaches them through its own `convexHull()`. See [algorithms](algorithms.md#smallest-enclosing-shapes-of-a-convex-hull).
 - `c.smallestEnclosingSlab()`: The narrowest strip between two parallel supporting lines, as a [`HalfplaneIntersection`](#halfplane-intersection) of two half-planes — exact, like the enclosing rectangle and for the same reason, while the distance between the two lines is not. The slab is unbounded, so it has no `bbox()` and no corners. A hull of fewer than three vertices comes back as its own region.
 - `c.squaredMinimumWidth()` / `c.minimumWidth()`: The distance between those two lines, squared and exact as a `Fraction`, or plain as a `float`. The width is generally irrational, so the squared form is the one to compare against a threshold or between hulls.
@@ -591,7 +602,7 @@ If the convex polygon `c` has $n$ vertices, then:
 - `c.diameter()`, `c.smallestEnclosingRectangle()`, `c.smallestEnclosingSlab()` and the two minimum-width methods each take $O(n)$ time, one rotating-calipers sweep apiece.
 - `c.intersects(s)` takes $O(\log n)$ time if `s` is a shape with $O(1)$ vertices (not including Disk).
 - `s.intersects(c)` takes $O(\log n)$ time if `s` is a shape with $O(1)$ vertices (not including Disk).
-- `c.intersects(c2)` takes $O(\min(n+m) \log(n+m))$ time if `c2` is a convex polygon with $m$ vertices.
+- `c.intersects(c2)` takes $O(\min(n,m) \log(n+m))$ time if `c2` is a convex polygon with $m$ vertices.
 - Other predicates take the same time as `intersects`.
 - `c.intersection(c2)` takes $O((n+m) log (n+m))$ time if `c2` is a convex polygon with $m$ vertices.
 
@@ -761,7 +772,8 @@ k.intersection(pgl.Rectangle(pgl.Point(2,2), pgl.Point(9,9))).area()
 
 A half-plane intersection `k` has methods such as:
 
-- `k.insert(h)`: Intersects the region with one more half-plane, in place. Returns `False` when the half-plane is discarded — because it is redundant, or undefined (a degenerate half-plane bounds no side, so it carries no constraint). When it empties the region, the region switches to a sticky empty state; otherwise it is stored and the stored half-planes it makes redundant are removed.
+- `k.insert(h)`: Intersects the region with one more half-plane, in place. Returns `False` when the half-plane is discarded — because it is redundant, or undefined (a degenerate half-plane bounds no side, so it carries no constraint). When it empties the region, the region switches to a sticky empty state; otherwise it is stored and the stored half-planes it makes redundant are removed. Takes $O(n)$ time for $n$ stored half-planes.
+- `k.insertChanges(h)`: What `insert(h)` would return, without changing the region, in $O(\log n)$ time. `False` exactly when `h` is undefined or the region already lies inside it — the empty region lies inside every half-plane — so this is also the test of whether `h` contains the region.
 - `k.empty()`, `k.isPlane()`, `k.isBounded()`, `k.isDegenerate()`: State queries. A degenerate region has empty interior — a line, ray, segment, or point built from touching constraints — and remains fully supported by the predicates.
 - `k.isUndefined()`: Always `False`: `insert` ignores undefined half-planes, so every region is well defined.
 - `k.isHalfplane()` / `k.getIfHalfplane()`: Whether the region is exactly one closed half-plane, and that half-plane. Exact, no division.

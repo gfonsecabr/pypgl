@@ -76,11 +76,12 @@ void bindIntervalTree(nb::module_ &m, const char *name, const char *axisName) {
 
     // ---- mutation -----------------------------------------------------------
     cls.def("insert", [](Tree &t, const AnyShape &s) { t.insert(s); }, nb::arg("shape"),
-            "Insert a shape, keeping the tree balanced (raises for an unbounded shape, "
-            "which has no bounding box to project).");
+            "Insert a shape, keeping the tree balanced, in O(log n) amortized time "
+            "(raises for an unbounded shape, which has no bounding box to project).");
     cls.def("erase", [](Tree &t, const AnyShape &s) { return t.erase(s); }, nb::arg("shape"),
             "Remove one stored shape equal to shape, keeping the tree balanced; returns "
-            "whether one was found.");
+            "whether one was found. O(log n + k) time, k being the number of stored "
+            "shapes whose projected interval equals that of shape.");
 
     // ---- projection queries: decided from the intervals alone ---------------
     cls.def("countProjectionsIntersecting",

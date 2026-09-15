@@ -194,7 +194,7 @@ void bindGraph(nb::module_ &m, const char *name) {
             "function w(u, v). A disconnected graph gives one minimum spanning tree per "
             "component, so the result always has the same vertices and the same "
             "components as this graph, isolated vertices included. Prim's algorithm, "
-            "O(m log m) with one weight evaluation per edge.");
+            "O(n + m log m) for n vertices and m edges, with one weight evaluation per edge.");
     cls.def("shortestPath",
             [](const Graph &g, const Vertex &source, const Vertex &target, nb::callable weight) {
                 return g.shortestPath(source, target, [&](const Vertex &u, const Vertex &v) {

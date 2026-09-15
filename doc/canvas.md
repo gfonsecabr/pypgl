@@ -24,8 +24,8 @@ optionally change the drawing style in between, and then export the result as
 
 The canvas automatically fits the drawn geometry into the output image,
 preserves aspect ratio, clips infinite primitives to the visible viewport, and
-stores an SVG `<title>` for each drawn element so that exported images keep a
-human-readable tooltip.
+gives each drawn element a [tooltip](#tooltips) so that exported shapes can be
+identified precisely.
 
 In Jupyter / IPython every shape and every canvas renders itself inline (through
 `_repr_svg_`), so simply evaluating a shape or a canvas as the last expression in
@@ -106,6 +106,7 @@ Each style method takes an SVG string and returns the canvas:
 | [`canvas.strokeWidth(width)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a49586374ddc1970a6253da193b279526 "Creates a command that changes the current stroke width.") | Sets the stroke width in pixels for subsequent shapes. |
 | [`canvas.pointRadius(radius)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e29fcb65cc1bf621121dac846204aeb "Creates a command that changes the current point radius.") | Sets the rendered radius of [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") primitives in pixels for subsequent shapes. |
 | [`canvas.fontSize(size)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e47d77c1d6e252ad9b8c85497bb659d "Creates a command that changes the current text font size, in pixels.") | Sets the font size, in pixels, of subsequent [`Text`](https://gfonsecabr.github.io/pgl/classpgl_1_1Text.html "Text drawn on a Canvas, at a point or inside a box.") that takes its size from the canvas (see [Writing text](#writing-text)). The default is `16`. |
+| [`canvas.tooltips(enabled=True)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a6cdd32dfdeab3eb4463f4a3235301ada "Creates a command that turns tooltips on or off for subsequent elements.") | Turns [tooltips](#tooltips) on or off for subsequent shapes. A shape drawn while they are off has no tooltip in any format. They are on by default. Takes a `bool`, not a string. |
 
 [`strokeWidth`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a49586374ddc1970a6253da193b279526 "Creates a command that changes the current stroke width."), [`pointRadius`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e29fcb65cc1bf621121dac846204aeb "Creates a command that changes the current point radius.") and [`fontSize`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a1e47d77c1d6e252ad9b8c85497bb659d "Creates a command that changes the current text font size, in pixels.") are lengths rather than colors, so
 they take either an SVG length string (`"4"`) or a plain number (`4`). Like every
@@ -176,7 +177,7 @@ so draws chain. Every bound shape can be drawn: [`Point`](https://gfonsecabr.git
 [`OrientedSegment`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedSegment.html "Directed segment preserving source-to-target order plus optional segment label."), [`Line`](https://gfonsecabr.github.io/pgl/structpgl_1_1Line.html "Unoriented infinite line."), [`OrientedLine`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedLine.html "Directed infinite line with left/right side semantics plus optional line label."), [`Ray`](https://gfonsecabr.github.io/pgl/structpgl_1_1Ray.html "Half-infinite line starting from one source point plus optional ray label."), [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line."), [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."),
 [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."),
 [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes."), [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors."), [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty."), and [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") — plus
-[`Triangulation`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangulation.html "Triangulation whose connectivity may change and whose vertex set may grow.") and [`ShapeTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1ShapeTree.html "Static shape tree of bounded shapes."). A region or a set of regions is drawn as one
+[`Triangulation`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangulation.html "Triangulation whose connectivity may change and whose vertex set may grow.") and [`ShapeTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1ShapeTree.html "Shape tree of bounded shapes."). A region or a set of regions is drawn as one
 shape with a closed subpath per ring, so its holes are punched out of the fill
 rather than painted over, and a boolean result draws as one shape however many
 pieces it came apart into. Results of constructions such as
@@ -207,6 +208,31 @@ canvas.stroke("teal").draw(polygon.triangulation().triangles())
 Any iterable works — a list, a tuple, a generator expression — and its elements
 may be of mixed types, may be `None`, and may themselves be collections (a list
 of lists draws flattened).
+
+### Tooltips
+
+A shape's tooltip is its printed form, unless [`canvas.tooltips(False)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a6cdd32dfdeab3eb4463f4a3235301ada "Creates a command that turns tooltips on or off for subsequent elements.") turned
+tooltips off. Pass a string as a second argument to `draw` to give a shape that
+tooltip instead, even while tooltips are off. An empty tooltip gives none.
+
+```python
+canvas = pgl.Canvas()
+s = pgl.Segment(0, 0, 4, 3)
+p = pgl.Point(4, 3)
+
+canvas.tooltips(False).draw(s)   # no tooltip
+canvas.draw(p, "endpoint")       # the tooltip "endpoint"
+```
+
+In a collection, a `(shape, tooltip)` tuple stands for the shape with its own
+tooltip, so every shape can carry one:
+
+```python
+canvas.draw([(pgl.Point(0, 0), "origin"), (pgl.Point(4, 0), "east")])
+```
+
+Only a shape takes a tooltip: a [`Text`](https://gfonsecabr.github.io/pgl/classpgl_1_1Text.html "Text drawn on a Canvas, at a point or inside a box."), which is already on display, and a
+[`Triangulation`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangulation.html "Triangulation whose connectivity may change and whose vertex set may grow."), [`ShapeTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1ShapeTree.html "Shape tree of bounded shapes.") or [`BitMatrix`](https://gfonsecabr.github.io/pgl/classpgl_1_1BitMatrix.html "A bit per cell of a rectangular window of the integer grid.") do not.
 
 ### Configuration
 
@@ -317,6 +343,10 @@ stay visually constant even when the geometry is scaled to fit the output box.
 - Because style is captured when a shape is drawn, it is easy to layer highlights
   on top of a base drawing by switching style right before drawing the
   highlighted object.
+- A shape's [tooltip](#tooltips) is shown when you hover over the shape: in SVG
+  as a `<title>`, and in PDF as an annotation that draws nothing (not every PDF
+  viewer shows it on hover). Text has no tooltip, since it is already on
+  display.
 - [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line.") fill and [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.") fill are often easier to read when combined
   with a translucent [`fillOpacity(...)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a8cf94a6c54fd68e2972ff7440eca978b "Creates a command that changes the current fill opacity.").
 - [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices.") supports both stroke and fill just like [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.").

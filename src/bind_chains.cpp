@@ -2,7 +2,7 @@
 
 using namespace pypgl;
 
-// MonotoneChain and Polyline: the two open polygonal chains (shape/
+// MonotoneChain and Polyline: the two polygonal chains (shape/
 // monotonechain.hpp, shape/polyline.hpp). Both mirror Convex/Polygon's storage
 // -- a vertex vector plus a lazy translation, so translating is O(1) -- and are
 // likewise bound **mutable** (the in-place operators mutate) and therefore
@@ -24,17 +24,24 @@ using namespace pypgl;
 //   * Polyline keeps its vertices in *traversal order*, stored verbatim: what
 //     vertices()/indexing/iteration give back is exactly what was passed.
 //     Direction is still not part of its identity -- equality, ordering and
-//     hashing read the vertices through the canonical direction, so a polyline
-//     equals its own reverse -- but the storage never moves, which is what lets
+//     hashing read the vertices through the canonical reading, so a polyline
+//     equals its own reverse, and a closed one also equals the same loop
+//     started at another vertex -- but the storage never moves, which is what lets
 //     it be edited in place (set/insert/pushBack) and flipped edge-wise. It may
 //     self-intersect; isSimple() checks. Being an arbitrary chain it has no
 //     ordered structure to exploit, so it has no vertical queries.
 //
-// Both have n - 1 edges for n vertices (no closing edge, unlike Polygon) and,
-// as 1-dimensional manifolds with boundary, their boundary is the two extreme
-// vertices and their relative interior is everything else -- matching Segment's
-// convention, which is what makes boundaryContains/interiorContains meaningful
-// for them.
+// Both have n - 1 edges for n vertices (no implicit closing edge, unlike
+// Polygon). A MonotoneChain, and an *open* Polyline, is a 1-dimensional
+// manifold with boundary: its boundary is the two extreme vertices and its
+// relative interior is everything else -- matching Segment's convention, which
+// is what makes boundaryContains/interiorContains meaningful for them. A
+// *closed* Polyline (isClosed(): first vertex equal to the last, which a
+// MonotoneChain can never be past one vertex) is a loop instead: its boundary
+// is empty and its relative interior is the whole polyline, and its first and
+// last edges count as adjacent for isSimple(). That split arrived with pgl
+// 1a636e5; before it a closed polyline still subtracted the repeated vertex
+// from its interior and was never simple.
 //
 // Both join the shared PGL_BIND_ALL_PREDICATES / PGL_BIND_ALL_SQUARED_DISTANCE
 // / PGL_BIND_ALL_L1LINF_DISTANCE macros in src/common.h as full columns, so
@@ -160,7 +167,7 @@ void bind_chains(nb::module_ &m) {
 
         // Shrinking it again. Erasing an interior vertex reroutes the chain
         // through a single edge between its neighbours; erasing an extreme one
-        // shortens it. The point form is O(log n) (the vertices are sorted) and
+        // shortens it. Both forms are O(n). The point form
         // reports whether it found a vertex to remove; the index form is
         // positional, over the same lexicographic order that indexing uses.
         cls.def("erase", [](MonotoneChain &c, const Point &p) { return c.erase(p); },
@@ -243,8 +250,10 @@ void bind_chains(nb::module_ &m) {
                 "The sequence is stored verbatim -- iteration and indexing give it "
                 "back exactly as passed. Direction is not part of a polyline's "
                 "identity, though: equality, ordering and hashing read the vertices "
-                "through the canonical direction, so a polyline still equals its own "
-                "reverse. Self-intersections are allowed (use isSimple() to check).");
+                "through a canonical reading, so a polyline equals its own reverse "
+                "and a closed polyline equals the same loop started at another vertex. "
+                "Repeating the first vertex at the end closes the polyline (see "
+                "isClosed()). Self-intersections are allowed (use isSimple() to check).");
         // The same constructor spelled as a flat coordinate list, mirroring
         // pgl's initializer_list<Number> one: Polyline([0,0, 4,3, 8,1]).
         // Registered after the point overload, which is what disambiguates the
@@ -263,8 +272,15 @@ void bind_chains(nb::module_ &m) {
         cls.def("isSimple", [](const Polyline &p) { return p.isSimple(); },
                 "Whether the polyline does not touch or cross itself: no two "
                 "non-adjacent edges meet, adjacent edges meet only at their shared "
-                "vertex, and no edge has zero length. A closed polyline (first "
-                "vertex equal to the last) is therefore not simple.");
+                "vertex, and no edge has zero length. The first and last edges are "
+                "adjacent exactly when the polyline is closed, so a closed polyline "
+                "tracing a simple cycle is simple, while an open one whose ends "
+                "touch is not.");
+        cls.def("isClosed", [](const Polyline &p) { return p.isClosed(); },
+                "Whether the polyline is a closed loop: its first vertex equals its "
+                "last. A closed polyline has an empty boundary and is its own "
+                "relative interior. A polyline whose vertices are all equal (a single "
+                "vertex included) is closed; the empty polyline is not.");
 
         PGL_BIND_LATTICE_POINTS(cls, Polyline,
                                 "The integer points on the polyline, edge by edge in traversal "

@@ -57,8 +57,8 @@ def test_stub_declares_every_public_class():
 def test_stub_declares_every_public_function():
     functions = {n.name for n in ast.parse(_STUB.read_text()).body if isinstance(n, ast.FunctionDef)}
     for name in (
-        "findIntersections", "findCrossings", "bruteForceIntersections",
-        "bruteForceCrossings", "detectIntersections", "detectCrossings",
+        "findIntersections", "findCrossings", "findInteriorIntersections",
+        "detectIntersections", "detectCrossings", "detectInteriorIntersections",
         "convexHull", "convexHullExtended",
         "sortPoints", "sortDistinctPoints", "sortAround", "hilbertSort",
         "polyominoes", "polyominoesUpTo", "smallestEnclosingDisk", "closestPair",

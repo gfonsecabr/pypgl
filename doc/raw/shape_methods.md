@@ -17,7 +17,7 @@
 
 ### Predicates
 
-Any two shapes `A`,`B` support the following [predicates](#predicates), where $\partial A$ denotes the manifold boundary of $A$. Notice that the boundary of a one-dimensional shape is defined as its endpoints (see also [shapes](shapes.md)).
+Any two shapes `A`,`B` support the following [predicates](#predicates), where $\partial A$ denotes the manifold boundary of $A$. Notice that the boundary of a one-dimensional shape is defined as its endpoints, and is empty for a closed `Polyline` (see also [shapes](shapes.md)).
 
 | Predicate | Definition | Question |
 | --------- | ---------- | --------- |
@@ -547,9 +547,11 @@ applied with a [`Transformation`](#transformations).
   `Triangle`, `Disk`, `Convex`, `Polygon`, `PolygonWithHoles`, `PolygonSet`, and
   a `HalfplaneIntersection` that is bounded, which raises when it is not.
   `Line`, `OrientedLine`, `Ray` and `Halfplane` do not have it: an unbounded
-  shape covers infinitely many. A one-dimensional shape walks its edges in
-  traversal order; a two-dimensional one sweeps the columns of its bounding box,
-  so either costs one pass over the edges plus one step per point reported. The
+  shape covers infinitely many. Reporting $k$ points of a shape with $n$ vertices
+  whose bounding box spans $W$ integer columns takes $O(k + 1)$ time for a
+  `Rectangle`, $O(n + k)$ for a `Segment`, an `OrientedSegment` or a
+  `MonotoneChain`, $O(n (k + 1))$ for a `Polyline`, $O(W + k)$ for a `Disk`, and
+  $O((W + 1)\, n \log n + k \log k)$ for the other two-dimensional shapes. The
   answer is an ordinary list of `Point`, so a coordinate is never capped: a
   short segment sitting at x = 10\*\*20 names its three lattice points exactly.
 

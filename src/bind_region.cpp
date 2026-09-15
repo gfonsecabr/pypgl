@@ -71,8 +71,8 @@ void bind_region(nb::module_ &m) {
             nb::arg("index"), "Fill hole i back in, by its index in the canonical order.");
     cls.def("eraseHole", [](PolygonWithHoles &a, const Polygon &h) { return a.eraseHole(h); },
             nb::arg("hole"),
-            "Fill the given hole back in, returning whether one was found to erase "
-            "(O(log k) comparisons, since the holes are sorted).");
+            "Fill the given hole back in, returning whether one was found to erase. "
+            "O(k + s log k) time for k holes and a hole of s vertices.");
 
     // --- vertices and edges, over every ring ---
     cls.def("vertexCount", [](const PolygonWithHoles &a) { return a.vertexCount(); },

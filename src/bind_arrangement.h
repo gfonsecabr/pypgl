@@ -316,8 +316,8 @@ bindArrangement(nb::module_ &m, const char *name, const char *classDoc, const ch
     // --- point location ---
     cls.def("buildPointLocation", [](A &a) { a.buildPointLocation(); },
             "Build the exact randomized trapezoidal map and search DAG, after which "
-            "locateFace()/locateCell() answer in expected logarithmic time instead of "
-            "scanning the edges. Expected O(E log E) time and O(E) space.");
+            "locateFace()/locateCell() answer in expected O(log E) time instead of "
+            "scanning the edges in O(V + E). Expected O(E log E) time and O(E) space.");
     cls.def("hasPointLocation", [](const A &a) { return a.hasPointLocation(); },
             "Whether the point-location index has been built.");
     cls.def("clearPointLocation", [](A &a) { a.clearPointLocation(); },

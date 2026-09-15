@@ -33,7 +33,7 @@ README](../README.md) for a tour, then:
   and iteration.
 - [algorithms.md](algorithms.md) — convex hull, segment intersection, smallest
   enclosing disk, closest pair, visibility, point sorting, polyominoes.
-- [data_structures.md](data_structures.md) — [`ShapeTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1ShapeTree.html "Static shape tree of bounded shapes."), [`IntervalTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1IntervalTree.html "Mutable interval tree over the projection of bounded shapes."),
+- [data_structures.md](data_structures.md) — [`ShapeTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1ShapeTree.html "Shape tree of bounded shapes."), [`IntervalTree`](https://gfonsecabr.github.io/pgl/classpgl_1_1IntervalTree.html "Mutable interval tree over the projection of bounded shapes."),
   [`Triangulation`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangulation.html "Triangulation whose connectivity may change and whose vertex set may grow."), [`Arrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes.") and [`Graph`](https://gfonsecabr.github.io/pgl/classpgl_1_1Graph.html "Undirected simple graph stored as adjacency sets.").
 - [canvas.md](canvas.md) — drawing shapes and exporting them as SVG, PDF or Ipe,
   including inline display in a Jupyter notebook.

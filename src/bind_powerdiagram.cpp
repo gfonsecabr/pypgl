@@ -52,6 +52,6 @@ void bind_power_diagram(nb::module_ &m) {
           nb::arg("sites"), nb::arg("k"),
           "The order-k power diagram of the disks in sites, as a DiskListArrangement "
           "whose every face is labeled with the k disks nearest to it in the power "
-          "distance, in their order in sites. Empty cells never appear. O(n^3 log n) for "
-          "every k; raises ValueError unless 1 <= k <= len(sites).");
+          "distance, in their order in sites. Empty cells never appear. Built by "
+          "cutting every radical axis against every site; raises ValueError unless 1 <= k <= len(sites).");
 }

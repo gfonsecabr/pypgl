@@ -1546,6 +1546,108 @@ diff, and so did the other four after this re-pin. Each located cell is filled
 through `halfplaneIntersection(face)`, which `Canvas.view` clips when the cell
 is unbounded — no bounding box has to be invented for the diagram.
 
+**Closed polylines, interior-intersection sweeps, and canvas tooltips**
+(milestone 25, version 1.6.0): `.pgl-ref` re-pinned to `1a636e5`, 48 upstream
+commits on from `b6b2d1f`. Most of the batch is benchmarks and performance (a
+segment-pair method chosen per input, a faster arrangement construction, a
+Minkowski sum by convolution, `ShapeTree` elements gathered node by node). The
+rest breaks one binding, changes one shape's semantics, and adds four things.
+
+**Removed: `bruteForceIntersections`/`bruteForceCrossings`.** Upstream moved both
+into `pgl::detail` beside a new `bruteForceInteriorIntersections`, so pypgl
+follows the public API and drops them (the milestone 23 tests used them as the
+differential reference; [tests/test_algorithms.py](tests/test_algorithms.py) now
+carries its own quadratic reference built on `Segment.intersects`/`crosses`/
+`interiorsIntersect`, still compared **as multisets**). pgl's `xyIntersections`/
+`xyCrossings` also left its docs but were never bound. The segment-pair
+functions no longer promise Bentley-Ottmann: each samples its input and picks a
+bounding-box scan or the sweep, abandoning the scan when it outgrows the sweep,
+with the same bounds and the same output order either way — hence the
+differential test now runs a sparse and a dense input.
+
+**New: `findInteriorIntersections`/`detectInteriorIntersections`**, the pairs
+with `interiorsIntersect` (crossing, or overlapping along positive length).
+
+**Semantic change: a `Polyline` is open or closed.** A polyline whose first
+vertex equals its last is now a loop (`isClosed()`, bound): empty boundary, its
+own relative interior, its first and last edges adjacent for `isSimple()` (so a
+simple cycle *is* simple now — the old docstring said the opposite), and
+equality/ordering/hashing invariant under rotation as well as reversal. The
+degenerate case is the one worth remembering: a polyline whose vertices all
+coincide is closed, so its point is *interior*, which is why
+[tests/test_degeneracy.py](tests/test_degeneracy.py) now leaves `Polyline` out
+of the "a collapsed shape has empty interior" parametrization and pins the
+opposite in its own test. `MonotoneChain` is unaffected (it cannot repeat a
+vertex). Also bound: `Convex.boundary()`/`Polygon.boundary()`, each the closed
+`Polyline` of its ring.
+
+**Canvas tooltips.** `pgl::tooltips(bool)` is `canvas.tooltips(enabled=True)`,
+a style command, and pgl's `canvas << std::pair(shape, "tip")` is
+`canvas.draw(shape, tooltip)` — one two-argument overload per shape, since pgl
+constrains the pair to `AnyShapeConcept` (so `Text`, `Triangulation`,
+`ShapeTree` and `BitMatrix` take none; a two-argument fallback turns those into a
+`TypeError` naming both types, and keeps `draw(None, tip)` a no-op). pgl's
+"range of pairs" is a collection holding `(shape, str)` tuples: the
+`nb::iterable` overload treats a 2-tuple whose second item is a `str` as one
+shape with its tooltip rather than two things to draw, which is unambiguous
+because a `str` was never drawable. PDF export now carries tooltips too, as
+non-painting annotations, so `canvas_gallery.pdf` grew them.
+[tests/test_canvas_tooltips.py](tests/test_canvas_tooltips.py) pins the SVG and
+PDF fragments pgl's own `tests/unit/canvas.cpp` does.
+
+Not bound, as not applicable: `with<Number>()`/`withLabel`/`withPointLabel`
+(they change the C++ instantiation, and pypgl has one) and `pgl::Trust` (pypgl
+dropped the parameter in 1.5.1). `HalfplaneIntersection`'s range constructor is
+now O(n log n), which only its docstring records.
+
+**Five example figures and one notebook changed, and no drawing did.** The
+arrangement rewrite and the `ShapeTree` regrouping reorder elements, so
+`example_arrangement`, `example_dual_arrangement_dual`, `example_voronoi` and
+both `example_shapetree_*` SVGs hold the same lines in a different order
+(verified by comparing sorted lines), and `voronoi.ipynb` reorders the same way
+plus prints `VertexId(11)` where it printed `VertexId(19)` — the arrangement
+numbers its vertices differently, and no prose depends on the id. Every other
+figure is byte-identical.
+
+**Worst-case complexity claims, `insertChanges`, collinear Voronoi** (milestone
+26, same unreleased 1.6.0): `.pgl-ref` re-pinned to `eff7a6f`, four upstream
+commits on from `1a636e5`. Nothing renamed or removed; the build went through
+and all 1421 existing tests passed unchanged.
+
+**The bulk is upstream's audit of ~150 complexity claims** that only held on
+typical input (pgl `65e9579`): the cheap causes fixed in code (`IntervalTree`
+removes nodes instead of tombstoning them, Bentley-Ottmann handles runs in linear
+time, `HalfplaneIntersection.insert` drops its redundant run in one pass, and
+more), the rest restated as true worst-case bounds or dropped. **pypgl's pages
+and docstrings are paraphrases, not copies, so the port was by topic, not by
+sentence** — grepping for upstream's wording finds almost nothing. What changed
+here: `closestPair` lost "on ordinary inputs"; the Voronoi bounds (Lee's
+refinement no longer promises a bound); `hilbertSort` has none;
+`ShapeTree.insert` can drive the height to Θ(n); `IntervalTree` insert/erase/has;
+`Triangulation` locate and the Kirkpatrick query's conditions (pgl's "exact
+coordinates of its own point type" condition always holds for pypgl, so it is
+left out); `Arrangement` point location; `spanningTree` is O(n + m log m);
+`eraseHole`/`eraseComponent` are O(k + s log k), not O(log k) comparisons;
+`MonotoneChain.erase` is O(n); the `BitMatrix` raster/polygon-set/lattice-sum
+bounds; `latticePoints` per shape; and `Convex.intersects(Convex)`'s typo'd
+`min(n+m)`.
+
+**`HalfplaneIntersection.insertChanges(h)`** is the one new public method: what
+`insert(h)` would return, in O(log n), without mutating — hence also the test of
+whether `h` contains the region. Tests pin it against `insert` on a copy and
+against `Halfplane.contains`.
+
+**Collinear point sites are now sorted along their line** (pgl `eff7a6f`)
+instead of taking the O(n^3 log n) bisector route, for the ordinary and the
+order-k diagrams alike; the result is the same strips, so no answer changed and
+the milestone 24 collinear test passed as is. New tests compare a tilted,
+shuffled collinear input against brute force for several k, and pin repeated
+collinear sites (copies share a strip, one bisector reported).
+
+Every example figure is byte-identical to milestone 25's (`canvas_gallery.pdf`'s
+creation date aside), and the notebooks re-run to no diff beyond `tour.ipynb`
+printing the new version string.
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 

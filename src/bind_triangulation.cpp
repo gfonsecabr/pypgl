@@ -245,8 +245,10 @@ void bind_triangulation(nb::module_ &m) {
     cls.def("buildPointLocation", [](Triangulation &t) { t.buildPointLocation(); },
             "Build a Kirkpatrick hierarchy over the mesh, after which locate() "
             "descends it to the triangle holding the query instead of walking "
-            "from the previous query's answer. Expected O(V) time and space, "
-            "O(log V) per query. Calling it again redraws the hierarchy against "
+            "from the previous query's answer. O(V) time and space to build. A query "
+            "then takes O(log V) time when the mesh has not been modified since and the "
+            "point lies strictly inside the convex hull of the vertices or outside the "
+            "box the hierarchy encloses them in, and O(V) otherwise. Calling it again redraws the hierarchy against "
             "the mesh as it now stands (and does nothing if nothing has changed).");
     cls.def("hasPointLocation", [](const Triangulation &t) { return t.hasPointLocation(); },
             "Whether locate() currently goes through the point-location index.");
