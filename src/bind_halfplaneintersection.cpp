@@ -178,7 +178,7 @@ void bind_halfplane_intersection(nb::module_ &m) {
     PGL_BIND_INTERSECTION_HALFPLANES(cls, HalfplaneIntersection);
     // The regularized intersection needs a shape that can hold an answer with
     // a hole on one side, which a convex region never is.
-    PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, HalfplaneIntersection);
+    PGL_BIND_REGULARIZED_INTERSECTION_UNBOUNDED(cls, HalfplaneIntersection);
 
     // --- the shared matrices ---
     PGL_BIND_ALL_PREDICATES(cls, HalfplaneIntersection);

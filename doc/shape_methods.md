@@ -232,15 +232,27 @@ The six bounded region types are [`Rectangle`](https://gfonsecabr.github.io/pgl/
   the six plus a [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line.") or a [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty.") — $A \setminus B$ stays
   bounded however big $B$ is. It is the one operation that is not symmetric, so
   the unbounded shape may only be the argument.
-- `regularizedIntersection` needs a [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes.") or a [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors.") on one
-  side, since only those two can hold an answer with a hole or with several
-  pieces. So `rectangle.regularizedIntersection(triangle)` is the one gap worth
-  knowing: it raises where the other three answer, and
-  `rect.asPolygonWithHoles().regularizedIntersection(tri)` reaches it. The
-  general `intersection` [above](#intersection) is defined for that pair as it
-  stands.
+- `regularizedIntersection` is defined for every pair among the six, and for
+  each of them with a [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line.") or a [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty.") on *either* side
+  — $A \cap B$ stays bounded whenever one operand is, so it is the one
+  operation an unbounded shape may receive as well as take.
 
-Every pair outside those grids raises a `TypeError`.
+Every pair outside those grids raises a `TypeError`. Two unbounded operands are
+the case to know: $A \cap B$ need not be bounded then, so no [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors.") can
+hold it and `halfplane.regularizedIntersection(halfplane)` raises. The general
+`intersection` [above](#intersection) answers that pair, with a
+[`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty.").
+
+A pair of convex operands never builds an arrangement — two convex shapes meet
+in a convex shape, so the answer is one clip and one piece — and two rectangles
+cost a coordinate comparison per side. Only a pair with a polygon that is not
+convex reaches the cell engine.
+
+```python
+rect = pgl.Rectangle(pgl.Point(0,0), pgl.Point(4,4))
+tri  = pgl.Triangle(pgl.Point(0,0), pgl.Point(6,0), pgl.Point(0,6))
+area = rect.regularizedIntersection(tri)   # one piece, no arrangement
+```
 
 Every one of them returns the **regularized** result, the closure of the
 operation applied to the *interiors*. Lower-dimensional leftovers are dropped: a

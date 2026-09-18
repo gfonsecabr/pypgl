@@ -368,3 +368,22 @@ def test_scaling_scales_the_area():
 
 def test_rotated90_preserves_area():
     assert _annulus().rotated90().area() == _annulus().area()
+
+
+def test_a_region_meets_a_point_exactly_where_its_interior_does():
+    # A point's interior is the point itself, so interiorsIntersect against one
+    # is interiorContains -- which is what Polygon and every other area shape
+    # answer, and what a region used to refuse outright.
+    outer = Polygon([Point(0, 0), Point(10, 0), Point(10, 10), Point(0, 10)])
+    hole = Polygon([Point(4, 4), Point(6, 4), Point(6, 6), Point(4, 6)])
+    region = PolygonWithHoles(outer, [hole])
+
+    for probe in (Point(2, 2), Point(5, 5), Point(0, 5), Point(4, 4), Point(50, 50)):
+        assert region.interiorsIntersect(probe) == region.interiorContains(probe)
+        # And the same answer the filled polygon gives where there is no hole.
+        if not hole.contains(probe):
+            assert region.interiorsIntersect(probe) == outer.interiorContains(probe)
+
+    assert region.interiorsIntersect(Point(2, 2))
+    assert not region.interiorsIntersect(Point(5, 5))   # inside the hole
+    assert not region.interiorsIntersect(Point(0, 5))   # on the boundary

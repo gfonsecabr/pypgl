@@ -860,23 +860,21 @@ this order:
    refuses Python < 3.10. It is first in the matrix, so it took all three
    platform jobs down and hid the second failure entirely.
 2. **nanobind 3 does not compile on the Windows runner at all** (clang-cl
-   19.1.5), inside its own `nb_backend_slots.h` on a constexpr in the
+   19.1.5), inside its own `nb_backend.h` on a constexpr in the
    `NB_SLOT_ALIAS` macro. pypgl's sources are never reached. This only surfaced
    after cp39 was gone — the first failure was masking it.
 
-So the build is **capped at `nanobind>=2.0,<3`**, restoring the 2.x line the
-green 0.6.0 run used (2.15.0 builds clean here and passes all 980 tests). Lift
-the cap once nanobind fixes the Windows bug. Worth knowing when doing so:
-nanobind 3 builds fine on Linux, passes the whole suite, and emits a
-**byte-identical `_pgl.pyi`** — so there is nothing to adopt beyond the fix, and
-that stub equality is worth re-checking rather than assuming.
+So the build was **capped at `nanobind>=2.0,<3`**, restoring the 2.x line the
+green 0.6.0 run used (2.15.0 builds clean here and passes all 980 tests).
+**The cap is gone as of milestone 27** — see there for the fix and what
+re-checking it turned up.
 
 **`cp39` stays dropped anyway** — a deliberate choice, not a forced one, since
-the cap holds the build on a 2.x that still supports 3.9. Python 3.9 went
+the cap held the build on a 2.x that still supports 3.9. Python 3.9 went
 end-of-life in October 2025, nanobind 3 has dropped it, and re-adding the wheels
-now would only mean dropping them again when the cap lifts. `requires-python` is
-`>=3.10`, so pip holds 3.9 users on 0.6.0 rather than erroring, and a release is
-15 wheels instead of 18.
+would only have meant dropping them again when the cap lifted. `requires-python`
+is `>=3.10`, so pip holds 3.9 users on 0.6.0 rather than erroring, and a release
+is 15 wheels instead of 18.
 
 **Open-segment containment, a triangulation point-location index, and greedy
 independent sets** (milestone 17, version 1.0.0): `.pgl-ref` re-pinned to
@@ -938,8 +936,8 @@ since 0.6.1, the seventeen shape classes cover pgl's own set, and the matrices
 (predicates, distances, booleans, Minkowski, intersection, `samePointSet`) are
 complete rather than ragged. `requires-python` stays `>=3.10` and the
 `nanobind>=2.0,<3` cap from 0.7.0 is unchanged — the Windows bug that forced it
-is still open, so lifting it is still the separate piece of work milestone 16
-describes.
+was still open then, so lifting it was still the separate piece of work
+milestone 16 describes. (It was fixed and the cap lifted in milestone 27.)
 
 **`BitMatrix`, the digital-geometry grid** (milestone 18, version 1.1.0):
 `.pgl-ref` re-pinned to `1e4e6c1`, two upstream commits on from `f1c9dad`. One
@@ -1648,6 +1646,149 @@ Every example figure is byte-identical to milestone 25's (`canvas_gallery.pdf`'s
 creation date aside), and the notebooks re-run to no diff beyond `tour.ipynb`
 printing the new version string.
 
+**The regularized intersection closes, and a ray becomes a half-line**
+(milestone 27, version 1.7.0): `.pgl-ref` re-pinned to `c78a32a`, 18 upstream
+commits on from `eff7a6f`. Most of the batch is benchmarks, a README refresh and
+an audit harness; what lands here is one widened grid and eight wrong answers,
+six of which pypgl shipped.
+
+**`regularizedIntersection` is no longer the ragged one.** It used to need a
+`PolygonWithHoles` or a `PolygonSet` to take part — only those two can hold an
+answer with a hole or with several pieces — so `rectangle.regularizedIntersection(triangle)`
+raised where the other three operations answered, and reaching it meant
+`rect.asPolygonWithHoles().regularizedIntersection(tri)`. Upstream now defines it
+for every pair among the six bounded region types and for each of them with a
+`Halfplane` or a `HalfplaneIntersection` on **either** side: a pair of convex
+operands is one clip and one piece with no arrangement built, two rectangles cost
+a coordinate comparison per side, and only a pair with a non-convex polygon
+reaches the cell engine.
+
+**The grid is 60 pairs and it is not square**, which is what the two macros in
+[src/common.h](src/common.h) now say. A *bounded* receiver (any of the six) takes
+all eight arguments, so `PGL_BIND_REGULARIZED_INTERSECTION` is exactly
+`difference`'s argument grid and the four shapes that used the old
+"needs a set on the other side" macro switched to it. The two *unbounded*
+receivers take only the six — the answer has to be bounded by something — so
+`PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET` became
+`PGL_BIND_REGULARIZED_INTERSECTION_UNBOUNDED`, a bare `PGL_BIND_BOOLEAN`, and it
+is the only boolean operation either of them receives at all. **Two unbounded
+operands are the one gap left**: `A n B` need not be bounded then, so no
+`PolygonSet` can hold it and `halfplane.regularizedIntersection(halfplane)`
+raises — the literal `intersection` answers that pair, with a
+`HalfplaneIntersection`.
+
+**The probe needed a third form**, and it is the one to reuse. Milestone 12's
+`requires`-scan proves only that a declaration is viable; milestone 21's
+`decltype` trick instantiates the body but needs an `auto` return type, which
+this family does not have. A bare `if constexpr (requires ...)` in a
+*non-template* function does not even compile here — gcc reports the failed
+overload resolution as an error rather than as an unsatisfied requirement. What
+works is a `template <class A, class B> concept HasRI = requires ...` guarding a
+`template <class A, class B> void probe()` that *forms a lambda calling the
+method*: the concept is then evaluated in a dependent context (proper SFINAE)
+and the lambda ODR-uses the body (real instantiation). It reported exactly the
+60 pairs upstream's `Shape` docstring describes, all returning `PolygonSet`, and
+the build went through first try.
+
+**Six shipped wrong answers, and a ray is where four of them were.** The
+through-point of a `Ray` only fixes a direction — the ray carries on past it
+forever — but four predicates decided the whole question from `source()` and
+`target()`, which is a pair of points and settles nothing. So
+`Ray((1,-2),(0,-2)).contains(Ray((0,-2),(1,-2)))` was `True` for *both* opposite
+rays although they share only the segment between their sources (the witness:
+`(5,-2)` lies in one and not the other), `interiorContains` repeated the mistake
+and was masked by it, and `Line.separates(Ray)` missed every crossing beyond the
+target — for `Ray((0,0),(5,0))` the lines `x=1..5` separated and `x=6,7` did not,
+though all of them cut it in two. `Ray.separates(Ray)` made that comparison in
+both halves of its symmetric test, so one fixed pair of crossing rays answered
+differently depending on how far out each through-point happened to sit, and
+`crosses` inherited all of it. Verified against the unfixed headers before
+writing the tests (the milestone 20 method: a throwaway `g++ -I` against a
+`git archive` of `eff7a6f`), and pinned in
+[tests/test_predicates.py](tests/test_predicates.py).
+
+The other four, each likewise verified wrong at `eff7a6f` first:
+`Segment.intersection` **invented a point** for a zero-length operand — every
+orientation test against one vanishes, which reads as collinear and let the 1D
+overlap answer with an endpoint on neither shape. **The broken direction was the
+degenerate receiver**, which is why the obvious repro misses it:
+`Segment((0,0),(10,10)).intersection(Segment((3,7),(3,7)))` was always `None`,
+but the reverse spelling answered `(3,7)` for a disjoint pair. The operand also
+has to sit inside the other's bounding box to get past the cheap rejection, so
+the segment has to be diagonal. `Convex.intersection` answered *empty* for a
+zero-length segment it contains, having clipped the hull against a line through
+two equal points. `Convex`'s lazy translation reached neither `intersects`
+against a `Rectangle` or a `Triangle` (it probed the stored vertex, asking about
+where the hull used to be — the exposing case is a rectangle *containing* the
+translated hull, since only then do the two positions disagree) nor `centroid`
+for a one-point hull, where the translation is the whole of the answer. And
+`PolygonWithHoles.interiorsIntersect(Point)` answered a blanket `False` instead
+of `interiorContains`, unlike `Polygon` and every other area shape. Tests in
+[tests/test_intersection.py](tests/test_intersection.py),
+[tests/test_transforms.py](tests/test_transforms.py) and
+[tests/test_region.py](tests/test_region.py).
+
+The seventh and eighth are not pypgl bugs but are now covered anyway:
+`Polyline.separates` **threw** on an unbounded `HalfplaneIntersection` (the
+bounding-box rejection probed for `bbox()` at compile time, which a region has
+even when it throws; `detail::boundingBoxesMiss` now answers "not known to miss"
+instead) — pinned in [tests/test_chains.py](tests/test_chains.py) — and
+`regionEdgesSquaredDistance` built its edges in `ResultNumber`, which only
+misreports at `double` and so cannot reach pypgl's single `ERational`
+instantiation.
+
+**`sortAround`'s simple-ring guarantee has a hypothesis**, which
+[doc/raw/algorithms.md](doc/raw/algorithms.md) now states: the center must lie
+strictly inside the convex hull of the points. That is what keeps every gap
+between consecutive directions under half a turn; with the center outside the
+hull no order at all can satisfy the conclusion, a polygon lying inside the hull
+of its own vertices. No behavior changed.
+
+**pgl now ships a CMake target**, `pgl::pgl` — see the pgl headers note under
+Build & test for why pypgl does not link it and why the existing
+`FetchContent_MakeAvailable` is fine as it stands.
+
+**The nanobind cap is lifted** (same milestone): nanobind **3.0.1**
+(2026-08-27) fixed the Windows bug that forced it five days after 3.0.0 shipped
+it. `NB_SLOT_ALIAS` now spells the pointer `inline ret (*const name) args`
+rather than `inline constexpr ret (*name) args`, because Windows declares the
+CPython function `__declspec(dllimport)` and its address is then not a constant
+expression; nanobind's own CI gained a clang-cl job in the same PR, so the
+regression cannot return silently. The header is `nb_backend.h` — the 0.7.0 note
+above named it `nb_backend_slots.h`, which does not exist.
+
+`pyproject.toml` now asks for **`nanobind>=2.0,!=3.0.0`**, excluding the one
+known-bad release rather than the whole 3.x line: a bare floor would let a
+resolver pick 3.0.0 again. The dev venv was moved to 3.0.1 in the same breath
+and the extension rebuilt from scratch against it — **local and CI resolving
+different nanobinds is the whole 0.7.0 failure**, and leaving the venv pinned at
+2.13.0 would have recreated it in the other direction.
+
+**The stub is no longer byte-identical, and that claim was worth re-checking
+exactly as the 0.7.0 note said.** One line of `_pgl.pyi` differs, and it is an
+improvement: `Disk.minkowskiErosion(Halfplane)` was `-> object` under 2.13.0 and
+is `-> None` under 3.0.1. The lambda returns `nb::none()` and nothing else, so
+`None` is the truthful signature where 2.x rendered `nb::none` as a bare
+`object`. All 1517 tests pass under 3.0.1, every example figure is unchanged
+(`canvas_gallery.pdf`'s creation date aside) and the notebooks re-run to no
+further diff, so that one line is the entire user-visible effect of the move.
+**Windows itself is the one thing a local build cannot prove**, which is what a
+green `main` run is for — pushes to `main` run the wheels workflow without
+publishing.
+
+
+`booleans.ipynb`'s "where the grid is not square" section was the one notebook
+passage the widening falsified — it demonstrated the raise and then the
+`asPolygonWithHoles()` workaround — and now clips a region to a half-plane
+instead, which is the operation the unbounded operands are admitted for. Every
+example figure is byte-identical except `canvas_gallery.pdf`'s creation date
+(verified by `strings` diff: that one line), and the five notebooks re-run to no
+diff beyond `tour.ipynb`'s version string. The doxylink report is clean — no
+`not-bound` drift — and regenerating picked up `regularizedIntersection` in the
+auto-filled "Other methods" line of the four shapes that gained it, the
+self-maintaining drift catcher doing its job.
+
+
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
 
@@ -1748,8 +1889,16 @@ python3 -m venv .venv
 Re-run the `pip install -e .` line after editing any `src/*.cpp` — the editable
 install rebuilds the extension; importing alone does not.
 
-**pgl headers.** pgl is header-only and (currently) ships no CMake target or
-release tags, so we do **not** `FetchContent_MakeAvailable` a `pgl::pgl` target.
+**pgl headers.** pgl is header-only and ships no release tags. As of milestone
+27 it *does* ship a CMake target — `pgl::pgl`, an INTERFACE library carrying the
+include path, `cxx_std_20` and the MSVC-only Boost dependency — but pypgl does
+not link it: the in-tree `.pgl-ref/` path never runs CMake at all, so taking the
+target in the FetchContent branch alone would make local and CI builds differ.
+The existing `FetchContent_MakeAvailable(pgl)` now configures that CMakeLists as
+a subproject, which is harmless and was checked end to end (it compiles nothing;
+`PGL_INSTALL` and `PGL_BUILD_EXAMPLES` both default OFF below top level, and the
+one added step is a `PGL_HAVE_INT128` compile test that passes wherever pypgl
+already builds pgl's `int128`).
 [CMakeLists.txt](CMakeLists.txt) resolves `PGL_INCLUDE_DIR` in this order: an
 explicit `-DPGL_INCLUDE_DIR=…`, then an in-tree `.pgl-ref/` checkout (the offline
 default — a gitignored `git clone` of github.com/gfonsecabr/pgl), then FetchContent

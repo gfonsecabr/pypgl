@@ -108,3 +108,36 @@ def test_a_disk_still_only_meets_a_point():
     assert disk.intersection(Point(9, 9)) is None
     with pytest.raises(TypeError):
         disk.intersection(pypgl.Rectangle(Point(0, 0), Point(1, 1)))
+
+
+# --- a zero-length operand is a point, not a direction ----------------------
+#
+# Every orientation test against a zero-length segment vanishes, which reads as
+# collinear and let the 1D overlap answer with an endpoint lying on neither
+# shape. Both families now ask the point directly.
+
+def test_a_degenerate_segment_intersects_only_where_its_point_lies():
+    diagonal = pypgl.Segment(Point(0, 0), Point(10, 10))
+    # Off the supporting line but inside its bounding box, so no cheap
+    # rejection settles it: the answer has to come from the point itself.
+    for off in (Point(10, 0), Point(0, 10), Point(3, 7)):
+        degenerate = pypgl.Segment(off, off)
+        assert diagonal.intersection(degenerate) is None
+        assert degenerate.intersection(diagonal) is None
+        assert degenerate.intersection(degenerate) == off
+    for on in (Point(5, 5), Point(2, 2)):
+        degenerate = pypgl.Segment(on, on)
+        assert diagonal.intersection(degenerate) == on
+        assert degenerate.intersection(diagonal) == on
+
+
+def test_a_convex_shape_intersects_a_degenerate_segment_it_contains():
+    # A zero-length segment has no supporting line to clip the hull against,
+    # so the convex shapes answer for the point it is.
+    square = pypgl.Convex([Point(0, 0), Point(10, 0), Point(10, 10), Point(0, 10)])
+    inside = pypgl.Segment(Point(5, 5), Point(5, 5))
+    assert square.intersection(inside) == Point(5, 5)
+    on_edge = pypgl.Segment(Point(0, 5), Point(0, 5))
+    assert square.intersection(on_edge) == Point(0, 5)
+    outside = pypgl.Segment(Point(50, 5), Point(50, 5))
+    assert square.intersection(outside) is None

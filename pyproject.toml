@@ -1,16 +1,19 @@
 [build-system]
-# nanobind is capped below 3: nanobind 3.0.0 (2026-08-22) does not compile on
-# the Windows runner's clang-cl, failing inside its own nb_backend_slots.h on a
-# constexpr in the NB_SLOT_ALIAS macro -- pypgl's sources are never reached. It
-# builds and passes the whole suite on Linux, and emits a _pgl.pyi byte-identical
-# to 2.x's, so the cap is purely about that Windows bug: lift it once nanobind
-# ships a fix, and re-check the stub is still identical when doing so.
-requires = ["scikit-build-core>=0.10", "nanobind>=2.0,<3"]
+# Only nanobind 3.0.0 is excluded, not the whole 3.x line. That one release
+# (2026-08-22) does not compile on the Windows runner's clang-cl, failing inside
+# its own nb_backend.h on a constexpr in the NB_SLOT_ALIAS macro -- pypgl's
+# sources are never reached. nanobind 3.0.1 fixed exactly that (the macro now
+# spells the pointer `inline ret (*const name)`, since Windows declares the
+# CPython function __declspec(dllimport) and its address is then not a constant
+# expression) and added a clang-cl job to nanobind's own CI, so the regression
+# cannot return silently. The exclusion is kept rather than dropped because a
+# floor alone would let a resolver pick the one known-bad version.
+requires = ["scikit-build-core>=0.10", "nanobind>=2.0,!=3.0.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
 name = "pypgl"
-version = "1.6.0"
+version = "1.7.0"
 description = "Python bindings for the Pangolin (pgl) exact geometry library"
 # README.md is the user-facing front page rendered on PyPI; pypgl.md is the
 # internal design contract and is intentionally not shipped as the description.
@@ -69,12 +72,14 @@ sdist.exclude = [".ipynb_checkpoints", "**/*.ipynb", ".pytest_cache",
 # left out: nanobind supports it, but it is a separate ABI and a separate wheel
 # per platform, and nothing has asked for it yet.
 #
-# cp39 is gone as of 0.7.0. This is a deliberate choice and not a forced one --
-# the nanobind cap above holds the build on 2.x, which still supports 3.9 -- but
-# Python 3.9 reached end-of-life in October 2025, nanobind 3 has dropped it, and
-# keeping it would mean re-adding the wheels only to drop them again when the cap
-# lifts. Anyone still on 3.9 can stay on pypgl 0.6.0; requires-python keeps pip
-# from offering them this release.
+# cp39 is gone as of 0.7.0. It was a deliberate choice and not a forced one --
+# the nanobind cap then in force held the build on 2.x, which still supports 3.9
+# -- but Python 3.9 reached end-of-life in October 2025 and nanobind 3 has
+# dropped it, so keeping it would have meant re-adding the wheels only to drop
+# them again once the cap lifted. It has since lifted (1.7.0), and nanobind 3.0.1
+# requires >= 3.10, so the question is settled either way. Anyone still on 3.9
+# can stay on pypgl 0.6.0; requires-python keeps pip from offering them this
+# release.
 build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
 # Skip PyPy (nanobind targets CPython), 32-bit, and musl (lean matrix to start).
 skip = "pp* *_i686 *-win32 *-musllinux_*"

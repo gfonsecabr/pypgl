@@ -13,6 +13,8 @@ import pytest
 from pypgl import (
     Convex,
     Disk,
+    Halfplane,
+    HalfplaneIntersection,
     Line,
     MonotoneChain,
     Point,
@@ -300,3 +302,27 @@ def test_polygon_and_chain_predicates_meet():
     assert square.contains(inside)
     assert inside.intersects(square)
     assert square.squaredDistance(MonotoneChain([Point(6, 0), Point(7, 1)])) == 4
+
+
+def test_a_chain_answers_a_predicate_against_an_unbounded_region():
+    # The cheap bounding-box rejection has to cope with an operand that *has* a
+    # bbox() in the C++ sense but throws when asked for one, which is every
+    # unbounded HalfplaneIntersection. Answering "not known to miss" and going
+    # on is the fix; raising was not an option, the predicate being well posed.
+    left = HalfplaneIntersection([Halfplane(Point(0, -1), Point(0, 1))])
+    assert not left.isBounded()
+
+    crossing = Polyline([Point(-5, 0), Point(5, 0)])
+    outside = Polyline([Point(1, 0), Point(5, 0)])
+    within = Polyline([Point(-5, 0), Point(-5, 5), Point(-1, 5)])
+
+    for chain in (crossing, outside, within):
+        # Every one of these used to raise rather than answer.
+        for predicate in ("separates", "crosses", "intersects", "interiorsIntersect"):
+            assert getattr(chain, predicate)(left) == getattr(left, predicate)(chain)
+        chain.contains(left)
+        left.contains(chain)
+
+    assert crossing.intersects(left) and not left.contains(crossing)
+    assert not outside.intersects(left)
+    assert left.contains(within) and within.intersects(left)

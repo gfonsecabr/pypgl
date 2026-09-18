@@ -564,7 +564,7 @@ A polygon `P` has methods such as:
 - `P.asPolygonWithHoles()`: Returns the polygon as a hole-free [`PolygonWithHoles`](#polygon-with-holes) region.
 - `P.boundary()`: Returns the closed [`Polyline`](#polyline) through the vertices in order, the first repeated at the end. Simplicity is not checked. Takes $O(n)$ time.
 
-A `Polygon` also carries the [boolean operations](shape_methods.md#boolean-operations) `difference`, `regularizedUnion` and `symmetricDifference` — each answering with a [`PolygonSet`](#polygon-set) — and the region-returning [Minkowski sum](shape_methods.md#minkowski-sum). It has `regularizedIntersection` only against a shape that can hold the answer, a `PolygonWithHoles` or a `PolygonSet`.
+A `Polygon` also carries the [boolean operations](shape_methods.md#boolean-operations) `difference`, `regularizedUnion`, `symmetricDifference` and `regularizedIntersection` — each answering with a [`PolygonSet`](#polygon-set) — and the region-returning [Minkowski sum](shape_methods.md#minkowski-sum).
 
 - `P.empty()`: Returns true if the polygon has no vertex at all, which is the empty set. Distinct from `isDegenerate()`, which is a polygon with vertices but no area.
 - `P.convexPartition()`: Cuts the polygon into [`Convex`](#convex) pieces with pairwise disjoint interiors whose union is the polygon, using at most four times the fewest pieces possible. Shorthand for `P.triangulation().convexPartition()`.

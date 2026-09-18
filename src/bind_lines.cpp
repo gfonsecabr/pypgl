@@ -205,6 +205,6 @@ void bind_lines(nb::module_ &m) {
         // operand can hold the answer, which for a half-plane means a region
         // or a set of them. `difference` the other way round (region minus
         // half-plane) lives on the region.
-        PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Halfplane);
+        PGL_BIND_REGULARIZED_INTERSECTION_UNBOUNDED(cls, Halfplane);
     }
 }

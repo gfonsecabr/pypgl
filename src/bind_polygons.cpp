@@ -58,7 +58,7 @@ void bind_polygons(nb::module_ &m) {
         // *intersection* needs a region or a set on one side (bound just
         // below), since a triangle cannot hold an answer with a hole.
         PGL_BIND_BOOLEANS(cls, Triangle);
-        PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Triangle);
+        PGL_BIND_REGULARIZED_INTERSECTION(cls, Triangle);
         PGL_BIND_MINKOWSKI_CONVEX(cls, Triangle);
         PGL_BIND_EROSION_CONVEX(cls, Triangle);
         PGL_BIND_CONVEX_HULL(cls, Triangle);
@@ -217,7 +217,7 @@ void bind_polygons(nb::module_ &m) {
         // *intersection* needs a region or a set on one side (bound just
         // below), since a rectangle cannot hold an answer with a hole.
         PGL_BIND_BOOLEANS(cls, Rectangle);
-        PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Rectangle);
+        PGL_BIND_REGULARIZED_INTERSECTION(cls, Rectangle);
         PGL_BIND_MINKOWSKI_CONVEX(cls, Rectangle);
         PGL_BIND_EROSION_CONVEX(cls, Rectangle);
         PGL_BIND_CONVEX_HULL(cls, Rectangle);
@@ -386,7 +386,7 @@ void bind_polygons(nb::module_ &m) {
         // *intersection* needs a region or a set on one side (bound just
         // below), since a convex cannot hold an answer with a hole.
         PGL_BIND_BOOLEANS(cls, Convex);
-        PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Convex);
+        PGL_BIND_REGULARIZED_INTERSECTION(cls, Convex);
         PGL_BIND_MINKOWSKI_CONVEX(cls, Convex);
         PGL_BIND_EROSION_CONVEX(cls, Convex);
         PGL_BIND_CONVEX_HULL(cls, Convex);

@@ -839,12 +839,13 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
 //     big B is. It is the one operation that is not symmetric, so which side a
 //     shape is written on decides what is removed from what, and an unbounded
 //     shape may only be the argument.
-//   * regularizedIntersection: a PolygonWithHoles or a PolygonSet must take
-//     part, since only those two can hold an answer with a hole or with several
-//     pieces. So `rectangle.regularizedIntersection(triangle)` is the one gap
-//     worth knowing -- it raises where the other three answer, and
-//     `rect.asPolygonWithHoles().regularizedIntersection(tri)` reaches it. The
-//     unregularized `intersection` above is defined for that pair as it stands.
+//   * regularizedIntersection: every pair among the six, and each of them with
+//     a Halfplane or a HalfplaneIntersection on *either* side -- A n B stays
+//     bounded whenever one operand is. It is the one operation an unbounded
+//     shape may receive as well as take. Two unbounded operands are the gap:
+//     A n B need not be bounded then, so no PolygonSet can hold it and
+//     `halfplane.regularizedIntersection(halfplane)` raises. The unregularized
+//     `intersection` answers that pair, with a HalfplaneIntersection.
 //
 // Every pair outside the grids is simply not bound, so it raises a Python
 // TypeError -- the runtime equivalent of pgl's compile error. (pgl's own
@@ -870,20 +871,21 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_PRED(cls, SelfT, difference, ::pypgl::Halfplane);   \
     PGL_PRED(cls, SelfT, difference, ::pypgl::HalfplaneIntersection)
 
-// The regularized intersection for a receiver that can hold the answer: a
-// PolygonWithHoles or a PolygonSet. Same argument grid as `difference`.
+// The regularized intersection for a *bounded* region receiver -- any of the
+// six. The answer is bounded whatever the argument is, so the argument grid is
+// `difference`'s: the six plus the two unbounded convex shapes.
 #define PGL_BIND_REGULARIZED_INTERSECTION(cls, SelfT)                        \
     PGL_BIND_BOOLEAN(cls, SelfT, regularizedIntersection);                   \
     PGL_PRED(cls, SelfT, regularizedIntersection, ::pypgl::Halfplane);       \
     PGL_PRED(cls, SelfT, regularizedIntersection, ::pypgl::HalfplaneIntersection)
 
-// The other half of the regularized intersection, for the receivers that
-// cannot hold the answer themselves (Halfplane, Triangle, Rectangle, Convex,
-// Polygon, HalfplaneIntersection): the operation is available exactly when the
-// *other* operand is one of the two shapes that can.
-#define PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, SelfT)                \
-    PGL_PRED(cls, SelfT, regularizedIntersection, ::pypgl::PolygonWithHoles); \
-    PGL_PRED(cls, SelfT, regularizedIntersection, ::pypgl::PolygonSet)
+// The other half, for the two *unbounded* receivers (Halfplane and
+// HalfplaneIntersection): they may take the intersection, but only against an
+// operand that bounds the answer, so the argument grid is the six bounded
+// regions and nothing else. This is the only boolean operation either of them
+// receives at all.
+#define PGL_BIND_REGULARIZED_INTERSECTION_UNBOUNDED(cls, SelfT)               \
+    PGL_BIND_BOOLEAN(cls, SelfT, regularizedIntersection)
 
 // -----------------------------------------------------------------------------
 // Minkowski sum (implementation/minkowskisum.hpp)

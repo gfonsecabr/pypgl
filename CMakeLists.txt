@@ -33,7 +33,7 @@ if(NOT PGL_INCLUDE_DIR)
     # release tag once pgl publishes them.
     FetchContent_Declare(pgl
       GIT_REPOSITORY https://github.com/gfonsecabr/pgl
-      GIT_TAG        eff7a6f03f238fa8d45763df21c25888cec0ffdf)
+      GIT_TAG        c78a32a36bd13759d0f6727fa55b02c9156c7879)
     FetchContent_MakeAvailable(pgl)
     set(PGL_INCLUDE_DIR "${pgl_SOURCE_DIR}/include")
   endif()

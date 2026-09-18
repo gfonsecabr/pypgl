@@ -230,15 +230,27 @@ The six bounded region types are `Rectangle`, `Triangle`, `Convex`, `Polygon`,
   the six plus a `Halfplane` or a `HalfplaneIntersection` — $A \setminus B$ stays
   bounded however big $B$ is. It is the one operation that is not symmetric, so
   the unbounded shape may only be the argument.
-- `regularizedIntersection` needs a `PolygonWithHoles` or a `PolygonSet` on one
-  side, since only those two can hold an answer with a hole or with several
-  pieces. So `rectangle.regularizedIntersection(triangle)` is the one gap worth
-  knowing: it raises where the other three answer, and
-  `rect.asPolygonWithHoles().regularizedIntersection(tri)` reaches it. The
-  general `intersection` [above](#intersection) is defined for that pair as it
-  stands.
+- `regularizedIntersection` is defined for every pair among the six, and for
+  each of them with a `Halfplane` or a `HalfplaneIntersection` on *either* side
+  — $A \cap B$ stays bounded whenever one operand is, so it is the one
+  operation an unbounded shape may receive as well as take.
 
-Every pair outside those grids raises a `TypeError`.
+Every pair outside those grids raises a `TypeError`. Two unbounded operands are
+the case to know: $A \cap B$ need not be bounded then, so no `PolygonSet` can
+hold it and `halfplane.regularizedIntersection(halfplane)` raises. The general
+`intersection` [above](#intersection) answers that pair, with a
+`HalfplaneIntersection`.
+
+A pair of convex operands never builds an arrangement — two convex shapes meet
+in a convex shape, so the answer is one clip and one piece — and two rectangles
+cost a coordinate comparison per side. Only a pair with a polygon that is not
+convex reaches the cell engine.
+
+```python
+rect = pgl.Rectangle(pgl.Point(0,0), pgl.Point(4,4))
+tri  = pgl.Triangle(pgl.Point(0,0), pgl.Point(6,0), pgl.Point(0,6))
+area = rect.regularizedIntersection(tri)   # one piece, no arrangement
+```
 
 Every one of them returns the **regularized** result, the closure of the
 operation applied to the *interiors*. Lower-dimensional leftovers are dropped: a

@@ -279,9 +279,13 @@ All four of these reorder the Python list you pass **in place** and return
 
 - `sortAround(points, p)`: Reorders `points` counterclockwise around the center
   `p`, starting from the lexicographically smallest point and breaking ties by
-  putting farther points first. Connecting the result in order traces a simple
-  star-shaped polygon whose kernel contains `p`. Relies only on exact orientation
-  and squared-distance comparisons. Complexity $O(n \log n)$.
+  putting farther points first. When `p` lies strictly inside the convex hull of
+  `points`, connecting the result in order traces a simple star-shaped polygon
+  whose kernel contains `p` — that hypothesis is what keeps every gap between
+  consecutive directions under half a turn, and with `p` outside the hull no
+  order at all can satisfy the conclusion, a polygon lying inside the hull of
+  its own vertices. Relies only on exact orientation and squared-distance
+  comparisons. Complexity $O(n \log n)$.
 
 - `hilbertSort(points)`: Reorders `points` along a Hilbert space-filling curve,
   so points close in the plane stay close in the sequence — a useful

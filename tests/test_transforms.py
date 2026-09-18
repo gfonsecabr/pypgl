@@ -133,3 +133,43 @@ def test_convex_is_unhashable():
         hash(c)
     with pytest.raises(TypeError):
         {c}
+
+
+# --- the lazy translation has to reach every reader ------------------------
+#
+# Convex stores its vertices plus a pending translation, applied when a vertex
+# is read. Anything that reaches into the raw storage instead sees the shape
+# where it used to be.
+
+def test_a_translated_hull_intersects_where_it_now_is():
+    # A rectangle and a triangle are the two operands whose fast path probed
+    # the stored vertex rather than the translated one. The containing
+    # rectangle is the case that exposes it: the translated hull lies inside
+    # it, while the untranslated first vertex does not.
+    hull = pypgl.Convex([pypgl.Point(0, 0), pypgl.Point(6, 0),
+                         pypgl.Point(6, 6), pypgl.Point(0, 6)])
+    hull += pypgl.Point(20, 0)
+
+    assert hull.intersects(pypgl.Rectangle(pypgl.Point(19, -1), pypgl.Point(27, 7)))
+    assert hull.intersects(pypgl.Rectangle(pypgl.Point(21, 1), pypgl.Point(25, 5)))
+    assert hull.intersects(pypgl.Triangle(pypgl.Point(21, 1), pypgl.Point(25, 1),
+                                          pypgl.Point(23, 5)))
+    # And not where it used to be.
+    assert not hull.intersects(pypgl.Rectangle(pypgl.Point(-1, -1), pypgl.Point(1, 1)))
+
+    # The same answers as the hull written out at its final position.
+    moved = pypgl.Convex([pypgl.Point(20, 0), pypgl.Point(26, 0),
+                          pypgl.Point(26, 6), pypgl.Point(20, 6)])
+    for other in (pypgl.Rectangle(pypgl.Point(19, -1), pypgl.Point(27, 7)),
+                  pypgl.Rectangle(pypgl.Point(-1, -1), pypgl.Point(1, 1))):
+        assert hull.intersects(other) == moved.intersects(other)
+
+
+def test_a_translated_one_point_hull_reports_its_centroid_where_it_is():
+    # A one-vertex hull is its own centroid, so the translation is the whole
+    # of the answer and dropping it is the entire error.
+    hull = pypgl.Convex([pypgl.Point(3, 4)])
+    hull += pypgl.Point(10, 20)
+    assert hull.vertices() == [pypgl.Point(13, 24)]
+    assert hull.centroid() == pypgl.Point(13, 24)
+    assert hull.verticesCentroid() == pypgl.Point(13, 24)

@@ -15,6 +15,8 @@ import pytest
 
 from pypgl import (
     Convex,
+    Halfplane,
+    HalfplaneIntersection,
     Point,
     Polygon,
     PolygonSet,
@@ -30,6 +32,34 @@ def _square(side=10):
 
 def _total_area(pieces):
     return sum((piece.area() for piece in pieces.components()), Fraction(0))
+
+
+# The six bounded region types and the two unbounded convex ones, which is the
+# vocabulary the four grids are stated in. Each of the six is symmetric about
+# the y axis, so clipping it to either side of x = 0 halves it.
+_BOUNDED_REGIONS = [
+    Triangle(Point(-4, 0), Point(4, 0), Point(0, 6)),
+    Rectangle(Point(-4, -4), Point(4, 4)),
+    Convex([Point(-4, -4), Point(4, -4), Point(4, 4), Point(-4, 4)]),
+    Polygon([Point(-4, -4), Point(0, -1), Point(4, -4), Point(4, 4), Point(-4, 4)]),
+    PolygonWithHoles(
+        Polygon([Point(-6, -6), Point(6, -6), Point(6, 6), Point(-6, 6)]),
+        [Polygon([Point(-2, -2), Point(2, -2), Point(2, 2), Point(-2, 2)])],
+    ),
+    PolygonSet(
+        [
+            Rectangle(Point(-6, -3), Point(-2, 3)).asPolygonWithHoles(),
+            Rectangle(Point(2, -3), Point(6, 3)).asPolygonWithHoles(),
+        ]
+    ),
+]
+
+_UNBOUNDED_CONVEX = [
+    Halfplane(Point(0, -1), Point(0, 1)),
+    HalfplaneIntersection(
+        [Halfplane(Point(0, -1), Point(0, 1)), Halfplane(Point(-1, 0), Point(1, 0))]
+    ),
+]
 
 
 # --- difference -------------------------------------------------------------
@@ -148,17 +178,64 @@ def test_the_regularized_intersection_forwards_either_way():
     )
 
 
-def test_a_pair_of_convex_shapes_has_no_regularized_intersection():
-    # The one gap in the four grids: neither operand can hold an answer with a
-    # hole, so the operation is not bound for the pair at all. The literal
-    # `intersection` is defined for it as it stands, and asPolygonWithHoles()
-    # on either operand reaches the regularized one.
+def test_a_pair_of_convex_shapes_intersects_directly():
+    # Two convex shapes meet in a convex shape, so the answer is one clip and
+    # one piece -- no arrangement is built, and no operand has to be widened to
+    # a region first to reach the operation.
     rect = Rectangle(Point(0, 0), Point(4, 4))
     tri = Triangle(Point(0, 0), Point(6, 0), Point(0, 6))
-    with pytest.raises(TypeError):
-        rect.regularizedIntersection(tri)
-    assert rect.asPolygonWithHoles().regularizedIntersection(tri).area() == 14
+    pieces = rect.regularizedIntersection(tri)
+    assert pieces.area() == 14
+    assert len(pieces.components()) == 1
+    # Widening either operand to a region is the same answer, not a different
+    # operation, which is what the direct pair replaced.
+    assert rect.asPolygonWithHoles().regularizedIntersection(tri) == pieces
     assert rect.intersection(tri) is not None
+
+
+@pytest.mark.parametrize("receiver", _BOUNDED_REGIONS)
+@pytest.mark.parametrize("argument", _BOUNDED_REGIONS + _UNBOUNDED_CONVEX)
+def test_a_bounded_region_intersects_every_operand(receiver, argument):
+    # The grid: any of the six bounded region types on the left, and any of
+    # those plus the two unbounded convex shapes on the right. A n B is bounded
+    # whenever one operand is, so the unbounded ones are admitted here although
+    # regularizedUnion and symmetricDifference refuse them.
+    pieces = receiver.regularizedIntersection(argument)
+    assert isinstance(pieces, PolygonSet)
+
+
+@pytest.mark.parametrize("receiver", _UNBOUNDED_CONVEX)
+@pytest.mark.parametrize("argument", _BOUNDED_REGIONS)
+def test_an_unbounded_shape_receives_the_intersection_too(receiver, argument):
+    # The other half of the grid, and the only boolean operation either
+    # unbounded shape receives at all: the argument has to bound the answer,
+    # so it must be one of the six.
+    assert receiver.regularizedIntersection(argument) == argument.regularizedIntersection(
+        receiver
+    )
+
+
+@pytest.mark.parametrize("a", _UNBOUNDED_CONVEX)
+@pytest.mark.parametrize("b", _UNBOUNDED_CONVEX)
+def test_two_unbounded_operands_have_no_regularized_intersection(a, b):
+    # The one gap left: A n B need not be bounded when neither operand is, so
+    # no PolygonSet can hold it. The literal `intersection` answers that pair,
+    # with a HalfplaneIntersection.
+    with pytest.raises(TypeError):
+        a.regularizedIntersection(b)
+    assert a.intersection(b) is not None
+
+
+@pytest.mark.parametrize("receiver", _BOUNDED_REGIONS)
+def test_clipping_to_a_halfplane_halves_a_centred_region(receiver):
+    # The half-plane x >= 0 through the origin, against regions the fixtures
+    # place symmetrically about it.
+    right = Halfplane(Point(0, -1), Point(0, 1))
+    assert receiver.regularizedIntersection(
+        right
+    ).area() + receiver.regularizedIntersection(
+        Halfplane(Point(0, 1), Point(0, -1))
+    ).area() == receiver.regularizedIntersection(receiver).area()
 
 
 def test_the_literal_intersection_keeps_every_dimension():

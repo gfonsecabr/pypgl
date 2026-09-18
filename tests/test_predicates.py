@@ -1,5 +1,7 @@
 """The uniform predicate surface and the ``in`` sugar."""
 
+import pytest
+
 import pypgl
 
 
@@ -145,3 +147,62 @@ def test_a_degenerate_shape_separates_like_the_segment_it_spans():
     assert not pypgl.Segment(*short).separates(triangle)
     assert not pypgl.Convex(short).separates(triangle)
     assert not triangle.separates(pypgl.Convex(short))
+
+
+# --- a ray is a half-line, not its two defining points ----------------------
+#
+# The through-point of a Ray only fixes a direction: the ray carries on past it
+# forever. Four predicates used to decide the whole question from source() and
+# target() alone, which is a pair of points and settles nothing on its own.
+
+def test_a_ray_does_not_contain_the_opposite_ray_on_its_line():
+    # Two opposite rays on one line share only the segment between their
+    # sources, so neither contains the other -- although each one's two
+    # defining points do lie in the other.
+    forward = pypgl.Ray(pypgl.Point(1, -2), pypgl.Point(0, -2))
+    backward = pypgl.Ray(pypgl.Point(0, -2), pypgl.Point(1, -2))
+    assert not forward.contains(backward)
+    assert not backward.contains(forward)
+    assert not forward.interiorContains(backward)
+    assert not backward.interiorContains(forward)
+
+    # The witness: a point far out along one of them lies outside the other.
+    far = pypgl.Point(5, -2)
+    assert backward.contains(far) and not forward.contains(far)
+
+    # A ray does contain a codirectional ray starting further along it.
+    assert backward.contains(pypgl.Ray(pypgl.Point(2, -2), pypgl.Point(3, -2)))
+    assert not backward.contains(pypgl.Ray(pypgl.Point(2, -2), pypgl.Point(1, -2)))
+
+
+@pytest.mark.parametrize("x", [1, 3, 5, 6, 7, 100])
+def test_a_line_separates_a_ray_it_cuts_however_far_out(x):
+    # Every vertical line at x > 0 cuts this ray in two, including the ones
+    # beyond its through-point, which is merely where the direction was named.
+    ray = pypgl.Ray(pypgl.Point(0, 0), pypgl.Point(5, 0))
+    line = pypgl.Line(pypgl.Point(x, 0), pypgl.Point(x, 1))
+    assert line.separates(ray)
+    assert ray.separates(line)
+
+
+@pytest.mark.parametrize("through", [2, 5, 20])
+def test_two_crossing_rays_separate_each_other_wherever_named(through):
+    # One fixed crossing, spelled with the through-points at varying distances.
+    # The answer is a property of the two half-lines, so it cannot depend on
+    # how far out each direction happened to be named.
+    horizontal = pypgl.Ray(pypgl.Point(0, 0), pypgl.Point(through, 0))
+    vertical = pypgl.Ray(pypgl.Point(10, -10), pypgl.Point(10, -10 + through))
+    assert horizontal.separates(vertical)
+    assert vertical.separates(horizontal)
+    assert horizontal.crosses(vertical)
+    assert horizontal.interiorsIntersect(vertical)
+
+
+def test_two_collinear_rays_never_separate_each_other():
+    # The collinear guard: two half-lines on one line share a piece running off
+    # one end, so neither cuts the other in two.
+    a = pypgl.Ray(pypgl.Point(0, 0), pypgl.Point(1, 0))
+    b = pypgl.Ray(pypgl.Point(5, 0), pypgl.Point(4, 0))
+    assert a.intersects(b)
+    assert not a.separates(b)
+    assert not b.separates(a)

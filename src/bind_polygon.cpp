@@ -133,7 +133,7 @@ void bind_polygon(nb::module_ &m) {
     // The regularized intersection needs a shape that can hold an answer with
     // a hole, which a simple polygon is not: so it is available exactly when
     // the other operand is a region or a set of them.
-    PGL_BIND_REGULARIZED_INTERSECTION_WITH_SET(cls, Polygon);
+    PGL_BIND_REGULARIZED_INTERSECTION(cls, Polygon);
     PGL_BIND_MINKOWSKI_REGION(cls, Polygon);
     PGL_BIND_EROSION_REGION(cls, Polygon);
     PGL_BIND_CONVEX_HULL(cls, Polygon);
