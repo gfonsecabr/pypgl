@@ -34,8 +34,8 @@ void bind_lines(nb::module_ &m) {
         // again an intersection of half-planes (a line, a slab, a half-plane,
         // or the whole plane), so it comes back as a HalfplaneIntersection --
         // except for the Point pair, which is the line translated.
-        PGL_BIND_MINKOWSKI_UNBOUNDED(cls, Line);
-        PGL_BIND_EROSION_UNBOUNDED(cls, Line);
+        PGL_BIND_MINKOWSKI_LINE(cls, Line);
+        PGL_BIND_EROSION_LINE(cls, Line);
         PGL_BIND_XY_AT(cls, Line);
         PGL_BIND_HALFPLANES(cls, Line);
         PGL_BIND_COLLINEAR(cls, Line);
@@ -49,7 +49,7 @@ void bind_lines(nb::module_ &m) {
         // Two lines meet in None, a Point or a Line; a bounded shape clips the
         // line to a Point or a Segment, and a chain or a non-convex region to
         // a list of those.
-        PGL_BIND_INTERSECTION_LINEAR(cls, Line);
+        PGL_BIND_ALL_INTERSECTION(cls, Line);
     }
 
     // --- OrientedLine ---
@@ -74,8 +74,8 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_INDEXING(cls, OrientedLine);
         PGL_BIND_LINE_HELPERS(cls, OrientedLine);
         PGL_BIND_IS_UNDEFINED(cls, OrientedLine);
-        PGL_BIND_MINKOWSKI_UNBOUNDED(cls, OrientedLine);
-        PGL_BIND_EROSION_UNBOUNDED(cls, OrientedLine);
+        PGL_BIND_MINKOWSKI_LINE(cls, OrientedLine);
+        PGL_BIND_EROSION_LINE(cls, OrientedLine);
         PGL_BIND_XY_AT(cls, OrientedLine);
         PGL_BIND_HALFPLANES(cls, OrientedLine);
         PGL_BIND_ORIENTED_HELPERS(cls, OrientedLine);
@@ -86,7 +86,7 @@ void bind_lines(nb::module_ &m) {
         PGL_BIND_CLOSEST_POINTS_UNBOUNDED(cls, OrientedLine);
         PGL_BIND_ALL_L1LINF_DISTANCE(cls, OrientedLine);
         PGL_BIND_ALL_SAME_POINT_SET(cls, OrientedLine);
-        PGL_BIND_INTERSECTION_LINEAR(cls, OrientedLine);
+        PGL_BIND_ALL_INTERSECTION(cls, OrientedLine);
     }
 
     // --- Ray ---
@@ -127,7 +127,7 @@ void bind_lines(nb::module_ &m) {
 
         // Two rays meet in None, a Point, a Segment or a Ray -- the four ways
         // two half-infinite pieces of a line can overlap.
-        PGL_BIND_INTERSECTION_LINEAR(cls, Ray);
+        PGL_BIND_ALL_INTERSECTION(cls, Ray);
     }
 
     // --- Halfplane ---
@@ -156,7 +156,7 @@ void bind_lines(nb::module_ &m) {
         // half-plane, a line, or the empty set. Against the 0D/1D shapes the
         // result is the usual optional/variant of concrete pieces instead, and
         // against a non-convex region a list of them.
-        PGL_BIND_INTERSECTION_AREA(cls, Halfplane);
+        PGL_BIND_ALL_INTERSECTION(cls, Halfplane);
         cls.def("asOrientedLine", [](const Halfplane &h) { return h.asOrientedLine(); },
                 "Boundary line, directed so the half-plane lies to its left.");
 

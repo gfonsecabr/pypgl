@@ -63,11 +63,15 @@ from ._pgl import (
     polyominoesUpTo,
     polyominoRegions,
     polyominoRegionsUpTo,
+    findEmptyTriangles,
+    findEmptyQuadrilaterals,
+    findEmptyConvexQuadrilaterals,
     innerRaster,
     outerRaster,
     voronoiDiagram,
     farthestVoronoiDiagram,
     powerDiagram,
+    _valueHash,
 )
 
 try:
@@ -131,11 +135,21 @@ __all__ = [
     "polyominoesUpTo",
     "polyominoRegions",
     "polyominoRegionsUpTo",
+    "findEmptyTriangles",
+    "findEmptyQuadrilaterals",
+    "findEmptyConvexQuadrilaterals",
     "innerRaster",
     "outerRaster",
     "voronoiDiagram",
     "farthestVoronoiDiagram",
     "powerDiagram",
+    "FrozenConvex",
+    "FrozenMonotoneChain",
+    "FrozenPolyline",
+    "FrozenPolygon",
+    "FrozenPolygonWithHoles",
+    "FrozenPolygonSet",
+    "FrozenHalfplaneIntersection",
 ]
 
 
@@ -238,8 +252,18 @@ del _cls
 # stay reachable through holeCount() / hole(i) / holes(). Indexing is cyclic
 # like every other shape's, and materializes the vertex list, so prefer
 # vertices() when walking one repeatedly.
+def _flattened_getitem(self, index):
+    """Cyclic indexing over the flattened vertices, the same convention get()
+    uses everywhere else -- including raising IndexError, rather than dividing
+    by zero, when there are no vertices at all."""
+    vertices = self.vertices()
+    if not vertices:
+        raise IndexError(f"cannot index an empty {type(self).__name__}")
+    return vertices[index % len(vertices)]
+
+
 PolygonWithHoles.__len__ = lambda self: self.vertexCount()
-PolygonWithHoles.__getitem__ = lambda self, index: self.vertices()[index % self.vertexCount()]
+PolygonWithHoles.__getitem__ = _flattened_getitem
 PolygonWithHoles.__iter__ = lambda self: iter(self.vertices())
 
 # PolygonSet is the same story one level up: C++ iterates its *components*, the
@@ -248,7 +272,7 @@ PolygonWithHoles.__iter__ = lambda self: iter(self.vertices())
 # pypgl shape; componentCount() / component(i) / components() reach the
 # components, and holes stay reachable through each of those.
 PolygonSet.__len__ = lambda self: self.vertexCount()
-PolygonSet.__getitem__ = lambda self, index: self.vertices()[index % self.vertexCount()]
+PolygonSet.__getitem__ = _flattened_getitem
 PolygonSet.__iter__ = lambda self: iter(self.vertices())
 
 
@@ -301,3 +325,252 @@ for _cls in (
     _cls._repr_svg_ = _shape_repr_svg_
 
 del _cls
+
+
+
+# --- Frozen shapes: the hashable counterparts of the seven mutable ones ---
+#
+# Convex, MonotoneChain, Polyline, Polygon, PolygonWithHoles, PolygonSet and
+# HalfplaneIntersection all mutate in place (`shape += point`, `insert`,
+# `rotate90`, ...), so none of them binds __hash__: Python requires a key's hash
+# to stay put while it is a key, and a shape that can change value underneath a
+# dict cannot promise that.
+#
+# `shape.frozen()` answers with an independent *copy* whose class refuses every
+# mutator, so its value is fixed for its whole lifetime and it can be hashed.
+# Each frozen class is a Python **subclass** of the shape it freezes, which is
+# what keeps it a first-class shape rather than a wrapper: the underlying C++
+# object is unchanged, so `isinstance(frozen, Polygon)` holds, every bound
+# method takes one as an argument (`triangle.contains(frozen)`), and
+# `canvas.draw(frozen)` works. Equality, ordering and repr are inherited, so a
+# frozen shape compares equal to the mutable one it came from -- exactly as
+# `frozenset({1}) == {1}`, the unhashable counterpart being the mutable one.
+#
+# The hash is pgl's own std::hash, reached through the private `_valueHash`
+# (src/bind_frozen.cpp). That is the hash which agrees with pgl's operator==,
+# and the agreement is the whole contract: a Polyline equals its own reverse, a
+# closed one equals its own rotations, a Convex and a MonotoneChain ignore the
+# order they were given, and a PolygonWithHoles and a PolygonSet canonicalize
+# their rings and components. Hashing the vertex list in Python would have to
+# re-derive every one of those canonical forms, and getting a single one wrong
+# would silently lose dict entries.
+#
+# Everything a frozen shape computes comes back as the ordinary mutable type --
+# `frozen.convexHull()` is a Convex, `frozen + point` a Polygon. Freezing is
+# about being a key, not a parallel algebra to compute in; freeze a result again
+# when you want to key on that too.
+
+#: Mutating methods shared by all seven: the five in-place transforms and the
+#: four in-place operators.
+_FROZEN_SHARED_MUTATORS = (
+    "rotate90",
+    "scaleUpX",
+    "scaleUpY",
+    "scaleDownX",
+    "scaleDownY",
+    "__iadd__",
+    "__isub__",
+    "__imul__",
+    "__itruediv__",
+)
+
+#: Each shape's own mutators, beyond the shared ones. This mapping is what makes
+#: the frozen classes safe, so tests/test_frozen.py pins it from both sides: every
+#: name here must really mutate, and every *other* public method must leave the
+#: value alone. A mutator added upstream and missed here would not raise -- it
+#: would silently change a live dict key.
+_FROZEN_OWN_MUTATORS = {
+    "Convex": ("insert",),
+    "MonotoneChain": ("insert", "erase"),
+    "Polyline": ("insert", "set", "pushBack", "flip"),
+    "Polygon": ("untangle",),
+    "PolygonWithHoles": ("addHole", "eraseHole"),
+    "PolygonSet": ("addComponent", "eraseComponent"),
+    "HalfplaneIntersection": ("insert",),
+}
+
+#: The non-mutating way to say the same thing, named in the error message.
+_FROZEN_ALTERNATIVES = {
+    "rotate90": "rotated90()",
+    "scaleUpX": "scaledUpX()",
+    "scaleUpY": "scaledUpY()",
+    "scaleDownX": "scaledDownX()",
+    "scaleDownY": "scaledDownY()",
+    "__iadd__": "a + b",
+    "__isub__": "a - b",
+    "__imul__": "a * k",
+    "__itruediv__": "a / k",
+}
+
+
+def _frozen_hash(self):
+    """The value hash, from pgl's std::hash for this shape type.
+
+    A plain Python function rather than ``__hash__ = _valueHash``: a nanobind
+    function is not a descriptor, so assigning one straight to ``__hash__``
+    would call it with no arguments.
+    """
+    return _valueHash(self)
+
+
+def _frozen_refuse(cls_name, method):
+    """Build the replacement for one mutating method on one frozen class."""
+    alternative = _FROZEN_ALTERNATIVES.get(method)
+    hint = (
+        f" Use {alternative}, which returns a new shape."
+        if alternative
+        else " Call it on thawed(), which is a mutable copy."
+    )
+
+    def refuse(self, *args, **kwargs):
+        raise TypeError(f"{cls_name} is immutable: {method}() would change it.{hint}")
+
+    refuse.__name__ = method
+    refuse.__qualname__ = f"{cls_name}.{method}"
+    refuse.__doc__ = f"Unsupported on a frozen shape: {method}() mutates.{hint}"
+    return refuse
+
+
+class FrozenConvex(Convex):
+    """An immutable, hashable :class:`Convex`, usable as a dict key or set member."""
+
+    __hash__ = _frozen_hash
+
+    def frozen(self):
+        """Return self: the shape is already frozen."""
+        return self
+
+    def thawed(self):
+        """An independent, mutable :class:`Convex` copy of this shape."""
+        return Convex(self)
+
+
+class FrozenMonotoneChain(MonotoneChain):
+    """An immutable, hashable :class:`MonotoneChain`, usable as a dict key."""
+
+    __hash__ = _frozen_hash
+
+    def frozen(self):
+        """Return self: the shape is already frozen."""
+        return self
+
+    def thawed(self):
+        """An independent, mutable :class:`MonotoneChain` copy of this shape."""
+        return MonotoneChain(self)
+
+
+class FrozenPolyline(Polyline):
+    """An immutable, hashable :class:`Polyline`, usable as a dict key."""
+
+    __hash__ = _frozen_hash
+
+    def frozen(self):
+        """Return self: the shape is already frozen."""
+        return self
+
+    def thawed(self):
+        """An independent, mutable :class:`Polyline` copy of this shape."""
+        return Polyline(self)
+
+
+class FrozenPolygon(Polygon):
+    """An immutable, hashable :class:`Polygon`, usable as a dict key."""
+
+    __hash__ = _frozen_hash
+
+    def frozen(self):
+        """Return self: the shape is already frozen."""
+        return self
+
+    def thawed(self):
+        """An independent, mutable :class:`Polygon` copy of this shape."""
+        return Polygon(self)
+
+
+class FrozenPolygonWithHoles(PolygonWithHoles):
+    """An immutable, hashable :class:`PolygonWithHoles`, usable as a dict key."""
+
+    __hash__ = _frozen_hash
+
+    def frozen(self):
+        """Return self: the shape is already frozen."""
+        return self
+
+    def thawed(self):
+        """An independent, mutable :class:`PolygonWithHoles` copy of this shape."""
+        return PolygonWithHoles(self)
+
+
+class FrozenPolygonSet(PolygonSet):
+    """An immutable, hashable :class:`PolygonSet`, usable as a dict key."""
+
+    __hash__ = _frozen_hash
+
+    def frozen(self):
+        """Return self: the shape is already frozen."""
+        return self
+
+    def thawed(self):
+        """An independent, mutable :class:`PolygonSet` copy of this shape."""
+        return PolygonSet(self)
+
+
+class FrozenHalfplaneIntersection(HalfplaneIntersection):
+    """An immutable, hashable :class:`HalfplaneIntersection`, usable as a dict key."""
+
+    __hash__ = _frozen_hash
+
+    def frozen(self):
+        """Return self: the shape is already frozen."""
+        return self
+
+    def thawed(self):
+        """An independent, mutable :class:`HalfplaneIntersection` copy."""
+        return HalfplaneIntersection(self)
+
+
+#: Each mutable shape paired with the class that freezes it.
+_FROZEN_CLASSES = {
+    Convex: FrozenConvex,
+    MonotoneChain: FrozenMonotoneChain,
+    Polyline: FrozenPolyline,
+    Polygon: FrozenPolygon,
+    PolygonWithHoles: FrozenPolygonWithHoles,
+    PolygonSet: FrozenPolygonSet,
+    HalfplaneIntersection: FrozenHalfplaneIntersection,
+}
+
+
+def _install_frozen(base, frozen):
+    # Refuse every mutator on the frozen subclass. The C++ object underneath is
+    # an ordinary mutable one -- these overrides are the whole of what makes it
+    # immutable, which is why the name list is tested rather than trusted.
+    #
+    # The shared list is filtered by what the base actually has: a
+    # HalfplaneIntersection scales but does not take `*=` or `/=`, so two of the
+    # nine are absent there. The shape's own mutators must all exist, since a
+    # typo in that list would leave a real mutator reachable.
+    for _method in _FROZEN_SHARED_MUTATORS:
+        if hasattr(base, _method):
+            setattr(frozen, _method, _frozen_refuse(frozen.__name__, _method))
+    for _method in _FROZEN_OWN_MUTATORS[base.__name__]:
+        assert hasattr(base, _method), f"{base.__name__} has no {_method} to refuse"
+        setattr(frozen, _method, _frozen_refuse(frozen.__name__, _method))
+
+    def _frozen_of(self):
+        return frozen(self)
+
+    _frozen_of.__doc__ = (
+        f"An independent, immutable {frozen.__name__} copy of this shape: hashable, "
+        "and so usable as a dict key or set member. Later changes to this shape do "
+        "not affect it."
+    )
+    _frozen_of.__name__ = "frozen"
+    _frozen_of.__qualname__ = f"{base.__name__}.frozen"
+    base.frozen = _frozen_of
+
+
+for _base, _frozen in _FROZEN_CLASSES.items():
+    _install_frozen(_base, _frozen)
+
+del _base, _frozen

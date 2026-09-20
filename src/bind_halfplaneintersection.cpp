@@ -76,7 +76,10 @@ void bind_halfplane_intersection(nb::module_ &m) {
     cls.def("size", [](const HalfplaneIntersection &k) { return k.size(); },
             "Number of stored half-planes. Note these, not the vertices, are this "
             "shape's indexable elements.");
-    cls.def("get", [](const HalfplaneIntersection &k, std::ptrdiff_t i) { return k.get(i); },
+    cls.def("get",
+            [](const HalfplaneIntersection &k, std::ptrdiff_t i) {
+                return k[::pypgl::cyclicIndex(i, k.size(), "half-plane list")];
+            },
             nb::arg("index"),
             "The i-th stored half-plane, with i taken modulo size() (cyclic).");
     cls.def("index",
@@ -141,13 +144,19 @@ void bind_halfplane_intersection(nb::module_ &m) {
     // --- the implicit corners ---
     cls.def("vertexCount", [](const HalfplaneIntersection &k) { return k.vertexCount(); },
             "Number of implicit vertices. O(n) in the number of half-planes.");
-    cls.def("vertex", [](const HalfplaneIntersection &k, std::size_t i) { return k.vertex(i); },
+    cls.def("vertex",
+            [](const HalfplaneIntersection &k, std::ptrdiff_t i) {
+                return k.vertex(::pypgl::cyclicIndex(i, k.vertexCount(), "vertex list"));
+            },
             nb::arg("index"),
             "The i-th implicit vertex, counterclockwise for a bounded region. Exact: the "
             "coordinates are Fractions, which is generally what they have to be.");
     cls.def("vertices", [](const HalfplaneIntersection &k) { return k.vertices(); },
             "The implicit vertices, counterclockwise for a bounded region. Exact.");
-    cls.def("edge", [](const HalfplaneIntersection &k, std::size_t i) { return k.edge(i); },
+    cls.def("edge",
+            [](const HalfplaneIntersection &k, std::ptrdiff_t i) {
+                return k.edge(::pypgl::cyclicIndex(i, k.size(), "half-plane list"));
+            },
             nb::arg("index"),
             "The boundary contribution of half-plane i: a Segment when both neighbouring "
             "vertices exist, a Ray when only one does, and the whole boundary Line "
@@ -173,9 +182,9 @@ void bind_halfplane_intersection(nb::module_ &m) {
     // Against a convex shape the result is again a HalfplaneIntersection --
     // the type is closed under these, and exactly so, with no coordinate
     // divisions. Against the 0D/1D shapes it is the usual optional/variant of
-    // concrete pieces, and against a non-convex region a list of them. The two
-    // chains are the pair pgl does not implement in either direction.
-    PGL_BIND_INTERSECTION_HALFPLANES(cls, HalfplaneIntersection);
+    // concrete pieces, and against a non-convex region or a chain a list of
+    // them.
+    PGL_BIND_ALL_INTERSECTION(cls, HalfplaneIntersection);
     // The regularized intersection needs a shape that can hold an answer with
     // a hole on one side, which a convex region never is.
     PGL_BIND_REGULARIZED_INTERSECTION_UNBOUNDED(cls, HalfplaneIntersection);
@@ -185,6 +194,10 @@ void bind_halfplane_intersection(nb::module_ &m) {
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, HalfplaneIntersection);
     PGL_BIND_CLOSEST_POINTS_UNBOUNDED(cls, HalfplaneIntersection);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, HalfplaneIntersection);
+    // All three Hausdorff distances, each against the seven bounded convex
+    // shapes only -- and each throwing when this region is unbounded, having no
+    // finite distance to anything then.
+    PGL_BIND_HAUSDORFF_CONVEX(cls, HalfplaneIntersection);
     PGL_BIND_ALL_SAME_POINT_SET(cls, HalfplaneIntersection);
     // No Hausdorff family: the region may be unbounded, so the distance to or
     // from it is generally infinite. pgl defines it only for the six bounded

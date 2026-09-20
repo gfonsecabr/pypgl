@@ -18,6 +18,7 @@ def test_algorithms_are_public():
         "sortPoints", "sortDistinctPoints", "sortAround", "hilbertSort",
         "polyominoes", "polyominoesUpTo",
         "smallestEnclosingDisk", "closestPair", "regularizedUnionOf",
+        "findEmptyTriangles", "findEmptyQuadrilaterals", "findEmptyConvexQuadrilaterals",
     }
     assert names <= set(pypgl.__all__)
     assert all(callable(getattr(pypgl, name)) for name in names)

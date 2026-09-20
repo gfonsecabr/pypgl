@@ -250,7 +250,10 @@ bound via `PGL_BIND_ALL_HAUSDORFF_DISTANCE`, but only for the six shapes pgl
 implements them for — `Point`, `Segment`, `OrientedSegment`, `Rectangle`,
 `Triangle`, `Convex` (all convex, so the distance is always attained at a
 vertex); `Disk` (no closed form) and `Polygon` (may be non-convex) get neither
-method at all. **Important semantic gotcha**: pgl returns the standard
+method at all. (Widened in milestone 28: the two polyhedral norms now cover
+every bounded polygonal pair and the Euclidean one gained
+`HalfplaneIntersection`, so this is three grids rather than one.)
+**Important semantic gotcha**: pgl returns the standard
 *symmetric* Hausdorff distance `max(h(A, B), h(B, A))`, not a one-sided
 directed measure — `a.squaredHausdorffDistance(b)` always equals
 `b.squaredHausdorffDistance(a)`, which is easy to miss since the method reads
@@ -1788,6 +1791,247 @@ diff beyond `tour.ipynb`'s version string. The doxylink report is clean — no
 auto-filled "Other methods" line of the four shapes that gained it, the
 self-maintaining drift catcher doing its job.
 
+**Empty polygons, the polyhedral Hausdorff distances, and a line that sweeps a
+strip** (milestone 28, version 1.8.0): `.pgl-ref` re-pinned to `74004e5`, which
+is upstream's **`v1.0.0` tag** — the first release pgl has tagged — 12 commits on
+from `c78a32a`. Three grids widen, one new file of free functions is bound, and
+a segfault pypgl had been shipping since 0.6.0 is guarded.
+
+**The whole delta came from diffing the probe against itself.** Rather than
+reading headers, `scratchpad/probe.cpp` (generated, throwaway) was built twice —
+once against the new `.pgl-ref` and once against a `git archive` of the old
+commit — and the two outputs diffed. That names every pair gained or lost across
+`squaredHausdorffDistance`, `hausdorffDistanceL1`/`LInf`, `minkowskiSum`,
+`minkowskiErosion` and `intersection` in one listing, with each return type, and
+it reported *nothing removed*. The probe is the milestone 27 form (a `concept`
+plus a lambda that ODR-uses the body, so a pair that declares but does not
+compile is caught), and **building it at both commits is the refinement worth
+keeping**: an absolute grid has to be read against what was already bound, and a
+diff does that reading for you.
+
+**`intersection` is a square grid now**, which is the simplification. Milestone
+12 needed four macros "since the operand sets differ by receiver"; pgl closed
+the last two gaps — a `PolygonSet` against the lower-dimensional shapes, and a
+chain against a `HalfplaneIntersection` — so every one of the sixteen non-`Disk`
+shapes takes all sixteen, in either order. The four macros collapse into
+`PGL_BIND_ALL_INTERSECTION` in [src/common.h](src/common.h). `Disk` is unchanged:
+a `Point` and nothing else.
+
+**A `Line` or an `OrientedLine` now sums with a connected non-convex shape**,
+the one structural addition to the Minkowski grids. A half-plane forgets its
+operand's concavity because only one support point survives; a line keeps two,
+one on each side, and sweeps the operand into the strip between the parallels
+through them — so the answer is a two-half-plane `HalfplaneIntersection` and is
+*exactly* the sum with the operand's convex hull. Keeping two support points is
+what needs the operand connected across the line, so the operands are `Polyline`,
+`MonotoneChain`, `Polygon` and `PolygonWithHoles`. **`PolygonSet` is excluded and
+`Ray` is excluded, for different reasons**: a set's components can sit apart
+across the line and the sum is then several strips, which no shape holds; a ray
+keeps one support point, not two. Hence four new macros rather than two —
+`PGL_BIND_MINKOWSKI_LINE` / `PGL_BIND_EROSION_LINE` for the two line receivers
+and `PGL_BIND_MINKOWSKI_CONNECTED_REGION` / `PGL_BIND_EROSION_CONNECTED_REGION`
+for the four operands — with `Ray` and `HalfplaneIntersection` keeping the plain
+`_UNBOUNDED` pair and `PolygonSet` the plain `_REGION` pair. The erosion mirrors
+the sum operand for operand, as it always has.
+
+**The Hausdorff family is three grids, not one, and the reason is what each norm
+can answer exactly.** The Euclidean form reads the distance off a vertex of the
+source, which is only where the maximum sits when *both* operands are convex: it
+covers the seven bounded convex shapes, `HalfplaneIntersection` having joined
+them (it throws when unbounded). The L1 and LInf forms need no convexity — both
+norms are polyhedral, which makes the distance to one edge a maximum of six
+affine functions and the whole search a one-dimensional lower envelope — so they
+cover all 121 pairs of the eleven bounded polygonal shapes, plus a
+`HalfplaneIntersection` against the convex ones only. So
+`PGL_BIND_ALL_HAUSDORFF_DISTANCE` (a bounded convex receiver, twelve operands in
+L1/LInf), `PGL_BIND_HAUSDORFF_CONVEX` (a `HalfplaneIntersection`, seven) and
+`PGL_BIND_HAUSDORFF_NONCONVEX` (the five non-convex bounded polygonal shapes, no
+Euclidean form at all), over two shared operand lists. The old "Hausdorff for
+the non-convex shapes" line in [doc/raw/todo.md](doc/raw/todo.md) is down to the
+Euclidean form and the `Disk`.
+
+**A precondition pgl states with an assert, which pypgl raises instead.** The
+Hausdorff distance to the *empty set* is undefined — it is a supremum over each
+operand's points and one has none — so a non-empty operand is a precondition,
+and an empty one is undefined behavior rather than a wrong answer. The user's
+call, after this was first reported as a bug: pgl asserts it, and **an assert is
+compiled out of the release build pypgl ships, so it protects nobody** — the
+same reasoning as the milestone 11 `Transformation.inverse()` guard. What the
+undefined call does varies by shape, which is itself the argument for one rule:
+an empty `Convex` or `HalfplaneIntersection` reads past the end of its own
+vertex list and takes the interpreter down (verified in C++ against a
+`git archive` of `c78a32a` as well as of the new pin, the milestone 20 method —
+so the `Convex` case dates from 0.6.0, which is what gave `Convex` an empty
+state at all), the shapes carrying a plain vertex list answer `0` as though the
+empty set coincided with the other operand, and an empty `Rectangle` answers
+from an uninitialized corner. `requireNonEmptyForHausdorff` in
+[src/common.h](src/common.h) therefore refuses *any* empty operand with a
+`ValueError`, through a `PGL_HAUS` variant of `PGL_PRED` that the two
+operand-list macros use, rather than only the two that happen to crash.
+`isEmptyShape` probes for `empty()` with a `requires`, since a `Point`, a
+`Segment`, an `OrientedSegment` and a `Triangle` never have one — and `empty()`
+is about the point set, not about dimension, so a zero-area `Rectangle` and a
+one-vertex `Convex` still measure normally.
+
+**`algorithm/emptypolygons.hpp` is bound in its own TU**
+([src/bind_emptypolygons.cpp](src/bind_emptypolygons.cpp)): the empty triangles,
+empty quadrilaterals and empty *convex* quadrilaterals of a point set, each in
+three forms — all of them, those through a given vertex, and those through a
+given edge (a side of a triangle, an inside diagonal of a quadrilateral). Nine
+functions, eighteen overloads, since an edge is a `Segment` or an
+`OrientedSegment`. The `visit*` callbacks pgl pairs each with are **not** bound,
+the standing call for every pypgl traversal. Return types are the tightest ones:
+`Triangle`, `Polygon` (simple, possibly non-convex) and `Convex`. A polygon is
+empty when no *other* point of the set lies in it, closed — a point on an edge
+blocks it as much as one inside — and the input is read as a set, so coincident
+points count once.
+
+**They are tested against a brute force that shares no code with them**
+([tests/test_emptypolygons.py](tests/test_emptypolygons.py)): every 3- and
+4-subset, filtered by `Triangle.contains` / `Polygon.contains` and `isSimple`,
+over random sets on a small integer grid — small on purpose, since that is what
+produces the collinear triples, the points on edges and the coincident points
+the degenerate rules are about. Zero disagreements. The shapes are mutable and
+so unhashable, so the comparison keys on `repr`, which is canonical: a `Polygon`
+equals its own rotations and its reverse.
+
+**A Hausdorff test needs a maximum that is not at a vertex**, or it cannot tell
+the new code from the old. The case
+[tests/test_hausdorff.py](tests/test_hausdorff.py) uses is a `Polyline` from
+(0,0) to (10,0) against a `PolygonSet` of two boxes under its ends: the L1
+distance along it is `min(x, 10 - x)`, peaking at 5 strictly inside the edge,
+where a vertex-only computation reports the boxes' far corners at 3 (and 2 in
+LInf). A dense sampling of the chain attains the answer, pinning it from both
+sides.
+
+Every example figure is byte-identical (`canvas_gallery.pdf`'s creation date
+aside) and the five notebooks re-run to no diff beyond `tour.ipynb`'s version
+string. The doxylink report has no `not-bound` drift, and regenerating widened
+the auto-filled "Other methods" line of the five shapes that gained the
+polyhedral Hausdorff pair. **Two stale doc passages the report cannot catch were
+fixed by hand**, both in [doc/raw/shape_methods.md](doc/raw/shape_methods.md):
+the `intersection` blockquote still said the 2D-by-2D pairs and the chain-with-
+`Polygon` pair were missing, which milestone 12 closed, and the Hausdorff bullet
+still named the six convex shapes. Prose drift is the blind spot of a
+method-mention linter.
+
+**One upstream doxygen wart, noted not fixed** (pgl's checkout is the user's):
+`Disk.radius()`'s tooltip reads "Returns the center in this disk's exact
+coordinate type", the brief of a *commented-out* `center()` overload sitting
+just above it in `shape/disk.hpp`. It is pre-existing and cosmetic — the same
+kind of comment-attachment slip milestone 19 recorded and milestone 20 saw fixed
+upstream. What did change in those links is every `Disk` anchor hash, because
+upstream commit `6586f0a` renamed the result-type template parameter to
+`ApproximateNumber` wherever its default is floating point (`ResultNumber` where
+it is exact). That rename reaches pypgl nowhere else: every bound call passes
+the type positionally.
+
+**Frozen shapes, so a mutable one can be a dict key** (milestone 29, version
+1.9.0): the user's request. Seven bound shapes mutate in place -- `Convex`,
+`MonotoneChain`, `Polyline`, `Polygon`, `PolygonWithHoles`, `PolygonSet` and
+`HalfplaneIntersection` -- so none of them binds `__hash__`, and none could be a
+key. `shape.frozen()` now returns an independent copy that refuses every mutator
+and is hashable; `FrozenPolygon` and its six siblings are public classes, and
+`thawed()` goes back. No pgl re-pin: `.pgl-ref` stays at `74004e5`.
+
+**A Python subclass of the bound class is what makes this cheap**, and it was
+worth checking before designing anything else: nanobind accepts a Python
+subclass of a bound type as an argument to every C++ binding, since the instance
+really is one. So `isinstance(frozen, Polygon)` holds, `triangle.contains(frozen)`
+works, `canvas.draw(frozen)` works, and equality and repr are inherited --
+`frozen == polygon` is true, the `frozenset({1}) == {1}` relation. A composition
+wrapper would have made a frozen shape a second-class one, refused as an
+argument by every bound method; a parallel set of C++ classes would have meant
+re-binding all six matrices over fourteen types instead of seven, for nothing.
+This also keeps the project's layering rule: [pypgl/__init__.py](pypgl/__init__.py)
+holds the whole feature, and C++ contributes one private function.
+
+**The hash has to be pgl's, not a vertex-list hash.** `std::hash` is defined
+upstream for all seven (`core/hash.hpp`) and agrees with pgl's `operator==`,
+which is the part that matters, because equality here sees through
+representation: a `Polyline` equals its own reverse and a closed one its own
+rotations, a `Convex` and a `MonotoneChain` ignore the order their points came
+in, and a `PolygonWithHoles` and a `PolygonSet` canonicalize their rings and
+components. Hashing the vertices in Python would mean re-deriving every one of
+those canonical forms, and one mistake would silently lose dict entries.
+[src/bind_frozen.cpp](src/bind_frozen.cpp) exposes it as a module-level private
+`_valueHash`, not as a method, so the mutable classes' own surface is unchanged.
+**It cannot be assigned straight to `__hash__`**: a nanobind function is not a
+descriptor, so it would be called with no arguments; a one-line Python wrapper
+is what binds `self`.
+
+**What makes the frozen classes safe is a list of names, so the list is tested
+from both sides.** Blocking mutators by name is the one fragile part of the
+design -- the C++ object underneath is an ordinary mutable one, and a mutator
+that upstream adds and pypgl misses would not raise, it would silently change a
+live key. Three analyses were crossed to build it and each found something the
+others missed: the headers' non-`const` members (too noisy to trust -- a regex
+over C++ picks up locals and lambdas), the stub's `None`-returning methods
+(misses `HalfplaneIntersection.insert`, which returns a value, and
+`BitMatrix.latticeRotate90`), and an empirical sweep calling every method
+(misses a mutator whose sample call happens to be a no-op, like `Polygon.untangle`
+on an already-simple polygon, or `insert`ing a half-plane that already contains
+the region). [tests/test_frozen.py](tests/test_frozen.py) pins the union and then
+re-derives it: every refused name must really mutate, and every *other* public
+method is called with a battery of arguments and must leave the value alone.
+
+Two smaller things fell out. `PolygonWithHoles` and `PolygonSet` had **no copy
+constructor** where the other five did, so both gained one -- registered
+**first**, since the Python layer makes both iterable over their vertices and a
+converting overload would otherwise rebuild a region from the ring of its own
+points and drop the holes (the milestone 6 `Triangulation` pitfall). And
+`__init__` is *not* a hole in the immutability: nanobind warns and then refuses
+to re-initialize a live instance, so a frozen shape cannot be re-seated through
+it.
+
+**Every index pypgl takes is now cyclic** (the user's instruction, after the
+frozen sweep found nine accessors that were not). `get(i)` had always reduced
+its index modulo the count — that is pgl's own convention, not pypgl's — but
+`PolygonWithHoles.hole`/`eraseHole`, `PolygonSet.component`/`eraseComponent`,
+`MonotoneChain.erase`, `HalfplaneIntersection.vertex`/`edge` and
+`Polyline.set`/`insert` took a raw `std::size_t` and read past the end for an
+index past the end; `polygonset.component(1)` on a one-component set was enough
+to take the interpreter down. All of them now go through `cyclicIndex` in
+[src/common.h](src/common.h), so no index is out of range and a computed one
+needs no bounds check. They also take a `std::ptrdiff_t` now, so a negative
+index counts from the end instead of wrapping to a huge unsigned.
+
+**The empty shape is the case the cyclic rule cannot answer**, and it was
+hiding inside `get` all along: pgl reduces with `((i % n) + n) % n`, which
+divides by `n`, so `Polygon().get(0)` was a division by zero long before any of
+this. `cyclicIndex` checks the count and raises `IndexError` — what Python
+gives for indexing an empty list.
+
+**`Polyline.insert` is the one index that is not cyclic**, because it names a
+position *between* vertices rather than a vertex: there are `size() + 1` of
+them, and the last one is the append that a cyclic reduction would fold onto the
+first. It follows Python's own `list.insert` instead — negative counts from the
+end, past either end clamps — and
+[tests/test_indexing.py](tests/test_indexing.py) pins it against a real `list`
+for indices from -99 to 99. The same file sweeps every int-taking method on
+every shape, full and empty, over indices from -10^6 to 10^6.
+
+**The pre-release banner is gone from all fifteen pages** (the user's
+instruction, same milestone). Milestone 23 put it there and was careful about
+what it said: pypgl had had a stable release, so what the line named as
+unstable was *the pgl API it mirrors*. pgl tagged `v1.0.0` in the milestone 28
+re-pin and dropped its own banner in the same commit, so the sentence's subject
+is no longer true and the line comes out — of [README.md](README.md) and the
+seven [doc/raw/](doc/raw/) pages, which regenerate the seven in [doc/](doc/).
+The blank run it left behind was collapsed to one line, so the fifteen pages
+still agree with each other on spacing. CLAUDE.md's own copy of the wording
+stays where milestone 23 records it: that is history, not a live banner.
+
+The stub needed one thing: `frozen()` is added in the Python layer, so it
+reaches `_pgl.pyi` only through [src/stubgen_patterns.txt](src/stubgen_patterns.txt),
+and its **return type is the point** -- a checker that thinks `frozen()` returns
+a `Polygon` will reject `{p.frozen(): 1}`, since `Polygon.__hash__` is `None`
+there. The seven rules therefore import the Frozen classes from `pypgl`, which
+is a real import of real classes and the first time the stub refers to the
+Python layer. `test_stub_has_no_leaked_runtime_patches` used to ban the string
+`from pypgl` outright as a proxy for the `<lambda>` leak it was really about; it
+now checks for the leak and pins exactly which names may be imported.
+
 
 The package directory is [pypgl/](pypgl/) (so `import pypgl` works); the compiled
 extension is `pypgl._pgl`. Binding sources live in [src/](src/).
@@ -1852,7 +2096,9 @@ shape (so `intersection` returns `None` / `Point` / `Segment` with no sentinels)
 **Layering:** the compiled `_pgl` extension stays minimal (just `.def`s). All
 Pythonic sugar lives in `pgl/__init__.py`: vertex iteration, `point in shape` →
 `shape.contains(point)` (point-in-shape only — keep shape-vs-shape as explicit
-methods), pickling, and `_repr_svg_` for inline Jupyter rendering via `Canvas`.
+methods), the seven frozen shape classes (milestone 29), and `_repr_svg_` for
+inline Jupyter rendering via `Canvas`. (Pickling was listed here too but has
+never been implemented — no shape is picklable.)
 
 **Translation units:** one `bind_*.cpp` per shape group (point, segment, lines,
 polygons, polygon, region, polygonset, chains, canvas, and one per data
@@ -1866,8 +2112,12 @@ consistent across classes; each predicate is overloaded per accepted shape type.
 `PGL_BIND_ALL_SAME_POINT_SET` list all **seventeen** shapes, including
 themselves, so every pair works in both directions;
 `PGL_BIND_ALL_L1LINF_DISTANCE` lists sixteen (no `Disk`, which pgl implements
-only against a `Point`) and `PGL_BIND_ALL_HAUSDORFF_DISTANCE` only the six
-bounded convex ones. The closest-pair family (milestone 21) has two grids of
+only against a `Point`) and `PGL_BIND_ALL_INTERSECTION` sixteen likewise. The
+Hausdorff family (milestone 28) is three grids over two shared operand lists:
+`PGL_BIND_ALL_HAUSDORFF_DISTANCE` for a bounded convex receiver,
+`PGL_BIND_HAUSDORFF_CONVEX` for a `HalfplaneIntersection` and
+`PGL_BIND_HAUSDORFF_NONCONVEX` for the five non-convex bounded polygonal
+shapes, which get no Euclidean form. The closest-pair family (milestone 21) has two grids of
 its own: `PGL_BIND_CLOSEST_SEGMENTS_ALL` lists the eleven bounded polygonal
 shapes and `PGL_BIND_CLOSEST_POINTS_BOUNDED` those eleven plus the five
 unbounded convex ones, with `PGL_BIND_CLOSEST_POINTS_UNBOUNDED` for an
@@ -1889,7 +2139,9 @@ python3 -m venv .venv
 Re-run the `pip install -e .` line after editing any `src/*.cpp` — the editable
 install rebuilds the extension; importing alone does not.
 
-**pgl headers.** pgl is header-only and ships no release tags. As of milestone
+**pgl headers.** pgl is header-only. It ships release tags as of `v1.0.0`
+(milestone 28), though [CMakeLists.txt](CMakeLists.txt) still pins the exact SHA
+`.pgl-ref` is checked out at, a tag being movable where a SHA is not. As of milestone
 27 it *does* ship a CMake target — `pgl::pgl`, an INTERFACE library carrying the
 include path, `cxx_std_20` and the MSVC-only Boost dependency — but pypgl does
 not link it: the in-tree `.pgl-ref/` path never runs CMake at all, so taking the

@@ -14,6 +14,8 @@
 #include <compare>
 #include <functional>
 #include <sstream>
+#include <stdexcept>
+#include <string>
 
 #include "casters.h"
 #include "pgl.hpp"
@@ -184,6 +186,75 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
         cls.def("__hash__", [](const T &self) { return std::hash<T>{}(self); });
     else
         cls.attr("__hash__") = nb::none();
+}
+
+// The cyclic index convention, which pgl's get() sets and pypgl applies to
+// every index it takes: the index is reduced modulo the count, so a negative
+// one counts from the end and an out-of-range one wraps instead of running off
+// the end. No index is out of range, which is what makes these accessors safe
+// to call with a computed value.
+//
+// An empty shape is the one case with nothing to name, and pgl's own formula
+// (((i % n) + n) % n) divides by the count, so an empty one is a division by
+// zero there rather than an answer. It is checked here and raised as an
+// IndexError -- the exception Python gives for indexing an empty list.
+inline std::size_t cyclicIndex(std::ptrdiff_t index, std::size_t count, const char *what) {
+    if (count == 0)
+        throw nb::index_error((std::string("cannot index an empty ") + what).c_str());
+    const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(count);
+    return static_cast<std::size_t>(((index % n) + n) % n);
+}
+
+// The position convention for inserting *between* elements, where the valid
+// range is [0, count] rather than [0, count): there are count + 1 of them, and
+// the last one appends. Cyclic reduction would fold that last position onto the
+// first and make appending unsayable, so this follows Python's own list.insert
+// instead -- a negative index counts from the end, and anything past either end
+// clamps rather than raising.
+inline std::size_t insertPosition(std::ptrdiff_t index, std::size_t count) {
+    const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(count);
+    if (index < 0)
+        index += n;
+    return static_cast<std::size_t>(index < 0 ? 0 : (index > n ? n : index));
+}
+
+// Whether a shape's point set is empty. Only some shapes have that state at
+// all: a Point, a Segment, an OrientedSegment and a Triangle always hold at
+// least one point, and the four unbounded shapes are never empty either, so
+// they have no empty() to call. Note that empty() is not degeneracy -- a
+// zero-area Rectangle and a one-vertex Convex are both non-empty.
+template <class T>
+bool isEmptyShape(const T &shape) {
+    if constexpr (requires { shape.empty(); })
+        return shape.empty();
+    else
+        return false;
+}
+
+// The guard every bound Hausdorff method runs before calling pgl.
+//
+// The Hausdorff distance to the empty set is not defined: it is a supremum over
+// the points of each operand, and one of them has none. A non-empty operand is
+// therefore a *precondition*, and pgl states it as one -- an assert, which the
+// release build pypgl ships compiles out, leaving the call undefined rather
+// than wrong. What that undefined behavior looks like varies by shape: an empty
+// Convex or HalfplaneIntersection reads past the end of its own vertex list and
+// takes the interpreter down, the shapes carrying a plain vertex list answer 0
+// as though the empty set coincided with the other operand, and an empty
+// Rectangle answers from an uninitialized corner.
+//
+// None of that is safe to pass on to Python, so the precondition is checked
+// here and raised. This is the same call as the Transformation.inverse() guard:
+// where pgl asserts, pypgl raises, because an assert compiled out under NDEBUG
+// protects nobody. It is checked for every operand that can be empty rather
+// than only for the ones that currently crash -- one rule is easier to rely on
+// than a list of which empty shape does what, and all of them are equally
+// undefined.
+template <class A, class B>
+void requireNonEmptyForHausdorff(const A &a, const B &b, const char *method) {
+    if (isEmptyShape(a) || isEmptyShape(b))
+        throw std::invalid_argument(std::string(method) +
+                                    " is not defined when either shape is empty");
 }
 
 }  // namespace pypgl
@@ -423,8 +494,14 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
 // in __init__.py for every shape.
 #define PGL_BIND_INDEXING(cls, SelfT)                                                     \
     cls.def("size", [](const SelfT &s) { return s.size(); }, "Number of indexable elements."); \
-    cls.def("get", [](const SelfT &s, std::ptrdiff_t i) { return s.get(i); }, nb::arg("index"), \
-            "The i-th element, with i taken modulo size() (cyclic).")
+    cls.def("get",                                                                      \
+            [](const SelfT &s, std::ptrdiff_t i) {                                      \
+                return s[::pypgl::cyclicIndex(i, s.size(), #SelfT)];                    \
+            },                                                                          \
+            nb::arg("index"),                                                           \
+            "The i-th element, with i taken modulo size() (cyclic), so a negative "     \
+            "index counts from the end and an out-of-range one wraps. Raises "          \
+            "IndexError only when the shape is empty, having no element to name.")
 
 // Bind the seven uniform predicates of SelfT against one OtherT.
 #define PGL_BIND_PREDICATES(cls, SelfT, OtherT)        \
@@ -675,39 +752,98 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::HalfplaneIntersection); \
     PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::PolygonSet)
 
-// squaredHausdorffDistance / hausdorffDistanceL1 / hausdorffDistanceLInf of
-// SelfT against the six shapes pgl currently implements it for: Point,
-// Segment, OrientedSegment, Rectangle, Triangle, Convex -- all convex, so
-// each one-sided (directed) Hausdorff distance between any two of them is
-// attained at a vertex of the "from" shape. pgl returns the standard
-// *symmetric* Hausdorff distance, max(h(A, B), h(B, A)) where h is the
-// one-sided sup-inf distance -- so a.squaredHausdorffDistance(b) always
-// equals b.squaredHausdorffDistance(a); there is no separate one-sided form
-// bound (compute that yourself from vertices and squaredDistance/
-// distanceL1/distanceLInf if needed). Disk (no closed form: would need a
-// farthest-point-on-a-circle search) and Polygon (may be non-convex; would
-// need a Voronoi-based approach) are excluded -- pgl does not define these
-// methods for them at all. Only call this macro for SelfT in that same
-// six-shape set.
-#define PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, SelfT)                          \
-    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Point);            \
-    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Segment);          \
-    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::OrientedSegment);  \
-    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Rectangle);        \
-    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Triangle);         \
-    PGL_PRED(cls, SelfT, squaredHausdorffDistance, ::pypgl::Convex);           \
-    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Point);                \
-    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Segment);              \
-    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::OrientedSegment);      \
-    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Rectangle);            \
-    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Triangle);             \
-    PGL_PRED(cls, SelfT, hausdorffDistanceL1, ::pypgl::Convex);              \
-    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Point);              \
-    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Segment);            \
-    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::OrientedSegment);    \
-    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Rectangle);          \
-    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Triangle);           \
-    PGL_PRED(cls, SelfT, hausdorffDistanceLInf, ::pypgl::Convex)
+// squaredHausdorffDistance / hausdorffDistanceL1 / hausdorffDistanceLInf.
+//
+// pgl returns the standard *symmetric* Hausdorff distance,
+// max(h(A, B), h(B, A)) where h is the one-sided sup-inf distance -- so
+// a.squaredHausdorffDistance(b) always equals b.squaredHausdorffDistance(a);
+// there is no separate one-sided form bound (compute that yourself from
+// vertices and squaredDistance / distanceL1 / distanceLInf if needed).
+//
+// The three methods do not share one grid, because what each norm can answer
+// exactly differs:
+//
+//   * the Euclidean form is the narrow one. It reads the distance off a vertex
+//     of the source, which is only where the maximum sits when d(., B) is
+//     convex over the source -- so both operands must be convex. That is the
+//     seven bounded convex shapes: Point, Segment, OrientedSegment, Triangle,
+//     Rectangle, Convex and HalfplaneIntersection (which throws when it is
+//     unbounded, having no finite distance to anything then).
+//   * the L1 and LInf forms cover every pair of bounded *polygonal* shapes --
+//     the seven above minus HalfplaneIntersection, plus MonotoneChain,
+//     Polyline, Polygon, PolygonWithHoles and PolygonSet, so eleven squared.
+//     Both norms are polyhedral, which makes the distance to one edge a
+//     maximum of six affine functions and the whole search a one-dimensional
+//     lower envelope; there is no convexity left to need.
+//   * a HalfplaneIntersection joins the L1 and LInf grids only against the six
+//     bounded convex shapes and itself, not against the non-convex ones.
+//
+// So there are three tiers, one per kind of receiver. Disk is in none of them:
+// a farthest point on a circle is not a vertex and has no closed form in any
+// of the three norms.
+
+// One Hausdorff overload, refusing an empty operand -- see
+// requireNonEmptyForHausdorff above for why that check is here and not in pgl.
+#define PGL_HAUS(cls, SelfT, METHOD, OtherT)                                          \
+    cls.def(#METHOD,                                                                  \
+            [](const SelfT &self, const OtherT &other) {                              \
+                ::pypgl::requireNonEmptyForHausdorff(self, other, #METHOD);           \
+                return self.METHOD(other);                                            \
+            },                                                                        \
+            nb::arg("other"))
+
+// The seven bounded convex shapes: the whole squaredHausdorffDistance grid, and
+// what a HalfplaneIntersection receiver takes in L1/LInf as well.
+#define PGL_HAUSDORFF_CONVEX_OPERANDS(cls, SelfT, METHOD)    \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Point);            \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Segment);          \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::OrientedSegment);  \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Triangle);         \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Rectangle);        \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Convex);           \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::HalfplaneIntersection)
+
+// The eleven bounded polygonal shapes: the L1/LInf grid of every receiver but a
+// HalfplaneIntersection.
+#define PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, METHOD)   \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Point);            \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Segment);          \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::OrientedSegment);  \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Triangle);         \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Rectangle);        \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Convex);           \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::MonotoneChain);    \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Polyline);         \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Polygon);          \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::PolygonWithHoles); \
+    PGL_HAUS(cls, SelfT, METHOD, ::pypgl::PolygonSet)
+
+// A bounded convex receiver -- Point, Segment, OrientedSegment, Triangle,
+// Rectangle, Convex. It takes all three methods, the Euclidean one over the
+// seven convex shapes and the other two over the eleven bounded polygonal ones
+// plus a HalfplaneIntersection: twelve, the widest row there is.
+#define PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, SelfT)                              \
+    PGL_HAUSDORFF_CONVEX_OPERANDS(cls, SelfT, squaredHausdorffDistance);         \
+    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceL1);             \
+    PGL_HAUS(cls, SelfT, hausdorffDistanceL1, ::pypgl::HalfplaneIntersection);   \
+    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceLInf);           \
+    PGL_HAUS(cls, SelfT, hausdorffDistanceLInf, ::pypgl::HalfplaneIntersection)
+
+// A HalfplaneIntersection receiver: all three methods, each over the seven
+// bounded convex shapes only. Every one of them throws when this shape is
+// unbounded.
+#define PGL_BIND_HAUSDORFF_CONVEX(cls, SelfT)                             \
+    PGL_HAUSDORFF_CONVEX_OPERANDS(cls, SelfT, squaredHausdorffDistance);  \
+    PGL_HAUSDORFF_CONVEX_OPERANDS(cls, SelfT, hausdorffDistanceL1);       \
+    PGL_HAUSDORFF_CONVEX_OPERANDS(cls, SelfT, hausdorffDistanceLInf)
+
+// A bounded polygonal receiver that is not convex -- MonotoneChain, Polyline,
+// Polygon, PolygonWithHoles, PolygonSet. Only the two polyhedral norms, each
+// over the eleven bounded polygonal shapes: no squaredHausdorffDistance, and no
+// HalfplaneIntersection operand.
+#define PGL_BIND_HAUSDORFF_NONCONVEX(cls, SelfT)                   \
+    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceL1); \
+    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceLInf)
 
 
 // -----------------------------------------------------------------------------
@@ -730,13 +866,16 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
 // Every shape but Disk takes part: pgl implements no clipping against a circle,
 // so a Disk's only intersection is with a Point (both orders), bound by hand.
 //
-// The operand sets differ slightly by receiver, which is why there are four
-// macros rather than one -- see each one's comment for what it leaves out.
+// Every one of the sixteen non-Disk shapes takes all sixteen as operands, in
+// either order, so one macro covers the whole grid. It was four macros until
+// pgl closed the last gaps -- a PolygonSet against the lower-dimensional shapes
+// and a chain against a HalfplaneIntersection -- which is what made the grid
+// square.
 
 #define PGL_ISECT(cls, SelfT, OtherT) PGL_PRED(cls, SelfT, intersection, OtherT)
 
-// The fourteen operands every non-Disk receiver below accepts.
-#define PGL_BIND_INTERSECTION_COMMON(cls, SelfT)            \
+// The sixteen operands every non-Disk receiver accepts, itself included.
+#define PGL_BIND_ALL_INTERSECTION(cls, SelfT)               \
     PGL_ISECT(cls, SelfT, ::pypgl::Point);                  \
     PGL_ISECT(cls, SelfT, ::pypgl::Segment);                \
     PGL_ISECT(cls, SelfT, ::pypgl::OrientedSegment);        \
@@ -749,56 +888,6 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_ISECT(cls, SelfT, ::pypgl::Convex);                 \
     PGL_ISECT(cls, SelfT, ::pypgl::MonotoneChain);          \
     PGL_ISECT(cls, SelfT, ::pypgl::Polyline);               \
-    PGL_ISECT(cls, SelfT, ::pypgl::Polygon);                \
-    PGL_ISECT(cls, SelfT, ::pypgl::PolygonWithHoles)
-
-// The 0D/1D receivers -- Segment, OrientedSegment, Line, OrientedLine, Ray --
-// and the four 2D ones that are convex or simple: everything but a PolygonSet,
-// whose intersection is only defined against the shapes that can hold an
-// arbitrary set of regions back (see PGL_BIND_INTERSECTION_SET).
-#define PGL_BIND_INTERSECTION_LINEAR(cls, SelfT)            \
-    PGL_BIND_INTERSECTION_COMMON(cls, SelfT);               \
-    PGL_ISECT(cls, SelfT, ::pypgl::HalfplaneIntersection)
-
-// The 2D receivers whose intersection with a set of regions is defined:
-// Halfplane, Triangle, Rectangle, Convex, Polygon and PolygonWithHoles.
-#define PGL_BIND_INTERSECTION_AREA(cls, SelfT)              \
-    PGL_BIND_INTERSECTION_LINEAR(cls, SelfT);               \
-    PGL_ISECT(cls, SelfT, ::pypgl::PolygonSet)
-
-// A chain receiver (MonotoneChain, Polyline) takes the common fourteen and no
-// more: pgl clips a chain against no half-plane intersection and against no
-// set of regions.
-#define PGL_BIND_INTERSECTION_CHAIN(cls, SelfT)             \
-    PGL_BIND_INTERSECTION_COMMON(cls, SelfT)
-
-// A HalfplaneIntersection receiver: the common fourteen minus the two chains
-// (the pair pgl does not implement in either direction), plus itself and a set.
-#define PGL_BIND_INTERSECTION_HALFPLANES(cls, SelfT)        \
-    PGL_ISECT(cls, SelfT, ::pypgl::Point);                  \
-    PGL_ISECT(cls, SelfT, ::pypgl::Segment);                \
-    PGL_ISECT(cls, SelfT, ::pypgl::OrientedSegment);        \
-    PGL_ISECT(cls, SelfT, ::pypgl::Line);                   \
-    PGL_ISECT(cls, SelfT, ::pypgl::OrientedLine);           \
-    PGL_ISECT(cls, SelfT, ::pypgl::Ray);                    \
-    PGL_ISECT(cls, SelfT, ::pypgl::Halfplane);              \
-    PGL_ISECT(cls, SelfT, ::pypgl::Triangle);               \
-    PGL_ISECT(cls, SelfT, ::pypgl::Rectangle);              \
-    PGL_ISECT(cls, SelfT, ::pypgl::Convex);                 \
-    PGL_ISECT(cls, SelfT, ::pypgl::Polygon);                \
-    PGL_ISECT(cls, SelfT, ::pypgl::PolygonWithHoles);       \
-    PGL_ISECT(cls, SelfT, ::pypgl::HalfplaneIntersection);  \
-    PGL_ISECT(cls, SelfT, ::pypgl::PolygonSet)
-
-// A PolygonSet receiver: only the shapes with area, since the components a set
-// is made of are regions. A lower-dimensional operand is not refused by
-// omission alone -- write it on the left (`segment.intersection(a_set)` is not
-// defined either), so a caller wanting it clips against the components.
-#define PGL_BIND_INTERSECTION_SET(cls, SelfT)               \
-    PGL_ISECT(cls, SelfT, ::pypgl::Halfplane);              \
-    PGL_ISECT(cls, SelfT, ::pypgl::Triangle);               \
-    PGL_ISECT(cls, SelfT, ::pypgl::Rectangle);              \
-    PGL_ISECT(cls, SelfT, ::pypgl::Convex);                 \
     PGL_ISECT(cls, SelfT, ::pypgl::Polygon);                \
     PGL_ISECT(cls, SelfT, ::pypgl::PolygonWithHoles);       \
     PGL_ISECT(cls, SelfT, ::pypgl::HalfplaneIntersection);  \
@@ -959,8 +1048,8 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_MINK(cls, SelfT, ::pypgl::HalfplaneIntersection);  \
     PGL_MINK(cls, SelfT, ::pypgl::PolygonSet)
 
-// An unbounded convex receiver -- Line, OrientedLine, Ray,
-// HalfplaneIntersection. Every sum is again an intersection of half-planes, so
+// An unbounded convex receiver -- Ray, HalfplaneIntersection, and the base of
+// the Line pair below. Every sum is again an intersection of half-planes, so
 // only convex operands are accepted: a non-convex one would need an unbounded
 // region, which no pgl shape represents.
 #define PGL_BIND_MINKOWSKI_UNBOUNDED(cls, SelfT)           \
@@ -975,6 +1064,21 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_MINK(cls, SelfT, ::pypgl::Rectangle);              \
     PGL_MINK(cls, SelfT, ::pypgl::Convex);                 \
     PGL_MINK(cls, SelfT, ::pypgl::HalfplaneIntersection)
+
+// A Line or an OrientedLine: the unbounded convex operands above, plus the four
+// connected non-convex ones. A line is the second unbounded shape whose sum
+// forgets its operand's concavity -- it keeps one support point on each side
+// and sweeps the operand into the strip between the parallels through them, the
+// same answer its convex hull would give. That needs the operand connected
+// across the line, which a chain, a ring and a region's outer ring all are and
+// a PolygonSet is not: its components can sit apart across the line, and the
+// sum is then several strips, which no pgl shape holds.
+#define PGL_BIND_MINKOWSKI_LINE(cls, SelfT)                \
+    PGL_BIND_MINKOWSKI_UNBOUNDED(cls, SelfT);              \
+    PGL_MINK(cls, SelfT, ::pypgl::MonotoneChain);          \
+    PGL_MINK(cls, SelfT, ::pypgl::Polyline);               \
+    PGL_MINK(cls, SelfT, ::pypgl::Polygon);                \
+    PGL_MINK(cls, SelfT, ::pypgl::PolygonWithHoles)
 
 // A bounded receiver that is not convex, or not a single region: MonotoneChain,
 // Polyline, Polygon, PolygonWithHoles, PolygonSet. It sums with every bounded
@@ -993,6 +1097,15 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_MINK(cls, SelfT, ::pypgl::Polygon);                \
     PGL_MINK(cls, SelfT, ::pypgl::PolygonWithHoles);       \
     PGL_MINK(cls, SelfT, ::pypgl::PolygonSet)
+
+// The four of those five that are connected -- MonotoneChain, Polyline, Polygon
+// and PolygonWithHoles -- which additionally sum with a Line or an OrientedLine
+// into the strip PGL_BIND_MINKOWSKI_LINE describes. PolygonSet keeps the plain
+// region macro above.
+#define PGL_BIND_MINKOWSKI_CONNECTED_REGION(cls, SelfT)    \
+    PGL_BIND_MINKOWSKI_REGION(cls, SelfT);                 \
+    PGL_MINK(cls, SelfT, ::pypgl::Line);                   \
+    PGL_MINK(cls, SelfT, ::pypgl::OrientedLine)
 
 // The named `minkowskiSum` for a receiver whose only *macro-bound* pair is the
 // translation by a Point: the Disk, whose two other sums (with a Disk and with
@@ -1069,8 +1182,8 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_EROSION(cls, SelfT, ::pypgl::HalfplaneIntersection);   \
     PGL_EROSION(cls, SelfT, ::pypgl::PolygonSet)
 
-// An unbounded convex receiver -- Line, OrientedLine, Ray,
-// HalfplaneIntersection -- which takes only convex operands, exactly as
+// An unbounded convex receiver -- Ray, HalfplaneIntersection, and the base of
+// the Line pair below -- which takes only convex operands, exactly as
 // PGL_BIND_MINKOWSKI_UNBOUNDED does.
 #define PGL_BIND_EROSION_UNBOUNDED(cls, SelfT)                 \
     PGL_EROSION(cls, SelfT, ::pypgl::Point);                   \
@@ -1084,6 +1197,16 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_EROSION(cls, SelfT, ::pypgl::Rectangle);               \
     PGL_EROSION(cls, SelfT, ::pypgl::Convex);                  \
     PGL_EROSION(cls, SelfT, ::pypgl::HalfplaneIntersection)
+
+// A Line or an OrientedLine, mirroring PGL_BIND_MINKOWSKI_LINE operand for
+// operand, as the erosion mirrors the sum everywhere: the four connected
+// non-convex shapes join the convex ones.
+#define PGL_BIND_EROSION_LINE(cls, SelfT)                      \
+    PGL_BIND_EROSION_UNBOUNDED(cls, SelfT);                    \
+    PGL_EROSION(cls, SelfT, ::pypgl::MonotoneChain);           \
+    PGL_EROSION(cls, SelfT, ::pypgl::Polyline);                \
+    PGL_EROSION(cls, SelfT, ::pypgl::Polygon);                 \
+    PGL_EROSION(cls, SelfT, ::pypgl::PolygonWithHoles)
 
 // A bounded receiver that is not convex, or not a single region: MonotoneChain,
 // Polyline, Polygon, PolygonWithHoles, PolygonSet. Same operands as
@@ -1102,6 +1225,13 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
     PGL_EROSION(cls, SelfT, ::pypgl::Polygon);                 \
     PGL_EROSION(cls, SelfT, ::pypgl::PolygonWithHoles);        \
     PGL_EROSION(cls, SelfT, ::pypgl::PolygonSet)
+
+// The four connected ones of those five, which additionally erode by a Line or
+// an OrientedLine, mirroring PGL_BIND_MINKOWSKI_CONNECTED_REGION.
+#define PGL_BIND_EROSION_CONNECTED_REGION(cls, SelfT)          \
+    PGL_BIND_EROSION_REGION(cls, SelfT);                       \
+    PGL_EROSION(cls, SelfT, ::pypgl::Line);                    \
+    PGL_EROSION(cls, SelfT, ::pypgl::OrientedLine)
 
 // The Disk's one macro-bound erosion, its translation by a Point. Its other two
 // (by a Disk and by a Halfplane) need an explicit result type and are bound by

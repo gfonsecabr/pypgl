@@ -46,14 +46,16 @@ using namespace pypgl;
 // Both join the shared PGL_BIND_ALL_PREDICATES / PGL_BIND_ALL_SQUARED_DISTANCE
 // / PGL_BIND_ALL_L1LINF_DISTANCE macros in src/common.h as full columns, so
 // every other shape picked up a MonotoneChain and a Polyline column for free.
-// Neither has the Hausdorff family: pgl defines it only for the six convex
-// shapes (see PGL_BIND_ALL_HAUSDORFF_DISTANCE), and a chain is not convex.
+// Both take the two polyhedral Hausdorff distances against every bounded
+// polygonal shape, and neither takes the Euclidean one: that is read off a
+// vertex of the source, which is only where the maximum sits when both operands
+// are convex, and a chain is not (see the three tiers in common.h).
 //
-// intersection() is bound against the fourteen shapes pgl implements it for --
-// every shape except a Disk (no exact closed form against a circle), a
-// HalfplaneIntersection and a PolygonSet. The result is always a *list* of
-// Point/Segment pieces: a chain can meet even a line in arbitrarily many
-// disjoint places, so there is no single-piece optional form like Convex's.
+// intersection() is bound against the sixteen shapes pgl implements it for --
+// every shape except a Disk (no exact closed form against a circle). The result
+// is always a *list* of Point/Segment pieces: a chain can meet even a line in
+// arbitrarily many disjoint places, so there is no single-piece optional form
+// like Convex's.
 
 namespace {
 
@@ -114,10 +116,11 @@ namespace {
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, SelfT);                                                                        \
     PGL_BIND_ALL_CLOSEST(cls, SelfT);                                                                                 \
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, SelfT);                                                                         \
+    PGL_BIND_HAUSDORFF_NONCONVEX(cls, SelfT);                                                                         \
     PGL_BIND_ALL_SAME_POINT_SET(cls, SelfT);                                                                          \
-    PGL_BIND_INTERSECTION_CHAIN(cls, SelfT);                                                                          \
-    PGL_BIND_MINKOWSKI_REGION(cls, SelfT);                                                                            \
-    PGL_BIND_EROSION_REGION(cls, SelfT);                                                                              \
+    PGL_BIND_ALL_INTERSECTION(cls, SelfT);                                                                            \
+    PGL_BIND_MINKOWSKI_CONNECTED_REGION(cls, SelfT);                                                                  \
+    PGL_BIND_EROSION_CONNECTED_REGION(cls, SelfT);                                                                    \
     PGL_BIND_CONVEX_HULL(cls, SelfT)
 
 }  // namespace
@@ -173,7 +176,11 @@ void bind_chains(nb::module_ &m) {
         cls.def("erase", [](MonotoneChain &c, const Point &p) { return c.erase(p); },
                 nb::arg("point"),
                 "Remove the vertex equal to point, returning whether there was one.");
-        cls.def("erase", [](MonotoneChain &c, std::size_t i) { c.erase(i); }, nb::arg("index"),
+        cls.def("erase",
+                [](MonotoneChain &c, std::ptrdiff_t i) {
+                    c.erase(::pypgl::cyclicIndex(i, c.size(), "MonotoneChain"));
+                },
+                nb::arg("index"),
                 "Remove the i-th vertex in lexicographic order; i must be less than size().");
 
         // A perturbation-robust crossing test, unique to this shape: true when
@@ -184,7 +191,7 @@ void bind_chains(nb::module_ &m) {
         // outright -- a shared x that is only one chain's own extreme vertex is
         // not robust.
         // A MonotoneChain now sums with every bounded shape (the shared
-        // PGL_BIND_MINKOWSKI_REGION above): with a non-degenerate bounded
+        // PGL_BIND_MINKOWSKI_CONNECTED_REGION above): with a non-degenerate bounded
         // convex operand the answer is a single Polygon, since dragging a
         // convex body along an x-monotone chain cannot close over a hole.
 
@@ -323,17 +330,34 @@ void bind_chains(nb::module_ &m) {
         // be edited in place. A MonotoneChain has no counterpart to these: it
         // keeps its vertices sorted, so it has no positional insert and its
         // erase is by value or by sorted position.
-        cls.def("set", [](Polyline &p, std::size_t i, const Point &v) { p.set(i, v); },
-                nb::arg("index"), nb::arg("point"), "Replace the i-th vertex.");
-        cls.def("insert", [](Polyline &p, std::size_t i, const Point &v) { p.insert(i, v); },
+        cls.def("set",
+                [](Polyline &p, std::ptrdiff_t i, const Point &v) {
+                    p.set(::pypgl::cyclicIndex(i, p.size(), "Polyline"), v);
+                },
                 nb::arg("index"), nb::arg("point"),
-                "Insert a vertex at position i (in [0, size()]), shifting the rest along.");
+                "Replace the i-th vertex. Cyclic, like get(): the index is taken modulo "
+                "size(), so a negative one counts from the end and an out-of-range one "
+                "wraps; IndexError only when the polyline is empty.");
+        // insert names a position *between* vertices, so its range is the
+        // size() + 1 gaps rather than the size() vertices, and the last of them
+        // is the append. Reducing it cyclically would fold that onto the first
+        // and leave no way to say "append", so this clamps the way Python's own
+        // list.insert does instead.
         cls.def("insert",
-                [](Polyline &p, std::size_t i, const std::vector<Point> &points) {
-                    p.insert(i, points);
+                [](Polyline &p, std::ptrdiff_t i, const Point &v) {
+                    p.insert(::pypgl::insertPosition(i, p.size()), v);
+                },
+                nb::arg("index"), nb::arg("point"),
+                "Insert a vertex at position i, shifting the rest along. As for Python's "
+                "list.insert, a negative i counts from the end and anything past either "
+                "end clamps, so i == size() appends and no index is out of range.");
+        cls.def("insert",
+                [](Polyline &p, std::ptrdiff_t i, const std::vector<Point> &points) {
+                    p.insert(::pypgl::insertPosition(i, p.size()), points);
                 },
                 nb::arg("index"), nb::arg("points"),
-                "Insert several vertices at position i, in traversal order.");
+                "Insert several vertices at position i, in traversal order. Clamped like "
+                "the single-vertex overload.");
         cls.def("pushBack", [](Polyline &p, const Point &v) { p.pushBack(v); }, nb::arg("point"),
                 "Append a vertex, extending the polyline by one edge.");
         cls.def("pushBack",

@@ -141,3 +141,102 @@ def test_a_convex_shape_intersects_a_degenerate_segment_it_contains():
     assert square.intersection(on_edge) == Point(0, 5)
     outside = pypgl.Segment(Point(50, 5), Point(50, 5))
     assert square.intersection(outside) is None
+
+
+# --- The grid is square now -------------------------------------------------
+#
+# Every one of the sixteen non-Disk shapes intersects all sixteen, in either
+# order. Two gaps closed upstream to make that true: a PolygonSet against the
+# lower-dimensional shapes, and a chain against a HalfplaneIntersection.
+
+
+ALL_SHAPES = [
+    "Point", "Segment", "OrientedSegment", "Line", "OrientedLine", "Ray", "Halfplane",
+    "Triangle", "Rectangle", "Convex", "MonotoneChain", "Polyline", "Polygon",
+    "PolygonWithHoles", "HalfplaneIntersection", "PolygonSet",
+]
+
+
+def _one_of_each():
+    square = pypgl.Polygon([0, 0, 10, 0, 10, 10, 0, 10])
+    return {
+        "Point": Point(5, 5),
+        "Segment": Segment(Point(-5, 5), Point(15, 5)),
+        "OrientedSegment": pypgl.OrientedSegment(Point(-5, 4), Point(15, 4)),
+        "Line": pypgl.Line(Point(0, 6), Point(1, 6)),
+        "OrientedLine": pypgl.OrientedLine(Point(0, 7), Point(1, 7)),
+        "Ray": pypgl.Ray(Point(-5, 3), Point(0, 3)),
+        "Halfplane": pypgl.Halfplane(Point(0, 0), Point(1, 0)),
+        "Triangle": pypgl.Triangle(Point(1, 1), Point(9, 1), Point(1, 9)),
+        "Rectangle": pypgl.Rectangle(Point(2, 2), Point(8, 8)),
+        "Convex": pypgl.Convex([Point(1, 1), Point(9, 1), Point(9, 9), Point(1, 9)]),
+        "MonotoneChain": pypgl.MonotoneChain([Point(-5, 2), Point(5, 8), Point(15, 2)]),
+        "Polyline": pypgl.Polyline([Point(-5, 8), Point(5, 2), Point(15, 8)]),
+        "Polygon": square,
+        "PolygonWithHoles": square.asPolygonWithHoles(),
+        "HalfplaneIntersection": pypgl.Rectangle(
+            Point(1, 1), Point(9, 9)
+        ).asHalfplaneIntersection(),
+        "PolygonSet": square.asPolygonSet(),
+    }
+
+
+@pytest.mark.parametrize("left", ALL_SHAPES)
+def test_every_non_disk_pair_intersects_in_both_orders(left):
+    shapes = _one_of_each()
+    a = shapes[left]
+    for right in ALL_SHAPES:
+        b = shapes[right]
+        # Neither direction may raise; what comes back is a shape, a list of
+        # them, or None when the pair is disjoint.
+        a.intersection(b)
+        b.intersection(a)
+
+
+def test_a_polygon_set_now_meets_the_lower_dimensional_shapes():
+    square = pypgl.Polygon([0, 0, 10, 0, 10, 10, 0, 10]).asPolygonSet()
+    crossing = Segment(Point(-5, 5), Point(15, 5))
+    assert square.intersection(crossing) == [Segment(Point(0, 5), Point(10, 5))]
+    assert crossing.intersection(square) == square.intersection(crossing)
+    # A Point operand is the one pair whose answer is a single optional piece.
+    assert square.intersection(Point(5, 5)) == Point(5, 5)
+    assert Point(5, 5).intersection(square) == Point(5, 5)
+    assert square.intersection(Point(50, 5)) is None
+    for unbounded in (
+        pypgl.Line(Point(0, 5), Point(1, 5)),
+        pypgl.OrientedLine(Point(0, 5), Point(1, 5)),
+        pypgl.Ray(Point(-5, 5), Point(0, 5)),
+    ):
+        assert square.intersection(unbounded) == [Segment(Point(0, 5), Point(10, 5))]
+
+
+def test_a_polygon_set_reports_a_piece_per_component():
+    apart = pypgl.PolygonSet(
+        [
+            pypgl.Polygon([0, 0, 2, 0, 2, 2, 0, 2]).asPolygonWithHoles(),
+            pypgl.Polygon([5, 0, 7, 0, 7, 2, 5, 2]).asPolygonWithHoles(),
+        ]
+    )
+    across = pypgl.Line(Point(0, 1), Point(1, 1))
+    pieces = apart.intersection(across)
+    assert sorted(repr(p) for p in pieces) == sorted(
+        repr(p)
+        for p in [Segment(Point(0, 1), Point(2, 1)), Segment(Point(5, 1), Point(7, 1))]
+    )
+
+
+def test_a_chain_now_meets_a_halfplane_intersection():
+    strip = pypgl.Rectangle(Point(0, 0), Point(10, 10)).asHalfplaneIntersection()
+    for chain in (
+        pypgl.MonotoneChain([Point(-5, 5), Point(15, 5)]),
+        pypgl.Polyline([Point(-5, 5), Point(15, 5)]),
+    ):
+        clipped = chain.intersection(strip)
+        assert clipped == [Segment(Point(0, 5), Point(10, 5))]
+        assert strip.intersection(chain) == clipped
+    # An unbounded region clips a chain just as well -- the chain is bounded, so
+    # the answer is.
+    half = pypgl.HalfplaneIntersection([pypgl.Halfplane(Point(0, 0), Point(1, 0))])
+    zigzag = pypgl.Polyline([Point(0, -2), Point(2, 2), Point(4, -2)])
+    pieces = zigzag.intersection(half)
+    assert pieces and all(isinstance(p, (Point, Segment)) for p in pieces)

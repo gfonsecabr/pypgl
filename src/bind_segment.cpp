@@ -57,7 +57,7 @@ void bind_segment(nb::module_ &m) {
     // Against a 0D/1D shape the result is connected (None, a Point or a
     // Segment); against a chain or a non-convex region it can come apart, and
     // is then a list of those same pieces.
-    PGL_BIND_INTERSECTION_LINEAR(cls, Segment);
+    PGL_BIND_ALL_INTERSECTION(cls, Segment);
 }
 
 void bind_oriented_segment(nb::module_ &m) {
@@ -117,5 +117,5 @@ void bind_oriented_segment(nb::module_ &m) {
 
     // An intersection is a point set, so an orientation plays no part in it:
     // these give exactly what the same unoriented segment would.
-    PGL_BIND_INTERSECTION_LINEAR(cls, OrientedSegment);
+    PGL_BIND_ALL_INTERSECTION(cls, OrientedSegment);
 }

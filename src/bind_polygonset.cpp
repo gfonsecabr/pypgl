@@ -48,6 +48,11 @@ void bind_polygonset(nb::module_ &m) {
     nb::class_<PolygonSet> cls(m, "PolygonSet");
 
     // --- construction ---
+    // The copy constructor comes first, as for PolygonWithHoles: a set is
+    // iterable over its vertices in the Python layer, so a converting overload
+    // could otherwise swallow one.
+    cls.def(nb::init<const PolygonSet &>(), nb::arg("other"),
+            "Create an independent copy of a set.");
     cls.def(nb::init<>(), "Create the empty set: no components, covering no point.");
     cls.def(nb::init<PolygonWithHoles>(), nb::arg("component"),
             "Create a set with a single region as its only component.");
@@ -64,15 +69,24 @@ void bind_polygonset(nb::module_ &m) {
     // --- components ---
     cls.def("componentCount", [](const PolygonSet &a) { return a.componentCount(); },
             "Number of components.");
-    cls.def("component", [](const PolygonSet &a, std::size_t i) { return a.component(i); },
-            nb::arg("index"), "The i-th component, in canonical order.");
+    cls.def("component",
+            [](const PolygonSet &a, std::ptrdiff_t i) {
+                return a.component(::pypgl::cyclicIndex(i, a.componentCount(), "component list"));
+            },
+            nb::arg("index"),
+            "The i-th component, in canonical order. Cyclic: the index is taken modulo "
+            "componentCount(), so a negative one counts from the end and an out-of-range "
+            "one wraps; IndexError only when the set is empty.");
     cls.def("components", [](const PolygonSet &a) { return a.components(); },
             "The components, in canonical order.");
     cls.def("addComponent", [](PolygonSet &a, const PolygonWithHoles &c) { a.addComponent(c); },
             nb::arg("component"),
             "Add a component in place, keeping the canonical order. A zero-area region "
             "covers nothing and is ignored, and a duplicate is not added twice.");
-    cls.def("eraseComponent", [](PolygonSet &a, std::size_t i) { a.eraseComponent(i); },
+    cls.def("eraseComponent",
+            [](PolygonSet &a, std::ptrdiff_t i) {
+                a.eraseComponent(::pypgl::cyclicIndex(i, a.componentCount(), "component list"));
+            },
             nb::arg("index"), "Remove component i, by its index in the canonical order.");
     cls.def("eraseComponent", [](PolygonSet &a, const PolygonWithHoles &c) { return a.eraseComponent(c); },
             nb::arg("component"),
@@ -185,7 +199,7 @@ void bind_polygonset(nb::module_ &m) {
                             "on an edge is a point of the shape. A point shared by two components, which can only "
                             "be a boundary point of both, is reported once.");
     PGL_BIND_AS_BIT_MATRIX(cls, PolygonSet);
-    PGL_BIND_INTERSECTION_SET(cls, PolygonSet);
+    PGL_BIND_ALL_INTERSECTION(cls, PolygonSet);
 
     // --- the shared matrices ---
     PGL_BIND_ALL_PREDICATES(cls, PolygonSet);
@@ -193,6 +207,10 @@ void bind_polygonset(nb::module_ &m) {
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, PolygonSet);
     PGL_BIND_ALL_CLOSEST(cls, PolygonSet);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, PolygonSet);
+    // The two polyhedral Hausdorff distances only, as for every bounded
+    // polygonal shape that is not convex. A set is measured as the union of
+    // its components, not component by component.
+    PGL_BIND_HAUSDORFF_NONCONVEX(cls, PolygonSet);
     PGL_BIND_ALL_SAME_POINT_SET(cls, PolygonSet);
     // No Hausdorff family: pgl defines it only for the six bounded convex
     // shapes, and a set of regions is neither convex nor even connected.

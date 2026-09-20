@@ -17,6 +17,8 @@ void bind_bitmatrix(nb::module_ &m);
 void bind_canvas(nb::module_ &m);
 void bind_transformation(nb::module_ &m);
 void bind_algorithms(nb::module_ &m);
+void bind_emptypolygons(nb::module_ &m);
+void bind_frozen(nb::module_ &m);
 void bind_graph(nb::module_ &m);
 void bind_intervaltree(nb::module_ &m);
 void bind_arrangement(nb::module_ &m);
@@ -51,4 +53,6 @@ NB_MODULE(_pgl, m) {
     bind_voronoi(m);
     bind_power_diagram(m);
     bind_algorithms(m);
+    bind_emptypolygons(m);
+    bind_frozen(m);
 }

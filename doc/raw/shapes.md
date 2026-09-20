@@ -10,10 +10,6 @@
 [![License](https://img.shields.io/badge/license-MIT-rgb(216,134,42).svg)](https://opensource.org/licenses/MIT)
 <!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
-
-> ℹ️ **Pre-release**: pypgl is extensively tested, but the pgl API it mirrors has not had a stable release yet and may still change.
-
-
 ## Shapes
 
 The following shapes are supported by Pangolin:
@@ -571,8 +567,10 @@ A `Polygon` also carries the [boolean operations](shape_methods.md#boolean-opera
 - `P.convexCovering()`: Covers the polygon with `Convex` pieces, which may overlap. Irredundant but not necessarily minimum.
 - `P.visibilityGraph()`, `P.clearVisibilityGraph()`, `P.reducedVisibilityGraph()`, `P.visibleVertices(q)`, `P.clearlyVisibleVertices(q)`, `P.regularizedVisiblePolygon(q)`: [Visibility](algorithms.md#visibility) inside the polygon.
 
-`P` is not convex in general, so it has neither a Hausdorff distance nor
-`verticesContain` (use `P.index(point) is not None` for the latter).
+`P` is not convex in general, so it has no `squaredHausdorffDistance` — that one
+is read off a vertex — and no `verticesContain` (use `P.index(point) is not None`
+for the latter). It does have `hausdorffDistanceL1` and `hausdorffDistanceLInf`,
+which need no convexity.
 
 - Other methods:
 
@@ -649,7 +647,7 @@ validity is a documented precondition rather than an enforced invariant.
 A region `A` has methods such as:
 
 - `A.outer()`: Returns the outer boundary polygon.
-- `A.holeCount()` / `A.hasHoles()` / `A.hole(i)` / `A.holes()`: The holes, in canonical (sorted) order.
+- `A.holeCount()` / `A.hasHoles()` / `A.hole(i)` / `A.holes()`: The holes, in canonical (sorted) order. `hole(i)` is [cyclic](shape_methods.md#indexed-access) like every index here.
 - `A.addHole(h)`: Adds a hole in place, keeping the canonical order. A zero-area ring removes nothing and is ignored.
 - `A.eraseHole(i)` / `A.eraseHole(h)`: Fills a hole back in, by index or by the polygon itself; the second returns whether it found one.
 - `A.vertexCount()`: The total number of vertices over all rings.
@@ -717,7 +715,7 @@ edge — is a documented precondition rather than an enforced invariant, and
 
 A set `A` has methods such as:
 
-- `A.componentCount()` / `A.component(i)` / `A.components()`: The components, in canonical order.
+- `A.componentCount()` / `A.component(i)` / `A.components()`: The components, in canonical order. `component(i)` is [cyclic](shape_methods.md#indexed-access) like every index here.
 - `A.addComponent(r)` / `A.eraseComponent(i)` / `A.eraseComponent(r)`: Add or remove a component in place; the last returns whether it found one.
 - `A.empty()`: Returns true if the set has no components at all.
 - `A.isConnected()`: Returns true if the set is connected as a point set. Two components that never touch are two pieces; the empty set is connected by convention, having nothing to come apart.
@@ -781,7 +779,7 @@ A half-plane intersection `k` has methods such as:
 - `k.isRay()` / `k.getIfRay()`: Whether the region is a ray, and that ray.
 - `k.isPoint()` / `k.getIfPoint()` and `k.isSegment()` / `k.getIfSegment()`: The remaining degenerate cases. The tests are exact whatever the region's own coordinate type, so a point whose coordinates are not integral is still recognized.
 - Together with `empty` and `isPlane` these name every region a half-plane intersection can be, except a full-dimensional one other than a half-plane.
-- `k.vertexCount()`, `k.vertex(i)`, `k.vertices()`: The implicit corners, counterclockwise for a bounded region, and exact.
+- `k.vertexCount()`, `k.vertex(i)`, `k.vertices()`: The implicit corners, counterclockwise for a bounded region, and exact. `vertex(i)` is [cyclic](shape_methods.md#indexed-access) like every index here.
 - `k.edge(i)`: The boundary contribution of half-plane `i`: a [`Segment`](#segment) when both neighbouring vertices exist, a [`Ray`](#ray) when only one does, and the whole boundary [`Line`](#line) otherwise.
 - `k.halfplanes()`: The stored half-planes, in boundary order.
 - `k.bbox()`, `k.asConvex()`, `k.area()`, `k.twiceArea()`, `k.centroid()`: Raise when the region is empty or unbounded — none of them exists then.

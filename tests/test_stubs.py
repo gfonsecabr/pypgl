@@ -8,6 +8,7 @@ checks the artifacts are installed, syntactically valid, and that the re-added
 sugar landed on the shapes (and not on ``Canvas``)."""
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -72,7 +73,34 @@ def test_stub_has_no_leaked_runtime_patches():
     # an invalid `from pypgl import <lambda>` (the quirk the pattern file avoids).
     text = _STUB.read_text()
     assert "<lambda>" not in text
-    assert "from pypgl" not in text
+    # The one legitimate import from the package is the Frozen* classes, which
+    # the pattern file asks for by name because frozen() returns them and they
+    # live in the Python layer rather than in the extension. Anything else
+    # imported from pypgl here is a leak.
+    imported = set()
+    for match in re.finditer(r"from pypgl import \(([^)]*)\)|from pypgl import ([\w, ]+)", text):
+        names = match.group(1) or match.group(2)
+        imported |= {n.strip() for n in names.replace("\n", " ").split(",") if n.strip()}
+    assert imported == {
+        "FrozenConvex", "FrozenMonotoneChain", "FrozenPolyline", "FrozenPolygon",
+        "FrozenPolygonWithHoles", "FrozenPolygonSet", "FrozenHalfplaneIntersection",
+    }, f"unexpected imports from pypgl in the stub: {imported}"
+
+
+def test_stub_declares_frozen_on_every_mutable_shape():
+    # frozen() is added in the Python layer, so it reaches the stub only through
+    # src/stubgen_patterns.txt -- and its return type is what tells a type
+    # checker the result is hashable, which is the whole point of the method.
+    classes = _classes(ast.parse(_STUB.read_text()))
+    for name in (
+        "Convex", "MonotoneChain", "Polyline", "Polygon", "PolygonWithHoles",
+        "PolygonSet", "HalfplaneIntersection",
+    ):
+        methods = {
+            n.name: n for n in classes[name].body if isinstance(n, ast.FunctionDef)
+        }
+        assert "frozen" in methods, f"{name}.frozen missing from stub"
+        assert ast.unparse(methods["frozen"].returns) == "Frozen" + name
 
 
 @pytest.mark.parametrize("shape", [

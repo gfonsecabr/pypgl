@@ -29,11 +29,12 @@ if(NOT PGL_INCLUDE_DIR)
     include(FetchContent)
     # Pinned to the exact commit the in-tree .pgl-ref/ dev checkout is at, so CI
     # wheel builds (which don't ship the gitignored .pgl-ref/) are reproducible
-    # and match local development. Bump in lockstep with .pgl-ref. Switch to a
-    # release tag once pgl publishes them.
+    # and match local development. Bump in lockstep with .pgl-ref. pgl now tags
+    # releases (this commit is v1.0.0), but the exact SHA is what .pgl-ref is
+    # checked out at, and a tag can be moved where a SHA cannot.
     FetchContent_Declare(pgl
       GIT_REPOSITORY https://github.com/gfonsecabr/pgl
-      GIT_TAG        c78a32a36bd13759d0f6727fa55b02c9156c7879)
+      GIT_TAG        74004e53456d3932a8a99dfdbf637dded1a1cc3d)
     FetchContent_MakeAvailable(pgl)
     set(PGL_INCLUDE_DIR "${pgl_SOURCE_DIR}/include")
   endif()
@@ -59,6 +60,8 @@ nanobind_add_module(_pgl
   src/bind_canvas.cpp
   src/bind_transformation.cpp
   src/bind_algorithms.cpp
+  src/bind_emptypolygons.cpp
+  src/bind_frozen.cpp
   src/bind_graph.cpp
   src/bind_intervaltree.cpp
   src/bind_arrangement.cpp

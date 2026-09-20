@@ -70,7 +70,7 @@ void bind_point(nb::module_ &m) {
     // result is always std::optional<Point> — safe to bind against every shape.
     // The Disk is bound here and nowhere else: a point is the only shape pgl
     // clips against a circle.
-    PGL_BIND_INTERSECTION_LINEAR(cls, Point);
+    PGL_BIND_ALL_INTERSECTION(cls, Point);
     cls.def("intersection", [](const Point &a, const Disk &b) { return a.intersection(b); }, nb::arg("other"));
 
     cls.def("distance", [](const Point &a, const Point &b) { return a.distance(b); },

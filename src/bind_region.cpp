@@ -35,6 +35,12 @@ void bind_region(nb::module_ &m) {
     nb::class_<PolygonWithHoles> cls(m, "PolygonWithHoles");
 
     // --- construction ---
+    // The copy constructor comes first on purpose: the Python layer makes a
+    // region iterable over its vertices, so the Polygon overload below would
+    // otherwise convert one into the ring of its own points and quietly drop
+    // the holes (the milestone 6 Triangulation pitfall).
+    cls.def(nb::init<const PolygonWithHoles &>(), nb::arg("region"),
+            "Create an independent copy of a region.");
     cls.def(nb::init<>(),
             "Create the empty region: no outer boundary at all, and hence no holes.");
     cls.def(nb::init<Polygon>(), nb::arg("outer"),
@@ -59,15 +65,24 @@ void bind_region(nb::module_ &m) {
             "Number of holes.");
     cls.def("hasHoles", [](const PolygonWithHoles &a) { return a.hasHoles(); },
             "Whether the region has at least one hole.");
-    cls.def("hole", [](const PolygonWithHoles &a, std::size_t i) { return a.hole(i); },
-            nb::arg("index"), "The i-th hole, in canonical order.");
+    cls.def("hole",
+            [](const PolygonWithHoles &a, std::ptrdiff_t i) {
+                return a.hole(::pypgl::cyclicIndex(i, a.holeCount(), "hole list"));
+            },
+            nb::arg("index"),
+            "The i-th hole, in canonical order. Cyclic: the index is taken modulo "
+            "holeCount(), so a negative one counts from the end and an out-of-range one "
+            "wraps; IndexError only when there are no holes.");
     cls.def("holes", [](const PolygonWithHoles &a) { return a.holes(); },
             "The holes, in canonical order.");
     cls.def("addHole", [](PolygonWithHoles &a, const Polygon &h) { a.addHole(h); },
             nb::arg("hole"),
             "Add a hole in place, keeping the canonical order. A zero-area ring removes "
             "nothing and is ignored.");
-    cls.def("eraseHole", [](PolygonWithHoles &a, std::size_t i) { a.eraseHole(i); },
+    cls.def("eraseHole",
+            [](PolygonWithHoles &a, std::ptrdiff_t i) {
+                a.eraseHole(::pypgl::cyclicIndex(i, a.holeCount(), "hole list"));
+            },
             nb::arg("index"), "Fill hole i back in, by its index in the canonical order.");
     cls.def("eraseHole", [](PolygonWithHoles &a, const Polygon &h) { return a.eraseHole(h); },
             nb::arg("hole"),
@@ -221,8 +236,8 @@ void bind_region(nb::module_ &m) {
     // gets all four operations, not three.
     PGL_BIND_BOOLEANS(cls, PolygonWithHoles);
     PGL_BIND_REGULARIZED_INTERSECTION(cls, PolygonWithHoles);
-    PGL_BIND_MINKOWSKI_REGION(cls, PolygonWithHoles);
-    PGL_BIND_EROSION_REGION(cls, PolygonWithHoles);
+    PGL_BIND_MINKOWSKI_CONNECTED_REGION(cls, PolygonWithHoles);
+    PGL_BIND_EROSION_CONNECTED_REGION(cls, PolygonWithHoles);
     PGL_BIND_CONVEX_HULL(cls, PolygonWithHoles);
     PGL_BIND_LATTICE_POINTS(cls, PolygonWithHoles,
                             "The integer points the region contains, in increasing order, boundary included: a "
@@ -236,7 +251,7 @@ void bind_region(nb::module_ &m) {
     // The literal intersection, which keeps every piece whatever its
     // dimension: a list of Point / Polyline / PolygonWithHoles against a shape
     // with area, of Point / Segment against a lower-dimensional one.
-    PGL_BIND_INTERSECTION_AREA(cls, PolygonWithHoles);
+    PGL_BIND_ALL_INTERSECTION(cls, PolygonWithHoles);
 
     // --- the shared matrices ---
     PGL_BIND_ALL_PREDICATES(cls, PolygonWithHoles);
@@ -244,6 +259,9 @@ void bind_region(nb::module_ &m) {
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, PolygonWithHoles);
     PGL_BIND_ALL_CLOSEST(cls, PolygonWithHoles);
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, PolygonWithHoles);
+    // The two polyhedral Hausdorff distances only, as for every bounded
+    // polygonal shape that is not convex.
+    PGL_BIND_HAUSDORFF_NONCONVEX(cls, PolygonWithHoles);
     PGL_BIND_ALL_SAME_POINT_SET(cls, PolygonWithHoles);
     // No Hausdorff family: pgl defines it only for the six bounded convex
     // shapes, and a region is neither convex nor (with holes) simply connected.
@@ -267,7 +285,7 @@ void bind_region(nb::module_ &m) {
 
     // In-place translation/scaling, as on the other mutable shapes. The
     // value-returning `+` by a Point is just below: it is the Point special case
-    // of the Minkowski sum, whose named method PGL_BIND_MINKOWSKI_REGION binds.
+    // of the Minkowski sum, whose named method PGL_BIND_MINKOWSKI_CONNECTED_REGION binds.
     cls.def("__iadd__", [](PolygonWithHoles &a, const Point &p) { a += p; return &a; },
             nb::rv_policy::none, nb::is_operator());
     cls.def("__isub__", [](PolygonWithHoles &a, const Point &p) { a -= p; return &a; },
@@ -277,7 +295,7 @@ void bind_region(nb::module_ &m) {
     cls.def("__itruediv__", [](PolygonWithHoles &a, const Num &k) { a /= k; return &a; },
             nb::rv_policy::none, nb::is_operator());
     // Translation by a Point, the Point special case of the Minkowski sum that
-    // PGL_BIND_MINKOWSKI_REGION binds the named method for. Spelled out here
+    // PGL_BIND_MINKOWSKI_CONNECTED_REGION binds the named method for. Spelled out here
     // rather than in the macro, because every shape's `+ Point` is bound by that
     // shape itself (PGL_BIND_OPERATORS for the immutable ones, their own
     // __add__ for the mutable ones).

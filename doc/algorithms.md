@@ -12,9 +12,6 @@
 [![License](https://img.shields.io/badge/license-MIT-rgb(216,134,42).svg)](https://opensource.org/licenses/MIT)
 <!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
-
-> ℹ️ **Pre-release**: pypgl is extensively tested, but the pgl API it mirrors has not had a stable release yet and may still change.
-
 ## Algorithms
 
 The algorithms are module-level functions ([`pgl.convexHull(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a3999bfdf73609b7ec708a4882fcaea2f "Computes the convex hull of a point container."), not a
@@ -155,6 +152,50 @@ strip = pgl.Convex([0,0, 4,2, 3,4, -1,2])
 print(strip.squaredMinimumWidth(), strip.bbox().width(), strip.bbox().height())
 # Output: 5 5 4
 ```
+
+### Empty polygons of a point set
+
+A polygon is *empty* with respect to a point set when its vertices belong to the
+set and no other point of the set lies in the closed polygon — a point on an
+edge blocks it exactly as much as one inside. Only non-degenerate polygons
+count: three collinear points are no empty triangle, and every vertex of an
+empty quadrilateral is a proper corner rather than a straight angle. Every
+function reads its input as a *set*, so coincident points count once.
+
+- [`findEmptyTriangles(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a4eb3ec100b2467c31098a7c5765db54d "Returns every empty triangle of points with p as a vertex."): Returns every empty
+  [`Triangle`](shapes.md#triangle), in $O(n^2 \log n + k)$ time for `n`
+  distinct points and `k` triangles.
+
+- [`findEmptyQuadrilaterals(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a04d25debda567b1c1b4c62a1dbd26c08 "Returns every empty quadrilateral of points with p as a vertex."): Returns every empty quadrilateral as a
+  [`Polygon`](shapes.md#polygon) — simple, and possibly non-convex.
+
+- [`findEmptyConvexQuadrilaterals(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a8b2a0c6543d395d9b179e51456d340e6 "Returns every empty convex quadrilateral of points with p as a vertex."): Returns the convex ones only, as
+  [`Convex`](shapes.md#convex).
+
+Each of the three also takes a second argument narrowing what is reported, which
+is much cheaper than filtering the full answer:
+
+- a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."), reporting only the polygons with it as a **vertex**. It need not be
+  one of the points; it is treated as one of them.
+
+- a [`Segment`](shapes.md#segment) or
+  [`OrientedSegment`](shapes.md#oriented-segment), reporting only the polygons
+  with it as a **side** (for a triangle) or an inside **diagonal** (for a
+  quadrilateral). Its endpoints are likewise treated as points of the set. A
+  point of the set lying inside the segment blocks every polygon through it, and
+  a zero-length segment has none.
+
+```python
+points = [pgl.Point(0,0), pgl.Point(4,0), pgl.Point(4,4), pgl.Point(0,4), pgl.Point(1,1)]
+print(len(pgl.findEmptyTriangles(points)))
+# Output: 6
+print(len(pgl.findEmptyQuadrilaterals(points)),
+      len(pgl.findEmptyConvexQuadrilaterals(points)))
+# Output: 4 1
+```
+
+The interior point blocks the square itself, which leaves three non-convex
+quadrilaterals and one convex one.
 
 ### Closest pair of points
 

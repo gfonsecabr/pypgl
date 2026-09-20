@@ -52,13 +52,17 @@ def test_rectangle_triangle_convex_l1_linf_cross_product():
     assert c.distanceLInf(r) == 0
 
 
-def test_polygon_gets_l1_linf_but_not_hausdorff():
+def test_polygon_gets_the_polyhedral_hausdorff_but_not_the_euclidean_one():
+    # The Euclidean form reads the distance off a vertex of the source, which is
+    # only where the maximum sits when both operands are convex. The L1 and LInf
+    # forms need no convexity: both norms are polyhedral, which makes the whole
+    # search a one-dimensional lower envelope.
     p = Polygon([Point(0, 0), Point(4, 0), Point(4, 4), Point(0, 4)])
     assert p.distanceL1(Point(10, 0)) == 6
     assert p.distanceLInf(Point(10, 0)) == 6
     assert not hasattr(p, "squaredHausdorffDistance")
-    assert not hasattr(p, "hausdorffDistanceL1")
-    assert not hasattr(p, "hausdorffDistanceLInf")
+    assert p.hausdorffDistanceL1(Point(10, 0)) == 14
+    assert p.hausdorffDistanceLInf(Point(10, 0)) == 10
 
 
 def test_disk_l1_linf_only_against_point_and_always_float():
@@ -92,15 +96,27 @@ def test_l1_linf_present_on_every_non_disk_shape():
 HAUSDORFF_SHAPES = ("Point", "Segment", "OrientedSegment", "Rectangle", "Triangle", "Convex")
 
 
-def test_hausdorff_present_only_on_the_six_convex_shapes():
-    for name in HAUSDORFF_SHAPES:
+def test_the_euclidean_hausdorff_is_on_the_convex_shapes_and_the_polyhedral_ones_wider():
+    # The Euclidean form reads the distance off a vertex of the source, which is
+    # only where the maximum sits when both operands are convex: the six bounded
+    # convex shapes plus a HalfplaneIntersection. The L1 and LInf forms need no
+    # convexity, so they reach every bounded polygonal shape.
+    for name in HAUSDORFF_SHAPES + ("HalfplaneIntersection",):
         cls = getattr(pypgl, name)
         assert hasattr(cls, "squaredHausdorffDistance"), f"{name} missing squaredHausdorffDistance"
         assert hasattr(cls, "hausdorffDistanceL1"), f"{name} missing hausdorffDistanceL1"
         assert hasattr(cls, "hausdorffDistanceLInf"), f"{name} missing hausdorffDistanceLInf"
-    for name in ("Line", "OrientedLine", "Ray", "Halfplane", "Polygon", "Disk"):
+    for name in ("MonotoneChain", "Polyline", "Polygon", "PolygonWithHoles", "PolygonSet"):
         cls = getattr(pypgl, name)
-        assert not hasattr(cls, "squaredHausdorffDistance"), f"{name} should not have squaredHausdorffDistance"
+        assert not hasattr(cls, "squaredHausdorffDistance"), f"{name} has squaredHausdorffDistance"
+        assert hasattr(cls, "hausdorffDistanceL1"), f"{name} missing hausdorffDistanceL1"
+        assert hasattr(cls, "hausdorffDistanceLInf"), f"{name} missing hausdorffDistanceLInf"
+    # An unbounded shape covers points arbitrarily far from anything, and a Disk
+    # has no closed form in any of the three norms.
+    for name in ("Line", "OrientedLine", "Ray", "Halfplane", "Disk"):
+        cls = getattr(pypgl, name)
+        for method in ("squaredHausdorffDistance", "hausdorffDistanceL1", "hausdorffDistanceLInf"):
+            assert not hasattr(cls, method), f"{name} should not have {method}"
 
 
 def test_squared_hausdorff_distance_of_segment_onto_itself_is_zero():

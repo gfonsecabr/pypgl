@@ -23,6 +23,7 @@ from pypgl import (
     HalfplaneIntersection,
     Line,
     MonotoneChain,
+    OrientedLine,
     OrientedSegment,
     Point,
     Polygon,
@@ -289,11 +290,13 @@ def test_a_disk_still_has_no_sum_with_a_polygon():
         Disk(Point(0, 0), 1).minkowskiSum(Rectangle(Point(0, 0), Point(1, 1)))
 
 
-def test_an_unbounded_operand_rejects_a_non_convex_one():
+def test_a_ray_or_halfplane_intersection_rejects_a_non_convex_operand():
     # The sum would be an unbounded non-convex region, which no pgl shape
-    # represents.
+    # represents. A Line is the exception -- see the strip tests below.
     with pytest.raises(TypeError):
-        Line(Point(0, 0), Point(1, 1)).minkowskiSum(_c_shape())
+        Ray(Point(0, 0), Point(1, 1)).minkowskiSum(_c_shape())
+    with pytest.raises(TypeError):
+        Rectangle(Point(0, 0), Point(1, 1)).asHalfplaneIntersection().minkowskiSum(_c_shape())
 
 
 def test_a_monotone_chain_sums_into_a_single_polygon():
@@ -316,3 +319,105 @@ def test_two_chains_sum_to_a_set_of_regions():
     # Both chains run along the same direction, so the swept material has no
     # area and regularization drops all of it.
     assert summed.empty()
+
+
+# --- A line sweeps its operand into a strip ---------------------------------
+#
+# A line is the second unbounded shape whose sum forgets its operand's
+# concavity: only the two support points, one on each side, survive. So the
+# answer is the strip between the parallels through them, and the operand counts
+# only through its convex hull. It needs the operand connected across the line,
+# which rules out a PolygonSet.
+
+
+STRIP_OPERANDS = [
+    Polyline([Point(0, 0), Point(5, 8), Point(10, 1)]),
+    MonotoneChain([Point(0, 0), Point(5, 8), Point(10, 1)]),
+    _c_shape(),
+    _c_shape().asPolygonWithHoles(),
+]
+
+
+@pytest.mark.parametrize("operand", STRIP_OPERANDS, ids=lambda s: type(s).__name__)
+@pytest.mark.parametrize(
+    "line", [Line(Point(0, 0), Point(1, 0)), OrientedLine(Point(0, 0), Point(1, 1))],
+    ids=["Line", "OrientedLine"],
+)
+def test_a_line_sums_with_a_connected_non_convex_shape_into_a_strip(line, operand):
+    summed = line.minkowskiSum(operand)
+    assert isinstance(summed, HalfplaneIntersection)
+    # Two parallel half-planes and nothing else, so the answer is a strip:
+    # unbounded, non-empty, and not the whole plane.
+    assert len(summed) == 2
+    assert not summed.isBounded() and not summed.empty()
+    # Every spelling and both operand orders agree.
+    assert line + operand == summed
+    assert operand.minkowskiSum(line) == summed
+    assert operand + line == summed
+    # And it is exactly the sum with the operand's convex hull, which is what
+    # "only the support points survive" means.
+    assert line.minkowskiSum(operand.convexHull()) == summed
+
+
+def test_the_strip_is_the_one_the_extreme_vertices_span():
+    # The C spans y in [0, 8], so a horizontal line sweeps it into exactly that
+    # horizontal strip -- every point of it, and nothing outside.
+    strip = Line(Point(0, 0), Point(1, 0)).minkowskiSum(_c_shape())
+    assert strip.contains(Point(-100, 0)) and strip.contains(Point(100, 8))
+    assert strip.contains(Point(0, 4))
+    assert not strip.contains(Point(0, -1)) and not strip.contains(Point(0, 9))
+
+
+@pytest.mark.parametrize("operand", STRIP_OPERANDS, ids=lambda s: type(s).__name__)
+def test_the_erosion_mirrors_the_sum_operand_for_operand(operand):
+    line = Line(Point(0, 0), Point(1, 0))
+    assert isinstance(line.minkowskiErosion(operand), HalfplaneIntersection)
+    assert isinstance(operand.minkowskiErosion(line), HalfplaneIntersection)
+    # Nothing two-dimensional fits inside a line, and no line fits inside a
+    # bounded shape, so both are empty for an operand of positive extent.
+    assert line.minkowskiErosion(operand).empty()
+    assert operand.minkowskiErosion(line).empty()
+
+
+def test_eroding_a_line_by_a_chain_along_it_gives_the_line_back():
+    line = Line(Point(0, 0), Point(1, 0))
+    flat = Polyline([Point(0, 0), Point(5, 0)])
+    # The chain fits inside the line, so every translate of it does too, and the
+    # erosion is the whole line -- the two half-planes that bound it from
+    # either side.
+    assert line.minkowskiErosion(flat) == line.minkowskiSum(flat)
+    assert not line.minkowskiErosion(flat).empty()
+    # Tilt it off the line and nothing fits any more.
+    assert line.minkowskiErosion(Polyline([Point(0, 0), Point(5, 1)])).empty()
+
+
+def test_a_polygon_set_is_not_a_strip_operand():
+    # Two components can sit apart across the line, and the sum is then several
+    # strips, which no pgl shape holds -- so the pair is not bound at all.
+    apart = PolygonSet(
+        [
+            Polygon([0, 0, 1, 0, 1, 1, 0, 1]).asPolygonWithHoles(),
+            Polygon([0, 5, 1, 5, 1, 6, 0, 6]).asPolygonWithHoles(),
+        ]
+    )
+    for line in (Line(Point(0, 0), Point(1, 0)), OrientedLine(Point(0, 0), Point(1, 0))):
+        with pytest.raises(TypeError):
+            line.minkowskiSum(apart)
+        with pytest.raises(TypeError):
+            apart.minkowskiSum(line)
+        with pytest.raises(TypeError):
+            line.minkowskiErosion(apart)
+
+
+def test_a_ray_and_a_halfplane_intersection_are_not_lines():
+    # A ray keeps one support point, not two, so it cannot forget a concavity
+    # the way a line does; the pair stays unbound.
+    for unbounded in (
+        Ray(Point(0, 0), Point(1, 0)),
+        Rectangle(Point(0, 0), Point(1, 1)).asHalfplaneIntersection(),
+    ):
+        for operand in STRIP_OPERANDS:
+            with pytest.raises(TypeError):
+                unbounded.minkowskiSum(operand)
+            with pytest.raises(TypeError):
+                unbounded.minkowskiErosion(operand)

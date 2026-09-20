@@ -10,9 +10,6 @@
 [![License](https://img.shields.io/badge/license-MIT-rgb(216,134,42).svg)](https://opensource.org/licenses/MIT)
 <!-- [![Benchmarks](https://img.shields.io/badge/benchmarks-online-rgb(21,153,135).svg)](https://gfonsecabr.github.io/pgl/benchmarks/index.html) -->
 
-
-> ℹ️ **Pre-release**: pypgl is extensively tested, but the pgl API it mirrors has not had a stable release yet and may still change.
-
 ## Missing Features
 
 These operations are not implemented yet:
@@ -21,14 +18,18 @@ These operations are not implemented yet:
   any shape with a `Disk` other than a `Point`.
 - `minkowskiSum` and `minkowskiErosion` of a `Disk` with anything but a `Point`,
   another `Disk` or a `Halfplane`, and of an unbounded shape with a non-convex
-  one. The `Disk`-with-`Halfplane` pair is bound but has no exact answer either
-  way: sliding a boundary by a radius moves it along that boundary's own *unit*
-  normal, which is a square root even when the radius is exact.
+  one — except a `Line` or an `OrientedLine`, which sweep a connected non-convex
+  operand into a strip. A `Ray` keeps one support point rather than two and
+  cannot; a `PolygonSet` can lie apart across the line and is not an operand
+  either. The `Disk`-with-`Halfplane` pair is bound but has no exact answer
+  either way: sliding a boundary by a radius moves it along that boundary's own
+  *unit* normal, which is a square root even when the radius is exact.
 - `distanceL1` / `distanceLInf` to and from a `Disk`, which is implemented only
   against a `Point` so far.
-- Hausdorff distance for the non-convex shapes (`Polygon`, `PolygonWithHoles`,
-  `PolygonSet`, `Polyline`, `MonotoneChain`), for `Disk`, and for the
-  possibly-unbounded `HalfplaneIntersection`.
+- The Euclidean `squaredHausdorffDistance` for the non-convex shapes (`Polygon`,
+  `PolygonWithHoles`, `PolygonSet`, `Polyline`, `MonotoneChain`), and any
+  Hausdorff distance for a `Disk`. The polyhedral `hausdorffDistanceL1` and
+  `hausdorffDistanceLInf` do cover every bounded polygonal pair.
 
 Several entries that used to be here have since arrived: the two chains
 [`Polyline`](shapes.md#polyline) and [`MonotoneChain`](shapes.md#monotonechain),
@@ -38,8 +39,10 @@ the two regions [`PolygonWithHoles`](shapes.md#polygon-with-holes) and
 two-dimensional [`intersection`](shape_methods.md#intersection) grid, the
 Minkowski sums of the chains and of the unbounded shapes,
 [`regularizedUnionOf`](algorithms.md#boolean-operations-minkowski-sums-and-erosions)
-over a range of any of the six bounded region types, and the whole
-[`minkowskiErosion`](shape_methods.md#minkowski-erosion) family.
+over a range of any of the six bounded region types, the whole
+[`minkowskiErosion`](shape_methods.md#minkowski-erosion) family, and the
+polyhedral [Hausdorff distances](shape_methods.md#other-methods-for-shapes) between shapes
+that are not both convex.
 
 ## Deliberately Not Exposed
 

@@ -79,7 +79,7 @@ void bind_polygons(nb::module_ &m) {
         // a Segment where the operand is lower-dimensional, a Convex where two
         // convex bodies overlap, and a list of pieces where the operand is a
         // chain or a non-convex region.
-        PGL_BIND_INTERSECTION_AREA(cls, Triangle);
+        PGL_BIND_ALL_INTERSECTION(cls, Triangle);
     }
 
     // --- Rectangle ---
@@ -238,7 +238,7 @@ void bind_polygons(nb::module_ &m) {
         // a Segment where the operand is lower-dimensional, a Convex where two
         // convex bodies overlap, and a list of pieces where the operand is a
         // chain or a non-convex region.
-        PGL_BIND_INTERSECTION_AREA(cls, Rectangle);
+        PGL_BIND_ALL_INTERSECTION(cls, Rectangle);
     }
 
     // --- Convex ---
@@ -462,6 +462,6 @@ void bind_polygons(nb::module_ &m) {
         // a Segment where the operand is lower-dimensional, a Convex where two
         // convex bodies overlap, and a list of pieces where the operand is a
         // chain or a non-convex region.
-        PGL_BIND_INTERSECTION_AREA(cls, Convex);
+        PGL_BIND_ALL_INTERSECTION(cls, Convex);
     }
 }

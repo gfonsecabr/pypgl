@@ -134,8 +134,8 @@ void bind_polygon(nb::module_ &m) {
     // a hole, which a simple polygon is not: so it is available exactly when
     // the other operand is a region or a set of them.
     PGL_BIND_REGULARIZED_INTERSECTION(cls, Polygon);
-    PGL_BIND_MINKOWSKI_REGION(cls, Polygon);
-    PGL_BIND_EROSION_REGION(cls, Polygon);
+    PGL_BIND_MINKOWSKI_CONNECTED_REGION(cls, Polygon);
+    PGL_BIND_EROSION_CONNECTED_REGION(cls, Polygon);
     PGL_BIND_CONVEX_HULL(cls, Polygon);
     PGL_BIND_LATTICE_POINTS(cls, Polygon,
                             "The integer points the polygon contains, in increasing order, boundary included: a "
@@ -180,19 +180,19 @@ void bind_polygon(nb::module_ &m) {
     PGL_BIND_INTERIOR_CONTAINS_INTERIOR(cls, Polygon);
     PGL_BIND_ALL_SQUARED_DISTANCE(cls, Polygon);
     PGL_BIND_ALL_CLOSEST(cls, Polygon);
-    // Polygon has no squaredHausdorffDistance/hausdorffDistanceL1/LInf (pgl
-    // excludes it from that family -- a non-convex polygon would need a
-    // Voronoi-based approach; see PGL_BIND_ALL_HAUSDORFF_DISTANCE in
-    // common.h), but it does get the full distanceL1/distanceLInf cross
-    // product like every other non-Disk shape.
     PGL_BIND_ALL_L1LINF_DISTANCE(cls, Polygon);
+    // The two polyhedral Hausdorff distances against every bounded polygonal
+    // shape, but no squaredHausdorffDistance: the Euclidean one is read off a
+    // vertex of the source, which is only where the maximum sits when both
+    // operands are convex (see the three tiers in common.h).
+    PGL_BIND_HAUSDORFF_NONCONVEX(cls, Polygon);
     PGL_BIND_ALL_SAME_POINT_SET(cls, Polygon);
 
     // The literal intersection against every shape but a Disk. Against a 2D
     // operand the one-dimensional pieces come back as Polyline objects, since
     // pgl gained that class -- a stretch shared by two boundaries is a
     // Polyline, even when it is a single segment.
-    PGL_BIND_INTERSECTION_AREA(cls, Polygon);
+    PGL_BIND_ALL_INTERSECTION(cls, Polygon);
 
 
     // --- visibility (implementation/visibilitygraph.hpp) ---
