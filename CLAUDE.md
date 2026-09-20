@@ -1926,8 +1926,8 @@ upstream commit `6586f0a` renamed the result-type template parameter to
 it is exact). That rename reaches pypgl nowhere else: every bound call passes
 the type positionally.
 
-**Frozen shapes, so a mutable one can be a dict key** (milestone 29, version
-1.9.0): the user's request. Seven bound shapes mutate in place -- `Convex`,
+**Frozen shapes, so a mutable one can be a dict key** (milestone 29, same
+unreleased 1.8.0): the user's request. Seven bound shapes mutate in place -- `Convex`,
 `MonotoneChain`, `Polyline`, `Polygon`, `PolygonWithHoles`, `PolygonSet` and
 `HalfplaneIntersection` -- so none of them binds `__hash__`, and none could be a
 key. `shape.frozen()` now returns an independent copy that refuses every mutator
