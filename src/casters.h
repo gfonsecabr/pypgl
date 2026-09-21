@@ -10,6 +10,8 @@
 // Everything else in pypgl is mechanical `.def(...)`. All three casters live
 // here so every translation unit shares one definition.
 
+#include "pgl_assert.h"  // must precede every pgl header
+
 #include <nanobind/nanobind.h>
 
 #include <sstream>

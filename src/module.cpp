@@ -28,6 +28,9 @@ void bind_power_diagram(nb::module_ &m);
 NB_MODULE(_pgl, m) {
     m.doc() = "Compiled core of pypgl: Python bindings for the Pangolin (pgl) "
               "exact geometry library.";
+    // Every failed pgl assertion (see pgl_assert.h). Registered first so it is
+    // in place before any binding can run.
+    nb::exception<pypgl::PreconditionError>(m, "PreconditionError", PyExc_ValueError);
     bind_point(m);
     bind_segment(m);
     bind_oriented_segment(m);

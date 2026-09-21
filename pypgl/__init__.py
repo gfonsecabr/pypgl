@@ -8,6 +8,7 @@ Shapes are exact: coordinates are rationals, accepted as ``int``,
 from importlib.metadata import PackageNotFoundError, version as _version
 
 from ._pgl import (
+    PreconditionError,
     Point,
     Segment,
     OrientedSegment,
@@ -80,6 +81,7 @@ except PackageNotFoundError:  # not installed (e.g. running from a source tree)
     __version__ = "0+unknown"
 
 __all__ = [
+    "PreconditionError",
     "Point",
     "Segment",
     "OrientedSegment",

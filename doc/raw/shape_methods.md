@@ -543,6 +543,12 @@ applied with a [`Transformation`](#transformations).
   `Point`-to-`Disk` exists so far (and returns a `float`, being irrational in
   general).
 
+  **An empty operand raises `ValueError`** for all five of `squaredDistance`,
+  `closestSegments`, `closestPoints`, `distanceL1` and `distanceLInf`, on
+  either side: the distance is an infimum over each shape's points, and the
+  empty set has none. A degenerate shape is not an empty one — a zero-area
+  `Rectangle` or a one-vertex `Convex` holds a point and is measured normally.
+
 - `squaredHausdorffDistance(Shape)`, `hausdorffDistanceL1(Shape)` /
   `hausdorffDistanceLInf(Shape)`: Return the exact Hausdorff distance in the same
   three metrics, with the same squared/unsquared convention as above. **These are
@@ -786,3 +792,21 @@ The ten other shapes — `Point`, `Segment`, `OrientedSegment`, `Line`,
 `OrientedLine`, `Ray`, `Halfplane`, `Triangle`, `Rectangle` and `Disk` — are
 immutable already and hashable as they are, so they have no frozen counterpart
 and need none.
+
+## Preconditions
+
+Some operations are defined only for some inputs: an empty rectangle has no
+center, a polyline edge flip needs an edge to flip. Calling one outside its
+domain raises `pgl.PreconditionError`, a subclass of `ValueError`, whose
+message names the condition that failed:
+
+```python
+pgl.Rectangle().center()
+# PreconditionError: pgl precondition violated: !empty() (implementation/measures.hpp:305)
+```
+
+Where a clearer message is possible, the more specific exception comes first —
+an empty operand to a distance raises `ValueError` naming the method, an index
+into an empty shape raises `IndexError`, division by zero raises
+`ZeroDivisionError` — so `PreconditionError` is what remains: a violated
+condition with no more specific name. Catching `ValueError` covers both.

@@ -545,6 +545,12 @@ applied with a [`Transformation`](#transformations).
   [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.")-to-[`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") exists so far (and returns a `float`, being irrational in
   general).
 
+  **An empty operand raises `ValueError`** for all five of `squaredDistance`,
+  `closestSegments`, `closestPoints`, `distanceL1` and `distanceLInf`, on
+  either side: the distance is an infimum over each shape's points, and the
+  empty set has none. A degenerate shape is not an empty one — a zero-area
+  [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.") or a one-vertex [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.") holds a point and is measured normally.
+
 - `squaredHausdorffDistance(Shape)`, `hausdorffDistanceL1(Shape)` /
   `hausdorffDistanceLInf(Shape)`: Return the exact Hausdorff distance in the same
   three metrics, with the same squared/unsquared convention as above. **These are
@@ -788,3 +794,21 @@ The ten other shapes — [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_
 [`OrientedLine`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedLine.html "Directed infinite line with left/right side semantics plus optional line label."), [`Ray`](https://gfonsecabr.github.io/pgl/structpgl_1_1Ray.html "Half-infinite line starting from one source point plus optional ray label."), [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line."), [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.") and [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label.") — are
 immutable already and hashable as they are, so they have no frozen counterpart
 and need none.
+
+## Preconditions
+
+Some operations are defined only for some inputs: an empty rectangle has no
+center, a polyline edge flip needs an edge to flip. Calling one outside its
+domain raises `pgl.PreconditionError`, a subclass of `ValueError`, whose
+message names the condition that failed:
+
+```python
+pgl.Rectangle().center()
+# PreconditionError: pgl precondition violated: !empty() (implementation/measures.hpp:305)
+```
+
+Where a clearer message is possible, the more specific exception comes first —
+an empty operand to a distance raises `ValueError` naming the method, an index
+into an empty shape raises `IndexError`, division by zero raises
+`ZeroDivisionError` — so `PreconditionError` is what remains: a violated
+condition with no more specific name. Catching `ValueError` covers both.

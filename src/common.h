@@ -250,17 +250,21 @@ bool isEmptyShape(const T &shape) {
         return false;
 }
 
-// The guard every bound Hausdorff method runs before calling pgl.
+// The guard every bound distance-family method runs before calling pgl:
+// squaredDistance, distanceL1, distanceLInf, closestPoints, closestSegments
+// and the three Hausdorff distances.
 //
-// The Hausdorff distance to the empty set is not defined: it is a supremum over
-// the points of each operand, and one of them has none. A non-empty operand is
-// therefore a *precondition*, and pgl states it as one -- an assert, which the
-// release build pypgl ships compiles out, leaving the call undefined rather
-// than wrong. What that undefined behavior looks like varies by shape: an empty
-// Convex or HalfplaneIntersection reads past the end of its own vertex list and
-// takes the interpreter down, the shapes carrying a plain vertex list answer 0
-// as though the empty set coincided with the other operand, and an empty
-// Rectangle answers from an uninitialized corner.
+// A distance to the empty set is not defined: the nearest-point distance is an
+// infimum and the Hausdorff distance a supremum over the points of an operand
+// that has none. A non-empty operand is therefore a *precondition*, and pgl
+// states it as one -- an assert, which the release build pypgl ships compiles
+// out, leaving the call undefined rather than wrong. What that undefined
+// behavior looks like varies by shape: an empty Convex, Polygon, chain or
+// HalfplaneIntersection seeds its minimum from a first vertex or edge it does
+// not have and takes the interpreter down, the other shapes answer 0 as though
+// the empty set coincided with the other operand, and closestPoints/
+// closestSegments invent witness points such as (0,0) that lie on neither
+// shape.
 //
 // None of that is safe to pass on to Python, so the precondition is checked
 // here and raised. This is the same call as the Transformation.inverse() guard:
@@ -268,9 +272,11 @@ bool isEmptyShape(const T &shape) {
 // protects nobody. It is checked for every operand that can be empty rather
 // than only for the ones that currently crash -- one rule is easier to rely on
 // than a list of which empty shape does what, and all of them are equally
-// undefined.
+// undefined. (Milestone 28 guarded the Hausdorff family alone; pgl 3000446
+// stated the same precondition for the nearest-point distances, and every one
+// of them turned out to crash or answer wrongly on an empty operand.)
 template <class A, class B>
-void requireNonEmptyForHausdorff(const A &a, const B &b, const char *method) {
+void requireNonEmptyOperands(const A &a, const B &b, const char *method) {
     if (isEmptyShape(a) || isEmptyShape(b))
         throw std::invalid_argument(std::string(method) +
                                     " is not defined when either shape is empty");
@@ -282,6 +288,17 @@ void requireNonEmptyForHausdorff(const A &a, const B &b, const char *method) {
 #define PGL_PRED(cls, SelfT, NAME, OtherT)                                  \
     cls.def(#NAME,                                                          \
             [](const SelfT &self, const OtherT &other) {                    \
+                return self.NAME(other);                                    \
+            },                                                              \
+            nb::arg("other"))
+
+// Bind one distance-family overload (self.NAME(other)), refusing an empty
+// operand -- see requireNonEmptyOperands above for why that check is here and
+// not in pgl.
+#define PGL_DIST(cls, SelfT, NAME, OtherT)                                  \
+    cls.def(#NAME,                                                          \
+            [](const SelfT &self, const OtherT &other) {                    \
+                ::pypgl::requireNonEmptyOperands(self, other, #NAME);       \
                 return self.NAME(other);                                    \
             },                                                              \
             nb::arg("other"))
@@ -553,12 +570,7 @@ void requireNonEmptyForHausdorff(const A &a, const B &b, const char *method) {
 // Bind the exact squared distance self.squaredDistance(other) for one OtherT.
 // ResultNumber defaults to the number type (ERational), so the result is the
 // exact squared Euclidean distance as a Fraction — never an approximation.
-#define PGL_SQDIST(cls, SelfT, OtherT)                                       \
-    cls.def("squaredDistance",                                              \
-            [](const SelfT &self, const OtherT &other) {                    \
-                return self.squaredDistance(other);                         \
-            },                                                              \
-            nb::arg("other"))
+#define PGL_SQDIST(cls, SelfT, OtherT) PGL_DIST(cls, SelfT, squaredDistance, OtherT)
 
 // squaredDistance of SelfT against every bound shape (all sixteen, including
 // itself). pgl makes every pair available (an explicit overload on the
@@ -619,8 +631,8 @@ void requireNonEmptyForHausdorff(const A &a, const B &b, const char *method) {
 // Where both are defined, closestPoints refines the elements closestSegments
 // names, so the two never disagree about which pair they describe. Each
 // returns a list of two, so `a.closestPoints(b)[0]` is the point on `a`.
-#define PGL_CLOSEST_SEGMENTS(cls, SelfT, OtherT) PGL_PRED(cls, SelfT, closestSegments, OtherT)
-#define PGL_CLOSEST_POINTS(cls, SelfT, OtherT)   PGL_PRED(cls, SelfT, closestPoints, OtherT)
+#define PGL_CLOSEST_SEGMENTS(cls, SelfT, OtherT) PGL_DIST(cls, SelfT, closestSegments, OtherT)
+#define PGL_CLOSEST_POINTS(cls, SelfT, OtherT)   PGL_DIST(cls, SelfT, closestPoints, OtherT)
 
 // The eleven bounded polygonal shapes: every pair of them has both methods.
 #define PGL_BIND_CLOSEST_SEGMENTS_ALL(cls, SelfT)                    \
@@ -738,38 +750,38 @@ void requireNonEmptyForHausdorff(const A &a, const B &b, const char *method) {
 // macro. The Point<->Disk pair is bound by hand in bind_point.cpp/
 // bind_disk.cpp instead, the only L1/LInf pair Disk currently supports.
 #define PGL_BIND_ALL_L1LINF_DISTANCE(cls, SelfT)                \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Point);             \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Segment);           \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::OrientedSegment);   \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Line);              \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::OrientedLine);      \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Ray);               \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Halfplane);         \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Triangle);          \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Rectangle);         \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Convex);            \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::MonotoneChain);     \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Polyline);          \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::Polygon);           \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::PolygonWithHoles);  \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::HalfplaneIntersection); \
-    PGL_PRED(cls, SelfT, distanceL1, ::pypgl::PolygonSet);        \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Point);           \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Segment);         \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::OrientedSegment); \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Line);            \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::OrientedLine);    \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Ray);             \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Halfplane);       \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Triangle);        \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Rectangle);       \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Convex);          \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::MonotoneChain);   \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Polyline);        \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::Polygon);         \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::PolygonWithHoles); \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::HalfplaneIntersection); \
-    PGL_PRED(cls, SelfT, distanceLInf, ::pypgl::PolygonSet)
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Point);             \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Segment);           \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::OrientedSegment);   \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Line);              \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::OrientedLine);      \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Ray);               \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Halfplane);         \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Triangle);          \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Rectangle);         \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Convex);            \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::MonotoneChain);     \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Polyline);          \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::Polygon);           \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::PolygonWithHoles);  \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::HalfplaneIntersection); \
+    PGL_DIST(cls, SelfT, distanceL1, ::pypgl::PolygonSet);        \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Point);           \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Segment);         \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::OrientedSegment); \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Line);            \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::OrientedLine);    \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Ray);             \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Halfplane);       \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Triangle);        \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Rectangle);       \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Convex);          \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::MonotoneChain);   \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Polyline);        \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::Polygon);         \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::PolygonWithHoles); \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::HalfplaneIntersection); \
+    PGL_DIST(cls, SelfT, distanceLInf, ::pypgl::PolygonSet)
 
 // squaredHausdorffDistance / hausdorffDistanceL1 / hausdorffDistanceLInf.
 //
@@ -801,15 +813,8 @@ void requireNonEmptyForHausdorff(const A &a, const B &b, const char *method) {
 // a farthest point on a circle is not a vertex and has no closed form in any
 // of the three norms.
 
-// One Hausdorff overload, refusing an empty operand -- see
-// requireNonEmptyForHausdorff above for why that check is here and not in pgl.
-#define PGL_HAUS(cls, SelfT, METHOD, OtherT)                                          \
-    cls.def(#METHOD,                                                                  \
-            [](const SelfT &self, const OtherT &other) {                              \
-                ::pypgl::requireNonEmptyForHausdorff(self, other, #METHOD);           \
-                return self.METHOD(other);                                            \
-            },                                                                        \
-            nb::arg("other"))
+// One Hausdorff overload, refusing an empty operand like every distance.
+#define PGL_HAUS(cls, SelfT, METHOD, OtherT) PGL_DIST(cls, SelfT, METHOD, OtherT)
 
 // The seven bounded convex shapes: the whole squaredHausdorffDistance grid, and
 // what a HalfplaneIntersection receiver takes in L1/LInf as well.
