@@ -163,8 +163,9 @@ struct type_caster<pgl::ERational> {
 
         if (PyUnicode_Check(o)) {
             // Parse "a/b", "a", "-3/4", and decimal strings exactly via Fraction.
-            // (pgl's BigInt operator>> reads a whole token, so it cannot drive the
-            // Rational "a/b" parse directly.)
+            // (Not pgl's Rational operator>>: it has no decimal form, accepts "3/"
+            // as 3, and builds a zero-denominator Rational from "1/0" with only an
+            // assert, compiled out in release, to stop it.)
             object fraction = module_::import_("fractions").attr("Fraction");
             try {
                 owner = fraction(borrow(o));

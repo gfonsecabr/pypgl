@@ -12,3 +12,6 @@ dist/
 examples/*.svg
 examples/*.pdf
 examples/*.ipe
+
+# Maintainer notes for Claude Code, kept local.
+CLAUDE.md
