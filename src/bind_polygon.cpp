@@ -124,7 +124,7 @@ void bind_polygon(nb::module_ &m) {
     cls.def("__iadd__", [](nb::object self, const Point &p) { nb::cast<Polygon &>(self) += p; return self; }, nb::is_operator());
     cls.def("__isub__", [](nb::object self, const Point &p) { nb::cast<Polygon &>(self) -= p; return self; }, nb::is_operator());
     cls.def("__imul__", [](nb::object self, const Num &k) { nb::cast<Polygon &>(self) *= k; return self; }, nb::is_operator());
-    cls.def("__itruediv__", [](nb::object self, const Num &k) { nb::cast<Polygon &>(self) /= k; return self; }, nb::is_operator());
+    cls.def("__itruediv__", [](nb::object self, const Num &k) { nb::cast<Polygon &>(self) /= ::pypgl::nonZeroDivisor(k); return self; }, nb::is_operator());
 
     // Value-returning transforms (new polygon) plus their in-place
     // counterparts (mutate, return None), mirroring Convex.
@@ -150,9 +150,9 @@ void bind_polygon(nb::module_ &m) {
             "Multiply the polygon's x-coordinates by scalar in place.");
     cls.def("scaleUpY", [](Polygon &p, const Num &k) { p.scaleUpY(k); }, nb::arg("scalar"),
             "Multiply the polygon's y-coordinates by scalar in place.");
-    cls.def("scaleDownX", [](Polygon &p, const Num &k) { p.scaleDownX(k); }, nb::arg("scalar"),
+    cls.def("scaleDownX", [](Polygon &p, const Num &k) { p.scaleDownX(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
             "Divide the polygon's x-coordinates by scalar in place.");
-    cls.def("scaleDownY", [](Polygon &p, const Num &k) { p.scaleDownY(k); }, nb::arg("scalar"),
+    cls.def("scaleDownY", [](Polygon &p, const Num &k) { p.scaleDownY(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
             "Divide the polygon's y-coordinates by scalar in place.");
 
     // Shortcuts for Triangulation(polygon) / Triangulation(polygon, segments)

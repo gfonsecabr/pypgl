@@ -92,13 +92,13 @@ namespace {
     cls.def("__iadd__", [](nb::object self, const Point &p) { nb::cast<SelfT &>(self) += p; return self; }, nb::is_operator()); \
     cls.def("__isub__", [](nb::object self, const Point &p) { nb::cast<SelfT &>(self) -= p; return self; }, nb::is_operator()); \
     cls.def("__imul__", [](nb::object self, const Num &k) { nb::cast<SelfT &>(self) *= k; return self; }, nb::is_operator());   \
-    cls.def("__itruediv__", [](nb::object self, const Num &k) { nb::cast<SelfT &>(self) /= k; return self; }, nb::is_operator()); \
+    cls.def("__itruediv__", [](nb::object self, const Num &k) { nb::cast<SelfT &>(self) /= ::pypgl::nonZeroDivisor(k); return self; }, nb::is_operator()); \
     cls.def("__add__",  [](const SelfT &c, const Point &p) { SelfT r = c; r += p; return r; }, nb::is_operator());     \
     cls.def("__radd__", [](const SelfT &c, const Point &p) { SelfT r = c; r += p; return r; }, nb::is_operator());     \
     cls.def("__sub__",  [](const SelfT &c, const Point &p) { SelfT r = c; r -= p; return r; }, nb::is_operator());     \
     cls.def("__mul__",  [](const SelfT &c, const Num &k) { SelfT r = c; r *= k; return r; }, nb::is_operator());       \
     cls.def("__rmul__", [](const SelfT &c, const Num &k) { SelfT r = c; r *= k; return r; }, nb::is_operator());       \
-    cls.def("__truediv__", [](const SelfT &c, const Num &k) { SelfT r = c; r /= k; return r; }, nb::is_operator());    \
+    cls.def("__truediv__", [](const SelfT &c, const Num &k) { SelfT r = c; r /= ::pypgl::nonZeroDivisor(k); return r; }, nb::is_operator());    \
     PGL_BIND_TRANSFORMS(cls, SelfT);                                                                                  \
     PGL_BIND_DEGENERACY(cls, SelfT);                                                                                  \
     cls.def("rotate90", [](SelfT &c, int k) { c.rotate90(k); }, nb::arg("k") = 1,                                     \
@@ -107,9 +107,9 @@ namespace {
             "Multiply the " NOUN "'s x-coordinates by scalar in place.");                                              \
     cls.def("scaleUpY", [](SelfT &c, const Num &k) { c.scaleUpY(k); }, nb::arg("scalar"),                             \
             "Multiply the " NOUN "'s y-coordinates by scalar in place.");                                              \
-    cls.def("scaleDownX", [](SelfT &c, const Num &k) { c.scaleDownX(k); }, nb::arg("scalar"),                         \
+    cls.def("scaleDownX", [](SelfT &c, const Num &k) { c.scaleDownX(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),                         \
             "Divide the " NOUN "'s x-coordinates by scalar in place.");                                                \
-    cls.def("scaleDownY", [](SelfT &c, const Num &k) { c.scaleDownY(k); }, nb::arg("scalar"),                         \
+    cls.def("scaleDownY", [](SelfT &c, const Num &k) { c.scaleDownY(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),                         \
             "Divide the " NOUN "'s y-coordinates by scalar in place.");                                                \
     PGL_BIND_INDEXING(cls, SelfT);                                                                                    \
     PGL_BIND_ALL_PREDICATES(cls, SelfT);                                                                              \
@@ -310,20 +310,36 @@ void bind_chains(nb::module_ &m) {
                 "path over the same vertices. Edges are compared as unordered vertex "
                 "pairs; in a self-intersecting polyline old_edge may match several "
                 "edges, and the first that admits new_edge is used.");
+        // flippable() is a precondition of both, not advice: pgl states it as
+        // @pre, so a flip that is not possible is undefined rather than
+        // refused, and it does run off the end -- reliably enough to segfault
+        // on some toolchains and not others, which is how it survived from the
+        // 0.5-era binding until a sweep called it with two unrelated segments.
+        // Checked here, the way every other pypgl precondition is.
         cls.def("flipped",
                 [](const Polyline &p, const Segment &oldEdge, const Segment &newEdge) {
+                    if (!p.flippable(oldEdge, newEdge))
+                        throw nb::value_error(
+                            "flipped(): the flip is not possible on this polyline; "
+                            "old_edge must be one of its edges and new_edge must leave "
+                            "a path over the same vertices (test it with flippable())");
                     return p.flipped(oldEdge, newEdge);
                 },
                 nb::arg("old_edge"), nb::arg("new_edge"),
-                "A copy with old_edge flipped to new_edge. The flip must be possible "
-                "-- check flippable() first.");
+                "A copy with old_edge flipped to new_edge. Raises ValueError when the "
+                "flip is not possible; flippable() tests it without raising.");
         cls.def("flip",
                 [](Polyline &p, const Segment &oldEdge, const Segment &newEdge) {
+                    if (!p.flippable(oldEdge, newEdge))
+                        throw nb::value_error(
+                            "flip(): the flip is not possible on this polyline; "
+                            "old_edge must be one of its edges and new_edge must leave "
+                            "a path over the same vertices (test it with flippable())");
                     p.flip(oldEdge, newEdge);
                 },
                 nb::arg("old_edge"), nb::arg("new_edge"),
-                "Flip old_edge to new_edge in place. The flip must be possible -- "
-                "check flippable() first.");
+                "Flip old_edge to new_edge in place. Raises ValueError when the flip is "
+                "not possible; flippable() tests it without raising.");
 
         // With the direction invariant gone upstream (the sequence is now stored
         // verbatim rather than canonicalized on every mutation), a polyline can

@@ -213,9 +213,9 @@ void bind_halfplane_intersection(nb::module_ &m) {
             "Multiply the region's x-coordinates by scalar in place.");
     cls.def("scaleUpY", [](HalfplaneIntersection &a, const Num &k) { a.scaleUpY(k); }, nb::arg("scalar"),
             "Multiply the region's y-coordinates by scalar in place.");
-    cls.def("scaleDownX", [](HalfplaneIntersection &a, const Num &k) { a.scaleDownX(k); }, nb::arg("scalar"),
+    cls.def("scaleDownX", [](HalfplaneIntersection &a, const Num &k) { a.scaleDownX(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
             "Divide the region's x-coordinates by scalar in place.");
-    cls.def("scaleDownY", [](HalfplaneIntersection &a, const Num &k) { a.scaleDownY(k); }, nb::arg("scalar"),
+    cls.def("scaleDownY", [](HalfplaneIntersection &a, const Num &k) { a.scaleDownY(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
             "Divide the region's y-coordinates by scalar in place.");
 
     // Mutable (insert mutates), hence unhashable, following Convex/Polygon.

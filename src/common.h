@@ -188,6 +188,25 @@ void bind_value_semantics(Class &cls, bool hashable = true) {
         cls.attr("__hash__") = nb::none();
 }
 
+// The scalar a shape is about to be divided by.
+//
+// Dividing by zero is a precondition violation, and pgl states it the way it
+// states the others: with an assert, which the release build pypgl ships
+// compiles out. So it does not fail -- Rational's reciprocal builds a
+// denominator of 0 and marks it already normalized, and the corrupt value takes
+// the process down later, when something finally forces a real BigInt division.
+// That is the same pathology the Transformation.inverse() guard exists for, and
+// what a sweep passing 0 as a scale factor turned up. It is checked here and
+// raised as the ZeroDivisionError Python gives for the same mistake (nanobind
+// has no builtin for that one, hence the C API call).
+inline const Num &nonZeroDivisor(const Num &k) {
+    if (k == Num(0)) {
+        PyErr_SetString(PyExc_ZeroDivisionError, "cannot divide a shape by zero");
+        throw nb::python_error();
+    }
+    return k;
+}
+
 // The cyclic index convention, which pgl's get() sets and pypgl applies to
 // every index it takes: the index is reduced modulo the count, so a negative
 // one counts from the end and an out-of-range one wraps instead of running off
@@ -404,7 +423,7 @@ void requireNonEmptyForHausdorff(const A &a, const B &b, const char *method) {
     cls.def("__sub__",  [](const SelfT &s, const ::pypgl::Point &p) { return s - p; }, nb::is_operator());  \
     cls.def("__mul__",  [](const SelfT &s, const ::pypgl::Num &k)   { return s * k; }, nb::is_operator());  \
     cls.def("__rmul__", [](const SelfT &s, const ::pypgl::Num &k)   { return k * s; }, nb::is_operator());  \
-    cls.def("__truediv__", [](const SelfT &s, const ::pypgl::Num &k) { return s / k; }, nb::is_operator())
+    cls.def("__truediv__", [](const SelfT &s, const ::pypgl::Num &k) { return s / ::pypgl::nonZeroDivisor(k); }, nb::is_operator())
 
 // Value-returning rigid/axis transforms (return a new shape). Shared by every
 // shape, mutable or not. `rotated90` rotates by 90*k degrees about the origin;
@@ -416,9 +435,9 @@ void requireNonEmptyForHausdorff(const A &a, const B &b, const char *method) {
             "Return the shape with its x-coordinates multiplied by scalar.");                                  \
     cls.def("scaledUpY", [](const SelfT &s, const ::pypgl::Num &k) { return s.scaledUpY(k); }, nb::arg("scalar"),   \
             "Return the shape with its y-coordinates multiplied by scalar.");                                  \
-    cls.def("scaledDownX", [](const SelfT &s, const ::pypgl::Num &k) { return s.scaledDownX(k); }, nb::arg("scalar"), \
+    cls.def("scaledDownX", [](const SelfT &s, const ::pypgl::Num &k) { return s.scaledDownX(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"), \
             "Return the shape with its x-coordinates divided by scalar.");                                     \
-    cls.def("scaledDownY", [](const SelfT &s, const ::pypgl::Num &k) { return s.scaledDownY(k); }, nb::arg("scalar"), \
+    cls.def("scaledDownY", [](const SelfT &s, const ::pypgl::Num &k) { return s.scaledDownY(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"), \
             "Return the shape with its y-coordinates divided by scalar.")
 
 // The convex hull, bound on every shape that has a bbox and can be written as

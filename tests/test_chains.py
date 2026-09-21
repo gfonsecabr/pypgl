@@ -326,3 +326,54 @@ def test_a_chain_answers_a_predicate_against_an_unbounded_region():
     assert crossing.intersects(left) and not left.contains(crossing)
     assert not outside.intersects(left)
     assert left.contains(within) and within.intersects(left)
+
+
+# --- The 2-opt flip has a precondition ---------------------------------------
+#
+# flippable() is stated upstream as @pre on both flip() and flipped(), so an
+# impossible flip is undefined rather than refused: it ran off the end, which
+# segfaulted on some toolchains and not others. pypgl checks it, the way it
+# checks every other precondition it can reach from Python.
+
+def _path():
+    return Polyline([Point(0, 0), Point(2, 3), Point(5, 1), Point(7, 0)])
+
+
+def test_an_impossible_flip_raises_instead_of_running_off_the_end():
+    path = _path()
+    # Neither segment is an edge of this polyline, so there is nothing to flip.
+    old, new = Segment(Point(0, 0), Point(1, 1)), Segment(Point(1, 1), Point(2, 2))
+    assert not path.flippable(old, new)
+    with pytest.raises(ValueError, match="not possible"):
+        path.flipped(old, new)
+    with pytest.raises(ValueError, match="not possible"):
+        path.flip(old, new)
+    # The refused in-place flip left the polyline untouched.
+    assert path == _path()
+
+
+def test_a_flip_whose_old_edge_exists_but_whose_new_edge_breaks_the_path_raises():
+    path = _path()
+    # (0,0)--(2,3) is an edge, but adding (2,3)--(5,1) back leaves no path over
+    # the same vertices.
+    old, new = Segment(Point(0, 0), Point(2, 3)), Segment(Point(2, 3), Point(5, 1))
+    assert not path.flippable(old, new)
+    with pytest.raises(ValueError):
+        path.flipped(old, new)
+
+
+def test_a_possible_flip_still_works():
+    path = _path()
+    old, new = Segment(Point(0, 0), Point(2, 3)), Segment(Point(0, 0), Point(7, 0))
+    assert path.flippable(old, new)
+    flipped = path.flipped(old, new)
+    assert flipped == Polyline(
+        [Point(0, 0), Point(7, 0), Point(5, 1), Point(2, 3)]
+    )
+    assert path == _path()  # flipped() left the original alone
+    path.flip(old, new)
+    assert path == flipped
+    # The flip is a reordering: same vertices, same edge count.
+    assert sorted(repr(v) for v in path.vertices()) == sorted(
+        repr(v) for v in _path().vertices()
+    )

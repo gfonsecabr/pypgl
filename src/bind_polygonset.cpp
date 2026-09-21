@@ -225,9 +225,9 @@ void bind_polygonset(nb::module_ &m) {
             "Multiply the set's x-coordinates by scalar in place.");
     cls.def("scaleUpY", [](PolygonSet &a, const Num &k) { a.scaleUpY(k); }, nb::arg("scalar"),
             "Multiply the set's y-coordinates by scalar in place.");
-    cls.def("scaleDownX", [](PolygonSet &a, const Num &k) { a.scaleDownX(k); }, nb::arg("scalar"),
+    cls.def("scaleDownX", [](PolygonSet &a, const Num &k) { a.scaleDownX(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
             "Divide the set's x-coordinates by scalar in place.");
-    cls.def("scaleDownY", [](PolygonSet &a, const Num &k) { a.scaleDownY(k); }, nb::arg("scalar"),
+    cls.def("scaleDownY", [](PolygonSet &a, const Num &k) { a.scaleDownY(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
             "Divide the set's y-coordinates by scalar in place.");
 
     bind_value_semantics<PolygonSet>(cls, /*hashable=*/false);
@@ -238,7 +238,7 @@ void bind_polygonset(nb::module_ &m) {
             nb::rv_policy::none, nb::is_operator());
     cls.def("__imul__", [](PolygonSet &a, const Num &k) { a *= k; return &a; },
             nb::rv_policy::none, nb::is_operator());
-    cls.def("__itruediv__", [](PolygonSet &a, const Num &k) { a /= k; return &a; },
+    cls.def("__itruediv__", [](PolygonSet &a, const Num &k) { a /= ::pypgl::nonZeroDivisor(k); return &a; },
             nb::rv_policy::none, nb::is_operator());
     // Translation by a Point -- the Point special case of the Minkowski sum,
     // whose named method PGL_BIND_MINKOWSKI_REGION binds.
@@ -252,6 +252,6 @@ void bind_polygonset(nb::module_ &m) {
             nb::is_operator());
     cls.def("__rmul__", [](const PolygonSet &a, const Num &k) { return k * a; },
             nb::is_operator());
-    cls.def("__truediv__", [](const PolygonSet &a, const Num &k) { return a / k; },
+    cls.def("__truediv__", [](const PolygonSet &a, const Num &k) { return a / ::pypgl::nonZeroDivisor(k); },
             nb::is_operator());
 }

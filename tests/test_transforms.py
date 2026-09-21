@@ -173,3 +173,92 @@ def test_a_translated_one_point_hull_reports_its_centroid_where_it_is():
     assert hull.vertices() == [pypgl.Point(13, 24)]
     assert hull.centroid() == pypgl.Point(13, 24)
     assert hull.verticesCentroid() == pypgl.Point(13, 24)
+
+
+# --- Dividing by zero ---------------------------------------------------------
+#
+# A zero divisor is a precondition violation, and pgl states it with an assert,
+# which the release build pypgl ships compiles out. Unchecked, it does not fail:
+# it builds a rational with denominator 0, marked already normalized, and the
+# process dies later when something forces a real division. So every division a
+# shape can take is guarded, and raises what Python raises for the same mistake.
+
+ZERO_DIVIDERS = [
+    "__truediv__",      # shape / 0
+    "__itruediv__",     # shape /= 0
+    "scaledDownX",      # value-returning
+    "scaledDownY",
+    "scaleDownX",       # in-place, on the mutable shapes
+    "scaleDownY",
+]
+
+
+def _one_of_every_shape():
+    P = pypgl.Point
+    square = pypgl.Polygon([0, 0, 4, 0, 4, 4, 0, 4])
+    return [
+        P(4, 6),
+        pypgl.Segment(P(0, 0), P(4, 4)),
+        pypgl.OrientedSegment(P(0, 0), P(4, 4)),
+        pypgl.Line(P(0, 0), P(4, 4)),
+        pypgl.OrientedLine(P(0, 0), P(4, 4)),
+        pypgl.Ray(P(0, 0), P(4, 4)),
+        pypgl.Halfplane(P(0, 0), P(4, 0)),
+        pypgl.Triangle(P(0, 0), P(4, 0), P(0, 4)),
+        pypgl.Rectangle(P(0, 0), P(4, 4)),
+        pypgl.Convex([P(0, 0), P(4, 0), P(4, 4)]),
+        pypgl.MonotoneChain([P(0, 0), P(2, 3), P(5, 1)]),
+        pypgl.Polyline([P(0, 0), P(2, 3), P(5, 1)]),
+        square,
+        square.asPolygonWithHoles(),
+        square.asPolygonSet(),
+        pypgl.Rectangle(P(0, 0), P(4, 4)).asHalfplaneIntersection(),
+        pypgl.Disk(P(0, 0), 5),
+    ]
+
+
+@pytest.mark.parametrize("shape", _one_of_every_shape(), ids=lambda s: type(s).__name__)
+def test_dividing_any_shape_by_zero_raises(shape):
+    divided = False
+    for name in ZERO_DIVIDERS:
+        method = getattr(shape, name, None)
+        if method is None:
+            continue
+        divided = True
+        with pytest.raises(ZeroDivisionError):
+            method(0)
+        # A Fraction zero is the same zero.
+        with pytest.raises(ZeroDivisionError):
+            method(Fraction(0, 5))
+    assert divided, f"{type(shape).__name__} takes none of {ZERO_DIVIDERS}"
+
+
+@pytest.mark.parametrize("shape", _one_of_every_shape(), ids=lambda s: type(s).__name__)
+def test_a_refused_division_leaves_the_shape_alone(shape):
+    before = repr(shape)
+    for name in ZERO_DIVIDERS:
+        method = getattr(shape, name, None)
+        if method is None:
+            continue
+        with pytest.raises(ZeroDivisionError):
+            method(0)
+    assert repr(shape) == before
+
+
+@pytest.mark.parametrize("shape", _one_of_every_shape(), ids=lambda s: type(s).__name__)
+def test_a_nonzero_divisor_is_untouched_by_the_guard(shape):
+    for name in ("__truediv__", "scaledDownX", "scaledDownY"):
+        method = getattr(shape, name, None)
+        if method is None:
+            continue
+        # Halving twice is quartering -- an identity a corrupted rational would
+        # not satisfy, so it checks the guard let the real division through.
+        assert getattr(method(2), name)(2) == method(4)
+
+
+def test_scaling_up_by_zero_is_not_a_division():
+    # Multiplying by zero is a legal collapse, not a precondition violation: it
+    # flattens the shape onto an axis rather than producing a bad rational.
+    flat = pypgl.Polygon([0, 0, 4, 0, 4, 4]).scaledUpX(0)
+    assert all(v.x() == 0 for v in flat.vertices())
+    assert pypgl.Point(4, 6) * 0 == pypgl.Point(0, 0)

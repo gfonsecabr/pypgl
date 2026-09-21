@@ -41,7 +41,7 @@ void bind_point(nb::module_ &m) {
     cls.def("__neg__", [](const Point &a) { return -a; }, nb::is_operator());
     cls.def("__mul__", [](const Point &a, const Num &k) { return a * k; }, nb::is_operator());
     cls.def("__rmul__", [](const Point &a, const Num &k) { return k * a; }, nb::is_operator());
-    cls.def("__truediv__", [](const Point &a, const Num &k) { return a / k; }, nb::is_operator());
+    cls.def("__truediv__", [](const Point &a, const Num &k) { return a / ::pypgl::nonZeroDivisor(k); }, nb::is_operator());
     cls.def("asHalfplaneIntersection", [](const Point &p) { return p.asHalfplaneIntersection(); },
             "The same point as a (degenerate) HalfplaneIntersection.");
     PGL_BIND_TRANSFORMS(cls, Point);

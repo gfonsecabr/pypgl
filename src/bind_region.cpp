@@ -276,9 +276,9 @@ void bind_region(nb::module_ &m) {
             "Multiply the region's x-coordinates by scalar in place.");
     cls.def("scaleUpY", [](PolygonWithHoles &a, const Num &k) { a.scaleUpY(k); }, nb::arg("scalar"),
             "Multiply the region's y-coordinates by scalar in place.");
-    cls.def("scaleDownX", [](PolygonWithHoles &a, const Num &k) { a.scaleDownX(k); }, nb::arg("scalar"),
+    cls.def("scaleDownX", [](PolygonWithHoles &a, const Num &k) { a.scaleDownX(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
             "Divide the region's x-coordinates by scalar in place.");
-    cls.def("scaleDownY", [](PolygonWithHoles &a, const Num &k) { a.scaleDownY(k); }, nb::arg("scalar"),
+    cls.def("scaleDownY", [](PolygonWithHoles &a, const Num &k) { a.scaleDownY(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
             "Divide the region's y-coordinates by scalar in place.");
 
     bind_value_semantics<PolygonWithHoles>(cls, /*hashable=*/false);
@@ -292,7 +292,7 @@ void bind_region(nb::module_ &m) {
             nb::rv_policy::none, nb::is_operator());
     cls.def("__imul__", [](PolygonWithHoles &a, const Num &k) { a *= k; return &a; },
             nb::rv_policy::none, nb::is_operator());
-    cls.def("__itruediv__", [](PolygonWithHoles &a, const Num &k) { a /= k; return &a; },
+    cls.def("__itruediv__", [](PolygonWithHoles &a, const Num &k) { a /= ::pypgl::nonZeroDivisor(k); return &a; },
             nb::rv_policy::none, nb::is_operator());
     // Translation by a Point, the Point special case of the Minkowski sum that
     // PGL_BIND_MINKOWSKI_CONNECTED_REGION binds the named method for. Spelled out here
@@ -309,6 +309,6 @@ void bind_region(nb::module_ &m) {
             nb::is_operator());
     cls.def("__rmul__", [](const PolygonWithHoles &a, const Num &k) { return k * a; },
             nb::is_operator());
-    cls.def("__truediv__", [](const PolygonWithHoles &a, const Num &k) { return a / k; },
+    cls.def("__truediv__", [](const PolygonWithHoles &a, const Num &k) { return a / ::pypgl::nonZeroDivisor(k); },
             nb::is_operator());
 }

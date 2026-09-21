@@ -365,7 +365,7 @@ void bind_polygons(nb::module_ &m) {
         cls.def("__iadd__", [](nb::object self, const Point &p) { nb::cast<Convex &>(self) += p; return self; }, nb::is_operator());
         cls.def("__isub__", [](nb::object self, const Point &p) { nb::cast<Convex &>(self) -= p; return self; }, nb::is_operator());
         cls.def("__imul__", [](nb::object self, const Num &k) { nb::cast<Convex &>(self) *= k; return self; }, nb::is_operator());
-        cls.def("__itruediv__", [](nb::object self, const Num &k) { nb::cast<Convex &>(self) /= k; return self; }, nb::is_operator());
+        cls.def("__itruediv__", [](nb::object self, const Num &k) { nb::cast<Convex &>(self) /= ::pypgl::nonZeroDivisor(k); return self; }, nb::is_operator());
 
         // Value-returning operators copy first (Convex has no free operators, so
         // synthesize them from the compound-assignment members).
@@ -374,7 +374,7 @@ void bind_polygons(nb::module_ &m) {
         cls.def("__sub__",  [](const Convex &c, const Point &p) { Convex r = c; r -= p; return r; }, nb::is_operator());
         cls.def("__mul__",  [](const Convex &c, const Num &k) { Convex r = c; r *= k; return r; }, nb::is_operator());
         cls.def("__rmul__", [](const Convex &c, const Num &k) { Convex r = c; r *= k; return r; }, nb::is_operator());
-        cls.def("__truediv__", [](const Convex &c, const Num &k) { Convex r = c; r /= k; return r; }, nb::is_operator());
+        cls.def("__truediv__", [](const Convex &c, const Num &k) { Convex r = c; r /= ::pypgl::nonZeroDivisor(k); return r; }, nb::is_operator());
 
         // Value-returning transforms (new hull) plus their in-place counterparts
         // (mutate, return None), mirroring pgl.
@@ -440,9 +440,9 @@ void bind_polygons(nb::module_ &m) {
                 "Multiply the hull's x-coordinates by scalar in place.");
         cls.def("scaleUpY", [](Convex &c, const Num &k) { c.scaleUpY(k); }, nb::arg("scalar"),
                 "Multiply the hull's y-coordinates by scalar in place.");
-        cls.def("scaleDownX", [](Convex &c, const Num &k) { c.scaleDownX(k); }, nb::arg("scalar"),
+        cls.def("scaleDownX", [](Convex &c, const Num &k) { c.scaleDownX(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
                 "Divide the hull's x-coordinates by scalar in place.");
-        cls.def("scaleDownY", [](Convex &c, const Num &k) { c.scaleDownY(k); }, nb::arg("scalar"),
+        cls.def("scaleDownY", [](Convex &c, const Num &k) { c.scaleDownY(::pypgl::nonZeroDivisor(k)); }, nb::arg("scalar"),
                 "Divide the hull's y-coordinates by scalar in place.");
 
         PGL_BIND_VERTEX_QUERIES(cls, Convex);
