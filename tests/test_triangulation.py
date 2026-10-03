@@ -40,6 +40,14 @@ def _square_points():
     return [Point(0, 0), Point(4, 0), Point(4, 4), Point(0, 4)]
 
 
+def _diagonal_square():
+    # The four corners of the square are cocircular, so which diagonal the
+    # Delaunay triangulation picks is unspecified (and changed with pgl's
+    # Lawson-flip construction). Tests that reason about the (0,0)-(4,4)
+    # diagonal constrain it.
+    return Triangulation(_square_points(), [Segment(Point(0, 0), Point(4, 4))])
+
+
 def _square_polygon():
     return Polygon(_square_points())
 
@@ -251,7 +259,7 @@ def test_triangles_intersecting_segment_and_line():
 def test_triangles_intersecting_a_chain():
     # A chain is neither straight nor convex, so pgl gives it its own traversal:
     # the directed walk run over each edge in turn, in chain order.
-    t = Triangulation(_square_points())
+    t = _diagonal_square()
     # A zigzag polyline that dips across the (0,0)-(4,4) diagonal and back.
     zigzag = Polyline([Point(1, 3), Point(3, 1), Point(3, 3)])
     assert len(t.trianglesIntersecting(zigzag)) == 2
@@ -264,7 +272,7 @@ def test_triangles_intersecting_a_chain():
 
 
 def test_triangles_intersecting_region_shapes():
-    t = Triangulation(_square_points())
+    t = _diagonal_square()
     # (1, 3) is strictly on one side of the (0,0)-(4,4) diagonal, so it meets
     # exactly one triangle; (1, 1) would sit exactly on the diagonal itself.
     assert len(t.trianglesIntersecting(Point(1, 3))) == 1

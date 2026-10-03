@@ -60,7 +60,7 @@ def test_stub_declares_every_public_function():
     for name in (
         "findIntersections", "findCrossings", "findInteriorIntersections",
         "detectIntersections", "detectCrossings", "detectInteriorIntersections",
-        "convexHull", "convexHullExtended",
+        "convexHull", "convexHullExtended", "convexLayers",
         "sortPoints", "sortDistinctPoints", "sortAround", "hilbertSort",
         "polyominoes", "polyominoesUpTo", "smallestEnclosingDisk", "closestPair",
         "regularizedUnionOf",

@@ -57,6 +57,15 @@ void bind_algorithms(nb::module_ &m) {
           nb::arg("points"),
           "Return the convex hull, retaining input points on its edge interiors.");
 
+    m.def("convexLayers",
+          [](const std::vector<Point> &points) { return pgl::convexLayers(points); },
+          nb::arg("points"),
+          "Return the convex layers (onion peeling), outermost first. Each layer is every "
+          "remaining point on the boundary of the convex hull -- vertices and points on "
+          "edge interiors alike -- counterclockwise from its lexicographically smallest "
+          "point, as convexHullExtended returns it. Coincident points count once. "
+          "O(n log n + nL) for L layers.");
+
     // The smallest closed disk containing every given point, by Welzl's
     // randomized incremental algorithm (expected linear time). pgl's warning
     // about even coordinates does not apply here: pypgl's coordinates are

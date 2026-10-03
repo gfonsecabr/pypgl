@@ -475,6 +475,34 @@ Because $\mathrm{hull}(A \oplus B) = \mathrm{hull}(A) \oplus \mathrm{hull}(B)$,
 this is also how to ask for the convex approximation of a sum or an intersection
 that is not bound for the pair at hand.
 
+### Simplification
+
+[`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes.") and
+[`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors.") can drop vertices while staying close to themselves:
+
+- `simplified(squaredTolerance)`: Returns the shape with vertices removed, within
+  Hausdorff distance $\sqrt{\texttt{squaredTolerance}}$ of it. The result keeps
+  a subsequence of the vertices, chosen in Douglas–Peucker order, so no
+  coordinate is constructed and the answer is exact; the tolerance is compared
+  exactly too. With a tolerance of zero it covers the same points, dropping only
+  vertices that change nothing, such as collinear ones.
+- `simplify(squaredTolerance)`: The same, in place.
+
+```python
+p = pgl.Polygon([0,0, 2,0, 4,0, 4,1, 4,4, 2,5, 0,4])
+p.simplified(0)           # Polygon[(0,0),(4,0),(4,4),(2,5),(0,4)] — collinear vertices gone
+p.simplified(1)           # Polygon[(0,0),(4,0),(4,4),(0,4)]
+```
+
+What is preserved depends on the shape. A [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices.") keeps its first vertex and
+stays simple when it was. A [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.") stays convex, and may come back with fewer
+than three vertices when it is thinner than the tolerance. A chain keeps its
+endpoints, a closed [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect.") stays closed, and a [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.") stays
+monotone — but a [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect.") may come back self-intersecting even where it was
+not. A [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes.") or a [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors.") loses no ring and no component,
+stays valid when it was, and its rings meet only where they met before. The
+chains and [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.") take $O(n^2)$ time for $n$ vertices.
+
 ### Other Methods for Shapes
 
 The transforms come in two flavors. The value-returning forms below return a
@@ -552,25 +580,26 @@ applied with a [`Transformation`](#transformations).
   [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners.") or a one-vertex [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.") holds a point and is measured normally.
 
 - `squaredHausdorffDistance(Shape)`, `hausdorffDistanceL1(Shape)` /
-  `hausdorffDistanceLInf(Shape)`: Return the exact Hausdorff distance in the same
+  `hausdorffDistanceLInf(Shape)`: Return the Hausdorff distance in the same
   three metrics, with the same squared/unsquared convention as above. **These are
   the standard *symmetric* Hausdorff distance** — `max(h(A, B), h(B, A))` — so
   `a.squaredHausdorffDistance(b)` always equals `b.squaredHausdorffDistance(a)`,
   even though the call reads like a directed measure from `a` to `b`.
 
-  The three do not share one set of operands, because what each metric can
-  answer exactly differs. The Euclidean one reads the distance off a vertex of
-  the source, which is only where the maximum sits when both shapes are convex:
-  it is defined for the seven bounded convex shapes — [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."), [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label."),
-  [`OrientedSegment`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedSegment.html "Directed segment preserving source-to-target order plus optional segment label."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.") and
-  [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty."). The L1 and LInf forms need no convexity, both norms
-  being polyhedral, and cover every pair of bounded polygonal shapes: those
-  seven without [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty."), plus [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."),
-  [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes.") and [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors."). A [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty.")
-  joins the L1 and LInf grids against the convex shapes only. The maximum is
-  then not always at a vertex, and these find it where it is: a shape can be
-  farthest from another at a point in the middle of an edge, or, where it has
+  All three cover every pair of bounded polygonal shapes — [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."), [`Segment`](https://gfonsecabr.github.io/pgl/structpgl_1_1Segment.html "Unoriented closed segment between two endpoints plus optional segment label."),
+  [`OrientedSegment`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedSegment.html "Directed segment preserving source-to-target order plus optional segment label."), [`Rectangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Rectangle.html "Axis-aligned rectangle stored by minimum and maximum corners."), [`Triangle`](https://gfonsecabr.github.io/pgl/structpgl_1_1Triangle.html "Closed triangle stored by three vertices."), [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices."),
+  [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."), [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes.") and [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors.") — and a
+  [`HalfplaneIntersection`](https://gfonsecabr.github.io/pgl/structpgl_1_1HalfplaneIntersection.html "Intersection of closed half-planes; convex but possibly unbounded or empty.") joins them against the convex shapes only. The
+  maximum is not always at a vertex, and these find it where it is: a shape can
+  be farthest from another at a point in the middle of an edge, or, where it has
   area, strictly inside itself.
+
+  The L1 and LInf forms are always exact, both norms being polyhedral. The
+  Euclidean form is exact (a `Fraction`) when both shapes are convex, since the
+  maximum then sits at a vertex, and when either is a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload."), whose farthest
+  point on the other shape is a vertex too. Every other pair — a non-convex
+  shape against anything but a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") — generally has an irrational answer,
+  and `squaredHausdorffDistance` returns it as a `float`.
 
   [`Line`](https://gfonsecabr.github.io/pgl/structpgl_1_1Line.html "Unoriented infinite line."), [`OrientedLine`](https://gfonsecabr.github.io/pgl/structpgl_1_1OrientedLine.html "Directed infinite line with left/right side semantics plus optional line label."), [`Ray`](https://gfonsecabr.github.io/pgl/structpgl_1_1Ray.html "Half-infinite line starting from one source point plus optional ray label.") and [`Halfplane`](https://gfonsecabr.github.io/pgl/structpgl_1_1Halfplane.html "Closed half-plane defined by an oriented boundary line.") cover points arbitrarily far
   from anything and have none of the three; neither does a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), whose

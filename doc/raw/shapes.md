@@ -564,13 +564,14 @@ A `Polygon` also carries the [boolean operations](shape_methods.md#boolean-opera
 
 - `P.empty()`: Returns true if the polygon has no vertex at all, which is the empty set. Distinct from `isDegenerate()`, which is a polygon with vertices but no area.
 - `P.convexPartition()`: Cuts the polygon into [`Convex`](#convex) pieces with pairwise disjoint interiors whose union is the polygon, using at most four times the fewest pieces possible. Shorthand for `P.triangulation().convexPartition()`.
+- `P.optimalConvexPartition()`: Cuts the polygon into the fewest `Convex` pieces whose corners are all corners of the polygon, otherwise as `convexPartition()`. Allowing new corners inside the polygon can need fewer pieces still. Takes $O(n + r^2 n \log n)$ time beyond the triangulation, for $n$ vertices of which $r$ are reflex, and only $O(n)$ when the polygon is convex. The polygon must be simple and non-degenerate.
 - `P.convexCovering()`: Covers the polygon with `Convex` pieces, which may overlap. Irredundant but not necessarily minimum.
 - `P.visibilityGraph()`, `P.clearVisibilityGraph()`, `P.reducedVisibilityGraph()`, `P.visibleVertices(q)`, `P.clearlyVisibleVertices(q)`, `P.regularizedVisiblePolygon(q)`: [Visibility](algorithms.md#visibility) inside the polygon.
 
-`P` is not convex in general, so it has no `squaredHausdorffDistance` — that one
-is read off a vertex — and no `verticesContain` (use `P.index(point) is not None`
-for the latter). It does have `hausdorffDistanceL1` and `hausdorffDistanceLInf`,
-which need no convexity.
+`P` is not convex in general, so it has no `verticesContain` (use
+`P.index(point) is not None` instead), and its `squaredHausdorffDistance` is a
+`float` against anything but a `Point` — see
+[shape methods](shape_methods.md#other-methods-for-shapes).
 
 - Other methods:
 

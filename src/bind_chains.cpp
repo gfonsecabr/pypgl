@@ -173,6 +173,9 @@ void bind_chains(nb::module_ &m) {
         // shortens it. Both forms are O(n). The point form
         // reports whether it found a vertex to remove; the index form is
         // positional, over the same lexicographic order that indexing uses.
+        PGL_BIND_SIMPLIFY(cls, MonotoneChain, "chain",
+                          "The endpoints are kept, and the result is monotone like this chain. "
+                          "O(n^2) for n vertices.");
         cls.def("erase", [](MonotoneChain &c, const Point &p) { return c.erase(p); },
                 nb::arg("point"),
                 "Remove the vertex equal to point, returning whether there was one.");
@@ -276,6 +279,10 @@ void bind_chains(nb::module_ &m) {
 
         PGL_BIND_CHAIN_COMMON(cls, Polyline, "polyline");
 
+        PGL_BIND_SIMPLIFY(cls, Polyline, "polyline",
+                          "The endpoints are kept and a closed polyline stays closed. The result "
+                          "may self-intersect even where this polyline does not. O(n^2) for n "
+                          "vertices.");
         cls.def("isSimple", [](const Polyline &p) { return p.isSimple(); },
                 "Whether the polyline does not touch or cross itself: no two "
                 "non-adjacent edges meet, adjacent edges meet only at their shared "

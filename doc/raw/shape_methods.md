@@ -473,6 +473,34 @@ Because $\mathrm{hull}(A \oplus B) = \mathrm{hull}(A) \oplus \mathrm{hull}(B)$,
 this is also how to ask for the convex approximation of a sum or an intersection
 that is not bound for the pair at hand.
 
+### Simplification
+
+`Convex`, `MonotoneChain`, `Polyline`, `Polygon`, `PolygonWithHoles` and
+`PolygonSet` can drop vertices while staying close to themselves:
+
+- `simplified(squaredTolerance)`: Returns the shape with vertices removed, within
+  Hausdorff distance $\sqrt{\texttt{squaredTolerance}}$ of it. The result keeps
+  a subsequence of the vertices, chosen in Douglas–Peucker order, so no
+  coordinate is constructed and the answer is exact; the tolerance is compared
+  exactly too. With a tolerance of zero it covers the same points, dropping only
+  vertices that change nothing, such as collinear ones.
+- `simplify(squaredTolerance)`: The same, in place.
+
+```python
+p = pgl.Polygon([0,0, 2,0, 4,0, 4,1, 4,4, 2,5, 0,4])
+p.simplified(0)           # Polygon[(0,0),(4,0),(4,4),(2,5),(0,4)] — collinear vertices gone
+p.simplified(1)           # Polygon[(0,0),(4,0),(4,4),(0,4)]
+```
+
+What is preserved depends on the shape. A `Polygon` keeps its first vertex and
+stays simple when it was. A `Convex` stays convex, and may come back with fewer
+than three vertices when it is thinner than the tolerance. A chain keeps its
+endpoints, a closed `Polyline` stays closed, and a `MonotoneChain` stays
+monotone — but a `Polyline` may come back self-intersecting even where it was
+not. A `PolygonWithHoles` or a `PolygonSet` loses no ring and no component,
+stays valid when it was, and its rings meet only where they met before. The
+chains and `Convex` take $O(n^2)$ time for $n$ vertices.
+
 ### Other Methods for Shapes
 
 The transforms come in two flavors. The value-returning forms below return a
@@ -550,25 +578,26 @@ applied with a [`Transformation`](#transformations).
   `Rectangle` or a one-vertex `Convex` holds a point and is measured normally.
 
 - `squaredHausdorffDistance(Shape)`, `hausdorffDistanceL1(Shape)` /
-  `hausdorffDistanceLInf(Shape)`: Return the exact Hausdorff distance in the same
+  `hausdorffDistanceLInf(Shape)`: Return the Hausdorff distance in the same
   three metrics, with the same squared/unsquared convention as above. **These are
   the standard *symmetric* Hausdorff distance** — `max(h(A, B), h(B, A))` — so
   `a.squaredHausdorffDistance(b)` always equals `b.squaredHausdorffDistance(a)`,
   even though the call reads like a directed measure from `a` to `b`.
 
-  The three do not share one set of operands, because what each metric can
-  answer exactly differs. The Euclidean one reads the distance off a vertex of
-  the source, which is only where the maximum sits when both shapes are convex:
-  it is defined for the seven bounded convex shapes — `Point`, `Segment`,
-  `OrientedSegment`, `Rectangle`, `Triangle`, `Convex` and
-  `HalfplaneIntersection`. The L1 and LInf forms need no convexity, both norms
-  being polyhedral, and cover every pair of bounded polygonal shapes: those
-  seven without `HalfplaneIntersection`, plus `MonotoneChain`, `Polyline`,
-  `Polygon`, `PolygonWithHoles` and `PolygonSet`. A `HalfplaneIntersection`
-  joins the L1 and LInf grids against the convex shapes only. The maximum is
-  then not always at a vertex, and these find it where it is: a shape can be
-  farthest from another at a point in the middle of an edge, or, where it has
+  All three cover every pair of bounded polygonal shapes — `Point`, `Segment`,
+  `OrientedSegment`, `Rectangle`, `Triangle`, `Convex`, `MonotoneChain`,
+  `Polyline`, `Polygon`, `PolygonWithHoles` and `PolygonSet` — and a
+  `HalfplaneIntersection` joins them against the convex shapes only. The
+  maximum is not always at a vertex, and these find it where it is: a shape can
+  be farthest from another at a point in the middle of an edge, or, where it has
   area, strictly inside itself.
+
+  The L1 and LInf forms are always exact, both norms being polyhedral. The
+  Euclidean form is exact (a `Fraction`) when both shapes are convex, since the
+  maximum then sits at a vertex, and when either is a `Point`, whose farthest
+  point on the other shape is a vertex too. Every other pair — a non-convex
+  shape against anything but a `Point` — generally has an irrational answer,
+  and `squaredHausdorffDistance` returns it as a `float`.
 
   `Line`, `OrientedLine`, `Ray` and `Halfplane` cover points arbitrarily far
   from anything and have none of the three; neither does a `Disk`, whose

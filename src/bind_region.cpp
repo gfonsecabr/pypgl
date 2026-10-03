@@ -270,6 +270,9 @@ void bind_region(nb::module_ &m) {
     // In-place transforms (mutate, return None), as on every other mutable
     // shape. PGL_BIND_TRANSFORMS above binds only the value-returning forms,
     // which every shape has; these are the counterpart the mutable ones add.
+    PGL_BIND_SIMPLIFY(cls, PolygonWithHoles, "region",
+                      "No ring is removed. The result is valid when this region is, and its "
+                      "rings meet only where this region's rings met.");
     cls.def("rotate90", [](PolygonWithHoles &a, int k) { a.rotate90(k); }, nb::arg("k") = 1,
             "Rotate the region in place by 90*k degrees about the origin.");
     cls.def("scaleUpX", [](PolygonWithHoles &a, const Num &k) { a.scaleUpX(k); }, nb::arg("scalar"),

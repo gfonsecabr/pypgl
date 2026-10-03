@@ -78,6 +78,13 @@ These functions use the same predicate conventions documented in
   input points that lie in the interior of a hull edge instead of dropping them.
   Complexity $O(n \log n)$.
 
+- `convexLayers(points)`: Returns the convex layers ("onion peeling"),
+  outermost first. Each layer is every remaining point on the boundary of the
+  hull — vertices and points inside hull edges alike — counterclockwise from its
+  smallest point, as `convexHullExtended` returns it; the next layer is the same
+  for the points left once it is removed. Coincident points count once.
+  Complexity $O(n \log n + nL)$ for $L$ layers.
+
 To get the hull as a shape rather than as a list of points, construct a
 [`Convex`](shapes.md#convex) directly: `pgl.Convex(points)` computes the hull.
 Every bounded shape also carries its own `convexHull()`, which answers a

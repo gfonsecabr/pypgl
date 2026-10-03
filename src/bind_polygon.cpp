@@ -144,6 +144,8 @@ void bind_polygon(nb::module_ &m) {
     cls.def("chainCount", [](const Polygon &s) { return s.chainCount(); },
             "Number of lexicographically monotone chains the boundary breaks into -- 2 for a convex ring, more the more the boundary reverses direction in x. It is what the containment and intersection tests cost: they run chain against chain when there are few, and fall back to a plane sweep when there are many.");
     PGL_BIND_DEGENERACY(cls, Polygon);
+    PGL_BIND_SIMPLIFY(cls, Polygon, "polygon",
+                      "The first vertex is kept, and the result is simple when this polygon is.");
     cls.def("rotate90", [](Polygon &p, int k) { p.rotate90(k); }, nb::arg("k") = 1,
             "Rotate the polygon in place by 90*k degrees about the origin.");
     cls.def("scaleUpX", [](Polygon &p, const Num &k) { p.scaleUpX(k); }, nb::arg("scalar"),
@@ -236,11 +238,18 @@ void bind_polygon(nb::module_ &m) {
             "edge -- ray-edge intersections, and exactly the coordinates that need "
             "division, which stays exact here.");
 
-    // --- convex decomposition (both shorthands for the triangulation's) ---
+    // --- convex decomposition ---
     cls.def("convexPartition", [](const Polygon &p) { return p.convexPartition(); },
             "Cut the polygon into Convex pieces with pairwise disjoint interiors whose "
             "union is the polygon, using at most four times the fewest pieces possible. "
             "A convex polygon comes back as a single piece.");
+    cls.def("optimalConvexPartition", [](const Polygon &p) { return p.optimalConvexPartition(); },
+            "Cut the polygon into the fewest Convex pieces whose corners are all corners "
+            "of the polygon (Keil-Snoeyink dynamic program over the diagonals). Same "
+            "contract as convexPartition() otherwise; allowing new corners inside the "
+            "polygon can need fewer pieces still. O(n + r^2 n log n) beyond the "
+            "triangulation, for n vertices of which r are reflex. The polygon must be "
+            "simple and non-degenerate.");
     cls.def("convexCovering", [](const Polygon &p) { return p.convexCovering(); },
             "Cover the polygon with Convex pieces, which may overlap. Irredundant but "
             "not necessarily minimum: it builds the full-visibility subgraph of the "

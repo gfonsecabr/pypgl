@@ -219,6 +219,9 @@ void bind_polygonset(nb::module_ &m) {
     // In-place transforms (mutate, return None), as on every other mutable
     // shape. A negative scale factor reflects the components, which can change
     // their relative order, so the result is re-canonicalized.
+    PGL_BIND_SIMPLIFY(cls, PolygonSet, "set",
+                      "No ring or component is removed. The result is valid when this set is, "
+                      "and its rings meet only where this set's rings met.");
     cls.def("rotate90", [](PolygonSet &a, int k) { a.rotate90(k); }, nb::arg("k") = 1,
             "Rotate the set in place by 90*k degrees about the origin.");
     cls.def("scaleUpX", [](PolygonSet &a, const Num &k) { a.scaleUpX(k); }, nb::arg("scalar"),

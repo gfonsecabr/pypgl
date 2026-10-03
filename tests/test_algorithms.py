@@ -14,7 +14,7 @@ def test_algorithms_are_public():
     names = {
         "findIntersections", "findCrossings", "findInteriorIntersections",
         "detectIntersections", "detectCrossings", "detectInteriorIntersections",
-        "convexHull", "convexHullExtended",
+        "convexHull", "convexHullExtended", "convexLayers",
         "sortPoints", "sortDistinctPoints", "sortAround", "hilbertSort",
         "polyominoes", "polyominoesUpTo",
         "smallestEnclosingDisk", "closestPair", "regularizedUnionOf",

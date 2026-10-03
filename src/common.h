@@ -791,33 +791,37 @@ void requireNonEmptyOperands(const A &a, const B &b, const char *method) {
 // there is no separate one-sided form bound (compute that yourself from
 // vertices and squaredDistance / distanceL1 / distanceLInf if needed).
 //
-// The three methods do not share one grid, because what each norm can answer
-// exactly differs:
+// All three methods share one grid: every pair of bounded *polygonal* shapes --
+// Point, Segment, OrientedSegment, Triangle, Rectangle, Convex, MonotoneChain,
+// Polyline, Polygon, PolygonWithHoles and PolygonSet, so eleven squared -- plus
+// a HalfplaneIntersection against the six bounded convex ones and itself (it
+// throws when it is unbounded, having no finite distance to anything then; it
+// takes no non-convex operand in any norm).
 //
-//   * the Euclidean form is the narrow one. It reads the distance off a vertex
-//     of the source, which is only where the maximum sits when d(., B) is
-//     convex over the source -- so both operands must be convex. That is the
-//     seven bounded convex shapes: Point, Segment, OrientedSegment, Triangle,
-//     Rectangle, Convex and HalfplaneIntersection (which throws when it is
-//     unbounded, having no finite distance to anything then).
-//   * the L1 and LInf forms cover every pair of bounded *polygonal* shapes --
-//     the seven above minus HalfplaneIntersection, plus MonotoneChain,
-//     Polyline, Polygon, PolygonWithHoles and PolygonSet, so eleven squared.
-//     Both norms are polyhedral, which makes the distance to one edge a
-//     maximum of six affine functions and the whole search a one-dimensional
-//     lower envelope; there is no convexity left to need.
-//   * a HalfplaneIntersection joins the L1 and LInf grids only against the six
-//     bounded convex shapes and itself, not against the non-convex ones.
+// What differs is the answer's *type*, and only for the Euclidean form:
 //
-// So there are three tiers, one per kind of receiver. Disk is in none of them:
-// a farthest point on a circle is not a vertex and has no closed form in any
-// of the three norms.
+//   * the L1 and LInf forms are always exact. Both norms are polyhedral, which
+//     makes the distance to one edge a maximum of six affine functions and the
+//     whole search a one-dimensional lower envelope.
+//   * squaredHausdorffDistance is exact (a Fraction) when both operands are
+//     convex, since the maximum then sits at a vertex of one of them, and when
+//     either operand is a Point, whose farthest point on the other shape is a
+//     vertex too. Every other pair -- a non-convex shape against anything but
+//     a Point -- is generally irrational (the farthest point can lie in an edge
+//     interior, equidistant from two features), so pgl computes it in double
+//     and it comes back as a Python float, like Disk.squaredDistance.
+//     (Milestone 31: the non-convex Euclidean pairs were unbound before pgl
+//     5a19657.)
+//
+// So there are three tiers, one per kind of receiver, and they differ only in
+// the operand list. Disk is in none of them: a farthest point on a circle is
+// not a vertex and has no closed form in any of the three norms.
 
 // One Hausdorff overload, refusing an empty operand like every distance.
 #define PGL_HAUS(cls, SelfT, METHOD, OtherT) PGL_DIST(cls, SelfT, METHOD, OtherT)
 
-// The seven bounded convex shapes: the whole squaredHausdorffDistance grid, and
-// what a HalfplaneIntersection receiver takes in L1/LInf as well.
+// The seven bounded convex shapes: what a HalfplaneIntersection receiver takes,
+// and what a HalfplaneIntersection operand is admitted against.
 #define PGL_HAUSDORFF_CONVEX_OPERANDS(cls, SelfT, METHOD)    \
     PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Point);            \
     PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Segment);          \
@@ -827,7 +831,7 @@ void requireNonEmptyOperands(const A &a, const B &b, const char *method) {
     PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Convex);           \
     PGL_HAUS(cls, SelfT, METHOD, ::pypgl::HalfplaneIntersection)
 
-// The eleven bounded polygonal shapes: the L1/LInf grid of every receiver but a
+// The eleven bounded polygonal shapes: the grid of every receiver but a
 // HalfplaneIntersection.
 #define PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, METHOD)   \
     PGL_HAUS(cls, SelfT, METHOD, ::pypgl::Point);            \
@@ -843,14 +847,14 @@ void requireNonEmptyOperands(const A &a, const B &b, const char *method) {
     PGL_HAUS(cls, SelfT, METHOD, ::pypgl::PolygonSet)
 
 // A bounded convex receiver -- Point, Segment, OrientedSegment, Triangle,
-// Rectangle, Convex. It takes all three methods, the Euclidean one over the
-// seven convex shapes and the other two over the eleven bounded polygonal ones
-// plus a HalfplaneIntersection: twelve, the widest row there is.
-#define PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, SelfT)                              \
-    PGL_HAUSDORFF_CONVEX_OPERANDS(cls, SelfT, squaredHausdorffDistance);         \
-    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceL1);             \
-    PGL_HAUS(cls, SelfT, hausdorffDistanceL1, ::pypgl::HalfplaneIntersection);   \
-    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceLInf);           \
+// Rectangle, Convex: all three methods over the eleven bounded polygonal shapes
+// plus a HalfplaneIntersection, twelve, the widest row there is.
+#define PGL_BIND_ALL_HAUSDORFF_DISTANCE(cls, SelfT)                                 \
+    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, squaredHausdorffDistance);           \
+    PGL_HAUS(cls, SelfT, squaredHausdorffDistance, ::pypgl::HalfplaneIntersection); \
+    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceL1);                \
+    PGL_HAUS(cls, SelfT, hausdorffDistanceL1, ::pypgl::HalfplaneIntersection);      \
+    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceLInf);              \
     PGL_HAUS(cls, SelfT, hausdorffDistanceLInf, ::pypgl::HalfplaneIntersection)
 
 // A HalfplaneIntersection receiver: all three methods, each over the seven
@@ -862,13 +866,37 @@ void requireNonEmptyOperands(const A &a, const B &b, const char *method) {
     PGL_HAUSDORFF_CONVEX_OPERANDS(cls, SelfT, hausdorffDistanceLInf)
 
 // A bounded polygonal receiver that is not convex -- MonotoneChain, Polyline,
-// Polygon, PolygonWithHoles, PolygonSet. Only the two polyhedral norms, each
-// over the eleven bounded polygonal shapes: no squaredHausdorffDistance, and no
-// HalfplaneIntersection operand.
-#define PGL_BIND_HAUSDORFF_NONCONVEX(cls, SelfT)                   \
-    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceL1); \
+// Polygon, PolygonWithHoles, PolygonSet: all three methods over the eleven
+// bounded polygonal shapes, no HalfplaneIntersection operand. The Euclidean
+// form is a float except against a Point.
+#define PGL_BIND_HAUSDORFF_NONCONVEX(cls, SelfT)                         \
+    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, squaredHausdorffDistance); \
+    PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceL1);      \
     PGL_HAUSDORFF_BOUNDED_OPERANDS(cls, SelfT, hausdorffDistanceLInf)
 
+// Vertex-subset simplification (implementation/simplification.hpp), on the six
+// shapes with a vertex sequence of their own: Convex, MonotoneChain, Polyline,
+// Polygon, PolygonWithHoles and PolygonSet. Douglas-Peucker over the vertices,
+// so no coordinate is constructed and the answer is exact; the tolerance is a
+// *squared* distance, compared exactly. `simplify` is the in-place form, and
+// hence one of the frozen classes' refused mutators (pypgl/__init__.py).
+#define PGL_BIND_SIMPLIFY(cls, SelfT, WHAT, KEEPS)                                     \
+    cls.def("simplified",                                                              \
+            [](const SelfT &self, const ::pypgl::Num &squaredTolerance) {              \
+                return SelfT(self.simplified(squaredTolerance));                       \
+            },                                                                         \
+            nb::arg("squaredTolerance"),                                               \
+            "Return the " WHAT " with vertices removed, within Hausdorff distance "    \
+            "sqrt(squaredTolerance) of it. The result keeps a subsequence of the "     \
+            "vertices (Douglas-Peucker order), so it is exact. With a tolerance of "   \
+            "zero it covers the same points, dropping only vertices that change "      \
+            "nothing, such as collinear ones. " KEEPS);                                \
+    cls.def("simplify",                                                                \
+            [](SelfT &self, const ::pypgl::Num &squaredTolerance) {                    \
+                self.simplify(squaredTolerance);                                       \
+            },                                                                         \
+            nb::arg("squaredTolerance"),                                               \
+            "Replace the " WHAT " by simplified(squaredTolerance), in place.")
 
 // -----------------------------------------------------------------------------
 // The general intersection (implementation/intersection.hpp)

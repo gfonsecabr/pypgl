@@ -80,6 +80,13 @@ These functions use the same predicate conventions documented in
   input points that lie in the interior of a hull edge instead of dropping them.
   Complexity $O(n \log n)$.
 
+- [`convexLayers(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a86d5e5dccfd4f3c5b084f9bf3135e8cb "Computes the convex layers of a point container."): Returns the convex layers ("onion peeling"),
+  outermost first. Each layer is every remaining point on the boundary of the
+  hull — vertices and points inside hull edges alike — counterclockwise from its
+  smallest point, as [`convexHullExtended`](https://gfonsecabr.github.io/pgl/namespacepgl.html#ace788332cf5ee8db888decfb08383cda "Computes the convex hull of a point container.") returns it; the next layer is the same
+  for the points left once it is removed. Coincident points count once.
+  Complexity $O(n \log n + nL)$ for $L$ layers.
+
 To get the hull as a shape rather than as a list of points, construct a
 [`Convex`](shapes.md#convex) directly: `pgl.Convex(points)` computes the hull.
 Every bounded shape also carries its own [`convexHull()`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a3999bfdf73609b7ec708a4882fcaea2f "Computes the convex hull of a point container."), which answers a

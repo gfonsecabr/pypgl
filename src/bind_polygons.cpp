@@ -434,6 +434,9 @@ void bind_polygons(nb::module_ &m) {
                 "to prefer it is that the hull has already thrown the interior points "
                 "away. Welzl's algorithm, expected linear time.");
         PGL_BIND_DEGENERACY(cls, Convex);
+        PGL_BIND_SIMPLIFY(cls, Convex, "hull",
+                          "The first vertex is kept and the result is convex; it may have fewer than "
+                          "three vertices when the hull is thinner than the tolerance.");
         cls.def("rotate90", [](Convex &c, int k) { c.rotate90(k); }, nb::arg("k") = 1,
                 "Rotate the hull in place by 90*k degrees about the origin.");
         cls.def("scaleUpX", [](Convex &c, const Num &k) { c.scaleUpX(k); }, nb::arg("scalar"),

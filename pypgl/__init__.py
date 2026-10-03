@@ -53,6 +53,7 @@ from ._pgl import (
     detectInteriorIntersections,
     convexHull,
     convexHullExtended,
+    convexLayers,
     smallestEnclosingDisk,
     closestPair,
     regularizedUnionOf,
@@ -126,6 +127,7 @@ __all__ = [
     "detectInteriorIntersections",
     "convexHull",
     "convexHullExtended",
+    "convexLayers",
     "smallestEnclosingDisk",
     "closestPair",
     "regularizedUnionOf",
@@ -382,12 +384,12 @@ _FROZEN_SHARED_MUTATORS = (
 #: value alone. A mutator added upstream and missed here would not raise -- it
 #: would silently change a live dict key.
 _FROZEN_OWN_MUTATORS = {
-    "Convex": ("insert",),
-    "MonotoneChain": ("insert", "erase"),
-    "Polyline": ("insert", "set", "pushBack", "flip"),
-    "Polygon": ("untangle",),
-    "PolygonWithHoles": ("addHole", "eraseHole"),
-    "PolygonSet": ("addComponent", "eraseComponent"),
+    "Convex": ("insert", "simplify"),
+    "MonotoneChain": ("insert", "erase", "simplify"),
+    "Polyline": ("insert", "set", "pushBack", "flip", "simplify"),
+    "Polygon": ("untangle", "simplify"),
+    "PolygonWithHoles": ("addHole", "eraseHole", "simplify"),
+    "PolygonSet": ("addComponent", "eraseComponent", "simplify"),
     "HalfplaneIntersection": ("insert",),
 }
 
@@ -398,6 +400,7 @@ _FROZEN_ALTERNATIVES = {
     "scaleUpY": "scaledUpY()",
     "scaleDownX": "scaledDownX()",
     "scaleDownY": "scaledDownY()",
+    "simplify": "simplified()",
     "__iadd__": "a + b",
     "__isub__": "a - b",
     "__imul__": "a * k",

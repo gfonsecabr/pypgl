@@ -247,9 +247,12 @@ def test_chain_distances(make):
     assert c.squaredDistance(Point(0, 0)) == 0
     # The Disk pair is the one that goes through floating point (irrational gap).
     assert isinstance(c.squaredDistance(Disk(Point(10, 0), 1)), float)
-    # A chain is not convex, so it has no Hausdorff distance (pgl defines that
-    # family only for the six convex shapes).
-    assert not hasattr(c, "squaredHausdorffDistance")
+    # A chain is not convex, so its Euclidean Hausdorff distance is a float --
+    # except against a Point, whose farthest point on the chain is a vertex.
+    assert c.squaredHausdorffDistance(p) == 10
+    assert isinstance(c.squaredHausdorffDistance(p), Fraction)
+    assert c.squaredHausdorffDistance(make([Point(0, 1), Point(2, 1)])) == 1.0
+    assert isinstance(c.squaredHausdorffDistance(c), float)
 
 
 @pytest.mark.parametrize("make", [MonotoneChain, Polyline])

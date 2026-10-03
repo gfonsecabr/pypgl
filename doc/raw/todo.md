@@ -26,10 +26,8 @@ These operations are not implemented yet:
   *unit* normal, which is a square root even when the radius is exact.
 - `distanceL1` / `distanceLInf` to and from a `Disk`, which is implemented only
   against a `Point` so far.
-- The Euclidean `squaredHausdorffDistance` for the non-convex shapes (`Polygon`,
-  `PolygonWithHoles`, `PolygonSet`, `Polyline`, `MonotoneChain`), and any
-  Hausdorff distance for a `Disk`. The polyhedral `hausdorffDistanceL1` and
-  `hausdorffDistanceLInf` do cover every bounded polygonal pair.
+- Any Hausdorff distance for a `Disk`. All three norms cover every other
+  bounded polygonal pair.
 
 Several entries that used to be here have since arrived: the two chains
 [`Polyline`](shapes.md#polyline) and [`MonotoneChain`](shapes.md#monotonechain),
@@ -41,8 +39,8 @@ Minkowski sums of the chains and of the unbounded shapes,
 [`regularizedUnionOf`](algorithms.md#boolean-operations-minkowski-sums-and-erosions)
 over a range of any of the six bounded region types, the whole
 [`minkowskiErosion`](shape_methods.md#minkowski-erosion) family, and the
-polyhedral [Hausdorff distances](shape_methods.md#other-methods-for-shapes) between shapes
-that are not both convex.
+[Hausdorff distances](shape_methods.md#other-methods-for-shapes), in all three
+norms, between shapes that are not both convex.
 
 ## Deliberately Not Exposed
 

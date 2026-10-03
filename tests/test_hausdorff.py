@@ -1,8 +1,9 @@
 """The widened Hausdorff grids.
 
-`squaredHausdorffDistance` covers the seven bounded convex shapes; the two
-polyhedral norms cover every pair of bounded polygonal shapes, and a
-`HalfplaneIntersection` against the convex ones. All three are the standard
+All three norms cover every pair of bounded polygonal shapes, and a
+`HalfplaneIntersection` against the convex ones. The two polyhedral norms are
+always exact; `squaredHausdorffDistance` is exact for two convex operands or
+against a `Point`, and a float otherwise. All three are the standard
 *symmetric* Hausdorff distance, max(h(A, B), h(B, A)).
 
 The three tiers themselves are pinned in test_distances.py. What is checked here
@@ -95,10 +96,50 @@ def test_a_dense_sampling_of_both_shapes_never_beats_the_answer(method):
     assert sampled == answer
 
 
+def test_the_euclidean_norm_finds_a_maximum_strictly_inside_an_edge_too():
+    # From (x, 0) the nearer box is at squared distance (x - 1)^2 + 1 for x in
+    # [1, 5], peaking at x = 5 with 17. Vertex-only, the farthest is a box's far
+    # corner from the segment: (-1, -2), at squared distance 5.
+    chain = Polyline([Point(0, 0), Point(10, 0)])
+    boxes = two_boxes()
+    assert chain.squaredHausdorffDistance(boxes) == pytest.approx(17)
+    assert boxes.squaredHausdorffDistance(chain) == pytest.approx(17)
+    sampled = max(
+        Point(Fraction(j, 20), 0).squaredDistance(boxes) for j in range(0, 201)
+    )
+    assert sampled == 17
+
+
+def test_the_euclidean_norm_is_exact_against_a_point_and_a_float_otherwise():
+    c = c_shape()
+    # The farthest point of the C from the origin is its corner (10, 10).
+    assert c.squaredHausdorffDistance(Point(0, 0)) == 200
+    assert isinstance(c.squaredHausdorffDistance(Point(0, 0)), Fraction)
+    assert isinstance(Point(0, 0).squaredHausdorffDistance(c), Fraction)
+    # Two convex operands stay exact; a non-convex one on either side does not.
+    tri = Triangle(Point(0, 0), Point(3, 0), Point(0, 3))
+    assert isinstance(tri.squaredHausdorffDistance(Rectangle(Point(0, 0), Point(1, 1))), Fraction)
+    assert isinstance(tri.squaredHausdorffDistance(c), float)
+    assert isinstance(c.squaredHausdorffDistance(tri), float)
+
+
+def test_a_convex_polygon_measures_as_the_equal_convex_shape():
+    # The same point set as a Polygon goes through the approximate path; the
+    # answer must agree with the exact convex one.
+    tri = Triangle(Point(0, 0), Point(7, 1), Point(2, 5))
+    square = Convex([Point(1, 1), Point(4, 1), Point(4, 4), Point(1, 4)])
+    exact = tri.squaredHausdorffDistance(square)
+    assert isinstance(exact, Fraction)
+    for other in (square.asPolygon(), square.asPolygon().asPolygonWithHoles(),
+                  square.asPolygonSet()):
+        assert tri.squaredHausdorffDistance(other) == pytest.approx(float(exact))
+        assert other.squaredHausdorffDistance(tri.asPolygon()) == pytest.approx(float(exact))
+
+
 # --- Non-convex operands ----------------------------------------------------
 
 
-@pytest.mark.parametrize("method, expected", [(L1, 2), (LINF, 2)])
+@pytest.mark.parametrize("method, expected", [(L1, 2), (LINF, 2), (SQUARED, 4)])
 def test_a_non_convex_shape_is_measured_as_itself_not_as_its_hull(method, expected):
     # Measuring the C against its own hull isolates exactly what the hull adds:
     # the C is inside it, so one direction is zero, and the other is the notch's
@@ -112,7 +153,7 @@ def test_a_non_convex_shape_is_measured_as_itself_not_as_its_hull(method, expect
     assert getattr(hull, method)(hull) == 0
 
 
-@pytest.mark.parametrize("method", [L1, LINF])
+@pytest.mark.parametrize("method", [SQUARED, L1, LINF])
 def test_a_shape_against_itself_is_zero_for_every_bounded_polygonal_kind(method):
     for shape in (
         Point(3, 4),
@@ -181,9 +222,9 @@ def test_a_bounded_halfplane_intersection_joins_all_three_grids():
         assert getattr(region, method)(triangle) == getattr(rectangle, method)(triangle)
 
 
-def test_a_halfplane_intersection_takes_only_convex_operands_in_l1_and_linf():
+def test_a_halfplane_intersection_takes_only_convex_operands():
     region = Rectangle(Point(0, 0), Point(2, 2)).asHalfplaneIntersection()
-    for method in (L1, LINF):
+    for method in (SQUARED, L1, LINF):
         with pytest.raises(TypeError):
             getattr(region, method)(c_shape())
         with pytest.raises(TypeError):

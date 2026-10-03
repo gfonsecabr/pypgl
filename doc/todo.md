@@ -28,10 +28,8 @@ These operations are not implemented yet:
   *unit* normal, which is a square root even when the radius is exact.
 - `distanceL1` / `distanceLInf` to and from a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."), which is implemented only
   against a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") so far.
-- The Euclidean `squaredHausdorffDistance` for the non-convex shapes ([`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices."),
-  [`PolygonWithHoles`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonWithHoles.html "Closed region bounded by one outer simple polygon minus disjoint polygonal holes."), [`PolygonSet`](https://gfonsecabr.github.io/pgl/structpgl_1_1PolygonSet.html "Set of closed regions with pairwise disjoint interiors."), [`Polyline`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polyline.html "Open polygonal chain stored in traversal order; may self-intersect."), [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.")), and any
-  Hausdorff distance for a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."). The polyhedral `hausdorffDistanceL1` and
-  `hausdorffDistanceLInf` do cover every bounded polygonal pair.
+- Any Hausdorff distance for a [`Disk`](https://gfonsecabr.github.io/pgl/structpgl_1_1Disk.html "Closed Euclidean disk stored by boundary points plus optional disk label."). All three norms cover every other
+  bounded polygonal pair.
 
 Several entries that used to be here have since arrived: the two chains
 [`Polyline`](shapes.md#polyline) and [`MonotoneChain`](shapes.md#monotonechain),
@@ -43,8 +41,8 @@ Minkowski sums of the chains and of the unbounded shapes,
 [`regularizedUnionOf`](algorithms.md#boolean-operations-minkowski-sums-and-erosions)
 over a range of any of the six bounded region types, the whole
 [`minkowskiErosion`](shape_methods.md#minkowski-erosion) family, and the
-polyhedral [Hausdorff distances](shape_methods.md#other-methods-for-shapes) between shapes
-that are not both convex.
+[Hausdorff distances](shape_methods.md#other-methods-for-shapes), in all three
+norms, between shapes that are not both convex.
 
 ## Deliberately Not Exposed
 
