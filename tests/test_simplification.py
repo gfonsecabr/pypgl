@@ -30,6 +30,13 @@ def _is_subsequence(small, big):
     return all(any(v == w for w in it) for v in small)
 
 
+def _within(tolerance):
+    """The squared Hausdorff distance of a non-convex pair is a float, so the
+    bound gets a little slack: relative for a positive tolerance, absolute for
+    zero (where one platform's libm answered 1e-31 rather than 0)."""
+    return float(tolerance) * (1 + 1e-12) + 1e-12
+
+
 def _random_points(rng, n, size=20):
     return [Point(rng.randint(0, size), rng.randint(0, size)) for _ in range(n)]
 
@@ -127,7 +134,7 @@ def test_random_chains_against_the_definition(make):
         assert _is_subsequence(simple.vertices(), chain.vertices())
         assert simple.vertices()[0] == chain.vertices()[0]
         assert simple.vertices()[-1] == chain.vertices()[-1]
-        assert chain.squaredHausdorffDistance(simple) <= float(tolerance) * (1 + 1e-12)
+        assert chain.squaredHausdorffDistance(simple) <= _within(tolerance)
 
 
 def test_random_polygons_stay_simple_and_within_the_tolerance():
@@ -148,16 +155,19 @@ def test_random_polygons_stay_simple_and_within_the_tolerance():
         assert simple.vertices()[0] == polygon.vertices()[0]
         assert set(map(repr, simple.vertices())) <= set(map(repr, polygon.vertices()))
         assert simple.isSimple()
-        assert polygon.squaredHausdorffDistance(simple) <= float(tolerance) * (1 + 1e-12)
+        assert polygon.squaredHausdorffDistance(simple) <= _within(tolerance)
     assert checked > 100
 
 
 # --- optimalConvexPartition ---------------------------------------------------
 
 
-def test_the_optimal_partition_can_beat_the_heuristic_one():
+def test_the_optimal_partition_on_a_polygon_the_heuristic_can_miss():
+    # convexPartition() answers 3 pieces here with one standard library and 2
+    # with another -- it promises only to be within four times the optimum, not
+    # which partition it picks -- so only the optimal count is pinned.
     p = Polygon([0, 8, 6, 5, 8, 3, 8, 4, 8, 7, 11, 10])
-    assert len(p.convexPartition()) == 3
+    assert len(p.convexPartition()) >= 2
     pieces = p.optimalConvexPartition()
     assert len(pieces) == 2
     assert all(isinstance(q, Convex) for q in pieces)
