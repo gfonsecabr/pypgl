@@ -29,7 +29,7 @@ README](../README.md) for a tour, then:
 - [algorithms.md](algorithms.md) — convex hull, segment intersection, smallest
   enclosing disk, closest pair, visibility, point sorting, polyominoes.
 - [data_structures.md](data_structures.md) — `ShapeTree`, `IntervalTree`,
-  `Triangulation`, `Arrangement` and `Graph`.
+  `DynamicConvexHull`, `Triangulation`, `Arrangement` and `Graph`.
 - [canvas.md](canvas.md) — drawing shapes and exporting them as SVG, PDF or Ipe,
   including inline display in a Jupyter notebook.
 - [todo.md](todo.md) — what is not implemented yet.

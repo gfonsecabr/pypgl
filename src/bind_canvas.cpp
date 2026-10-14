@@ -73,8 +73,8 @@ std::string lengthToString(double value) {
 
 // The same shape paired with its own tooltip, replacing its output string --
 // pgl's `canvas << std::pair(shape, tooltip)`. pgl constrains that pair to
-// AnyShapeConcept, so the three drawable non-shapes (Triangulation, ShapeTree,
-// BitMatrix) and Text take no tooltip.
+// AnyShapeConcept, so the four drawable non-shapes (Triangulation, ShapeTree,
+// DynamicConvexHull, BitMatrix) and Text take no tooltip.
 #define CANVAS_DRAW_TOOLTIP(cls, T)                                          \
     cls.def("draw",                                                          \
             [](pgl::Canvas &c, const T &s, const std::string &tooltip) -> pgl::Canvas & { \
@@ -250,6 +250,8 @@ void bind_canvas(nb::module_ &m) {
     CANVAS_DRAW(cls, Disk);
     CANVAS_DRAW(cls, Triangulation);
     CANVAS_DRAW(cls, ShapeTree);
+    // The hull as a Convex (when the set is not empty), then every stored point.
+    CANVAS_DRAW(cls, DynamicConvexHull);
     // A bit matrix is drawn as one element, by streaming its polygon set -- so
     // touching cells merge into one path and the individual cell edges do not
     // show. canvas.draw(matrix.rectangles()) draws them as separate elements.

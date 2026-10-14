@@ -47,7 +47,7 @@ def test_stub_declares_every_public_class():
         "Halfplane", "Triangle", "Rectangle", "Convex", "MonotoneChain",
         "Polyline", "Polygon", "PolygonWithHoles", "PolygonSet",
         "HalfplaneIntersection", "Disk", "Triangulation", "ShapeTree",
-        "IntervalTree", "IntervalTreeY", "Graph", "Arrangement",
+        "DynamicConvexHull", "IntervalTree", "IntervalTreeY", "Graph", "Arrangement",
         "PointListArrangement", "DiskArrangement", "DiskListArrangement",
         "ArrangementGraph", "VertexId", "HalfedgeId", "FaceId", "Canvas", "Text",
         "Transformation",
@@ -135,7 +135,7 @@ def test_non_shapes_have_no_point_sugar(cls_name):
     assert "__iter__" not in methods
 
 
-@pytest.mark.parametrize("cls_name", ["Graph", "IntervalTree", "ShapeTree"])
+@pytest.mark.parametrize("cls_name", ["Graph", "IntervalTree", "ShapeTree", "DynamicConvexHull"])
 def test_containers_keep_their_own_container_methods(cls_name):
     # These bind __len__/__iter__/__contains__ themselves, over what they hold
     # (stored shapes, or vertices) rather than over points, so the generic shape

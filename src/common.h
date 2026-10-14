@@ -85,6 +85,12 @@ using Triangulation = pgl::Triangulation<Triangle, Segment>;
 // (see bind_triangulation.cpp), and a weight function would be exactly that.
 using ShapeTree = pgl::ShapeTree<AnyShape>;
 
+// A mutable set of points keeping its convex hull under insertion and erasure
+// (algorithm/dynamicconvexhull.hpp): Overmars-van Leeuwen with bridges only.
+// Bound in bind_dynamicconvexhull.cpp; shared here because bind_canvas.cpp
+// draws it.
+using DynamicConvexHull = pgl::DynamicConvexHull<Point>;
+
 // One bit per cell of a rectangular window of the integer grid
 // (algorithm/bitmatrix.hpp). This is the one bound class pypgl cannot hold over
 // its own Point: pgl constrains BitMatrix to `std::signed_integral` coordinates,

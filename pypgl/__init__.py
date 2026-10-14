@@ -28,6 +28,7 @@ from ._pgl import (
     Disk,
     Triangulation,
     ShapeTree,
+    DynamicConvexHull,
     BitMatrix,
     GridAdjacency,
     IntervalTree,
@@ -102,6 +103,7 @@ __all__ = [
     "Disk",
     "Triangulation",
     "ShapeTree",
+    "DynamicConvexHull",
     "BitMatrix",
     "GridAdjacency",
     "IntervalTree",
@@ -159,18 +161,21 @@ __all__ = [
 
 # --- Pythonic sugar added in the thin Python layer (cheap here, not in C++) ---
 #
-# Triangulation, ShapeTree, BitMatrix, IntervalTree, Graph and the four
-# Arrangement classes are deliberately absent from every loop below: unlike the fixed-extent shapes, none
-# of them has contains(Point)/pointInside/index/get to hang `in` or indexing off
-# of. The container ones bind their own has()/__contains__/__len__/__iter__ in
-# C++, over what they actually hold -- stored shapes for the two trees, vertices
-# for a graph, set cells for a bit matrix -- which is membership, not
-# point-in-shape. (A BitMatrix does have pointInside() and a contains(), but the
-# first is the center of its first set cell rather than an accessor, and the
-# second takes another matrix; `point in matrix` asks whether that *cell* is
-# set.) Triangulation, ShapeTree and BitMatrix do get _repr_svg_ further down,
-# since Canvas.draw() accepts them like any other shape; the rest are not
-# drawable.
+# Triangulation, ShapeTree, DynamicConvexHull, BitMatrix, IntervalTree, Graph
+# and the four Arrangement classes are deliberately absent from every loop
+# below: unlike the fixed-extent shapes, none of them has a sequence of defining
+# points to hang indexing off of. The container ones bind their own
+# has()/__contains__/__len__/__iter__ in C++, over what they actually hold --
+# stored shapes for the two trees, stored points for a dynamic convex hull,
+# vertices for a graph, set cells for a bit matrix -- which is membership, not
+# point-in-shape. (A DynamicConvexHull does have contains(Point), but it is a
+# set of points first: `point in hull` asks whether that point is *stored*, as
+# for every container, and a point inside the hull need not be. A BitMatrix has
+# pointInside() and a contains(), but the first is the center of its first set
+# cell rather than an accessor, and the second takes another matrix; `point in
+# matrix` asks whether that *cell* is set.) Triangulation, ShapeTree,
+# DynamicConvexHull and BitMatrix do get _repr_svg_ further down, since
+# Canvas.draw() accepts them like any other shape; the rest are not drawable.
 
 def _shape_contains(self, item):
     """``point in shape`` maps to ``shape.contains(point)``.
@@ -317,12 +322,13 @@ for _cls in (
     PolygonSet,
     HalfplaneIntersection,
     Disk,
-    # Triangulation, ShapeTree and BitMatrix are not "shapes" (see the loops
-    # above), but Canvas.draw() accepts them just like every bound shape, so the
-    # same one-shot rendering applies here too -- and to a Text, which a canvas
-    # draws the same way.
+    # Triangulation, ShapeTree, DynamicConvexHull and BitMatrix are not
+    # "shapes" (see the loops above), but Canvas.draw() accepts them just like
+    # every bound shape, so the same one-shot rendering applies here too -- and
+    # to a Text, which a canvas draws the same way.
     Triangulation,
     ShapeTree,
+    DynamicConvexHull,
     BitMatrix,
     Text,
 ):

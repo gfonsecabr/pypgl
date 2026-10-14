@@ -99,6 +99,19 @@ are those outputs, kept in [`figures/`](figures).
 <td valign="top"><a href="example_dual_arrangement.py"><code>dual_arrangement</code></a> Detects collinear points through the <a href="../doc/data_structures.md#arrangement"><code>Arrangement</code></a> of their <a href="../doc/shapes.md#point"><code>dual</code></a> lines; also <a href="figures/example_dual_arrangement_primal.svg">in the primal</a>.</td>
 <td valign="top"><a href="example_shapetree.py"><code>shapetree</code></a> A <a href="../doc/data_structures.md#shape-tree"><code>ShapeTree</code></a> indexes triangles to answer queries with another triangle; also <a href="figures/example_shapetree_points.svg">over points</a>.</td>
 </tr>
+
+<tr>
+<td width="33%" valign="top" align="center">
+<a href="example_convexlayers.py"><img src="figures/example_convexlayers.svg" width="100%"/></a>
+</td>
+<td width="33%"></td>
+<td width="33%"></td>
+</tr>
+<tr>
+<td valign="top"><a href="example_convexlayers.py"><code>convexlayers</code></a> Peels the convex layers of a point set by erasing hull vertices from a <a href="../doc/data_structures.md#dynamic-convex-hull"><code>DynamicConvexHull</code></a>.</td>
+<td></td>
+<td></td>
+</tr>
 </table>
 
 [`example1.py`](example1.py) has no figure: it prints, showing that two shapes

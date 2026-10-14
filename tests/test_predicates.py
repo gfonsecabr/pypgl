@@ -206,3 +206,31 @@ def test_two_collinear_rays_never_separate_each_other():
     assert a.intersects(b)
     assert not a.separates(b)
     assert not b.separates(a)
+
+
+@pytest.mark.parametrize("unbounded", [
+    pypgl.Line(pypgl.Point(0, 0), pypgl.Point(1, 1)),
+    pypgl.OrientedLine(pypgl.Point(0, 0), pypgl.Point(1, 1)),
+    pypgl.Ray(pypgl.Point(0, 0), pypgl.Point(1, 1)),
+], ids=["Line", "OrientedLine", "Ray"])
+def test_an_empty_convex_meets_no_line_or_ray(unbounded):
+    # Up to 1.9.0 the line and ray overloads of intersects scanned for an
+    # extreme vertex of a hull with none and dereferenced past the end, taking
+    # the interpreter down. Every predicate, either way round, must answer.
+    empty = pypgl.Convex()
+    for name in ("intersects", "interiorsIntersect", "separates", "crosses"):
+        assert not getattr(empty, name)(unbounded)
+        assert not getattr(unbounded, name)(empty)
+
+
+@pytest.mark.parametrize("empty", [pypgl.Convex(), pypgl.DynamicConvexHull()],
+                         ids=["Convex", "DynamicConvexHull"])
+@pytest.mark.parametrize("radius", [0, 1])
+def test_an_empty_convex_contains_no_disk(empty, radius):
+    # Up to 1.9.0 both disk containments checked the disk against each edge's
+    # half-plane and answered True when there was no edge at all. A hull
+    # delegates to its convexHull(), so it inherited the answer.
+    disk = pypgl.Disk(pypgl.Point(0, 0), radius)
+    assert not empty.contains(disk)
+    assert not empty.interiorContains(disk)
+    assert not empty.boundaryContains(disk)

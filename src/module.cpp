@@ -13,6 +13,7 @@ void bind_halfplane_intersection(nb::module_ &m);
 void bind_disk(nb::module_ &m);
 void bind_triangulation(nb::module_ &m);
 void bind_shapetree(nb::module_ &m);
+void bind_dynamicconvexhull(nb::module_ &m);
 void bind_bitmatrix(nb::module_ &m);
 void bind_canvas(nb::module_ &m);
 void bind_transformation(nb::module_ &m);
@@ -44,6 +45,7 @@ NB_MODULE(_pgl, m) {
     bind_disk(m);
     bind_triangulation(m);
     bind_shapetree(m);
+    bind_dynamicconvexhull(m);
     bind_bitmatrix(m);
     bind_canvas(m);
     bind_transformation(m);

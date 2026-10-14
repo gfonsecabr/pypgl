@@ -153,6 +153,70 @@ sugar `len(tree)`, `for shape in tree`, `shape in tree`.
 - Other methods: [`countContainedIn`](https://gfonsecabr.github.io/pgl/classpgl_1_1IntervalTree.html#ae918a604763091e59b3c6652a4a3fc56 "Counts stored shapes geometrically contained in q."), [`countProjectionsContainedIn`](https://gfonsecabr.github.io/pgl/classpgl_1_1IntervalTree.html#ae7512c04c575239858fc93b464ccab27 "Counts shapes whose projected interval is contained in the projection of q."), [`emptyContainedIn`](https://gfonsecabr.github.io/pgl/classpgl_1_1IntervalTree.html#a5a39cac11c397647ef15094ac54c4c70 "Returns whether no stored shape is geometrically contained in q."), [`emptyProjectionsContainedIn`](https://gfonsecabr.github.io/pgl/classpgl_1_1IntervalTree.html#adc67523854627f68ef2c8c992943198e "Returns whether no stored projected interval is contained in that of q."), [`reportContainedIn`](https://gfonsecabr.github.io/pgl/classpgl_1_1IntervalTree.html#a139270ac2f3309e47b4015db43d3c30f "Returns copies of stored shapes geometrically contained in q."), [`reportProjectionsContainedIn`](https://gfonsecabr.github.io/pgl/classpgl_1_1IntervalTree.html#adf6864ce62642b2afab0aa927ab18f6d "Returns copies of shapes whose projected interval is contained in that of q.").
 
 
+### Dynamic Convex Hull
+
+[`DynamicConvexHull`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html "A set of points that keeps its convex hull under insertion and erasure.") is a **mutable** set of points that keeps its convex hull as
+points are inserted and erased. A point equal to a stored one is not stored
+twice. The hull is strictly convex — a point in the interior of a hull edge is
+not a vertex, and collinear points give a hull of their two extremes — and its
+vertices are numbered as those of a [`Convex`](shapes.md#convex):
+counterclockwise from the lexicographically smallest. In the bounds below, $n$
+is the number of stored points and $h$ the number of hull vertices.
+
+- `DynamicConvexHull(points)` stores any iterable of points in $O(n \log n)$
+  time, and `DynamicConvexHull()` starts empty. [`insert(p)`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#aeb4afcd4774b854d14535680f590ac04 "Stores a point.") and [`erase(p)`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#afb537ea89c02c3a7570252a6d83d0cfb "Removes the stored point equal to point.") take
+  $O(\log^2 n)$ time and return whether the set changed. [`has(p)`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ad16497dc93309c06fd087c9920ae600c "Returns whether a point equal to point is stored.") takes
+  $O(\log n)$ time, and [`clear()`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ada4b36b23a2eeba899a968b1de795817 "Removes every point.") empties the set.
+
+- [`hullSize()`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a17421b86244443211412374b1005479d "Returns the number of hull vertices.") returns $h$ in $O(1)$ time. [`vertex(i)`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a8b9261d1a0e3e8f2738c4ecfdf0ed44c "Returns a hull vertex by index, counterclockwise from the lexicographically smallest.") returns a hull vertex in
+  $O(\log n)$ time, cyclically like `Convex.get`, and raises `IndexError` on an
+  empty set. [`index(p)`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#aa1c9ba818d265e66f4e1a830a0f12b2f "Returns the index of point among the hull vertices, as numbered by vertex, or -1 if it is not a hull vertex.") returns the index of the vertex equal to `p`, or `None`,
+  and [`verticesContain(p)`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a054cf7dfe1241ce06ce47b03ee2b3ccf "Returns whether point is a hull vertex.") whether there is one, both in $O(\log n)$ time.
+
+- [`extremeVertex(d)`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ab71545df92c205d3cdc90d4999cadd49 "Returns the hull vertex maximizing the dot product with direction, the lexicographically smallest one among ties.") returns, in $O(\log n)$ time, the hull vertex maximizing
+  the dot product with `d`, the lexicographically smallest among ties. The set
+  must not be empty and `d` must not be zero.
+
+- [`contains`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ae28b5c5a4d5e52fd514d742cd3024b2c "Returns whether the closed hull contains point."), [`boundaryContains`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a36e6b031f14b8a70b05ef99d484025ca "Returns whether the hull's boundary contains point."), [`interiorContains`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a8731119ad71133f1220d9e4299295783 "Returns whether the hull's interior contains point."), [`intersects`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#aaeb5f7bacabe82c93008f5c6fa58ac06 "Returns whether point meets the closed hull."),
+  [`interiorsIntersect`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ae495c8656e2e98d6406c70a2fccaec7d "Returns whether point meets the hull's interior."), [`separates`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ab7ce363bc695add29fbf97c06c4bde8d "Returns false: removing the hull never disconnects a point.") and [`crosses`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#afba1c05f93fd3584051f69b8c34518e7 "Returns false: the hull and a point never disconnect each other.") accept every shape and answer
+  as the same predicate on [`convexHull()`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a7c540e764f83f92e7a4c16770bc3b41d "Returns the hull as a Convex."). With $k$ the number of vertices of
+  the other shape (of its outer boundaries, for a region), they take:
+  - $O(\log n)$ time against a point, a segment, a line or a ray (oriented or
+    not), a half-plane, a rectangle or a triangle, and [`boundaryContains`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a36e6b031f14b8a70b05ef99d484025ca "Returns whether the hull's boundary contains point.")
+    against a disk, a [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.") or a [`Polygon`](https://gfonsecabr.github.io/pgl/structpgl_1_1Polygon.html "Closed simple polygon stored by its vertices.");
+  - $O(k \log n)$ time against a [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), [`contains`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ae28b5c5a4d5e52fd514d742cd3024b2c "Returns whether the closed hull contains point.") and [`interiorContains`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a8731119ad71133f1220d9e4299295783 "Returns whether the hull's interior contains point.")
+    against a polygon, a polyline, a monotone chain, a polygon with holes or a
+    polygon set, and [`boundaryContains`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a36e6b031f14b8a70b05ef99d484025ca "Returns whether the hull's boundary contains point.") against a polyline or a monotone chain;
+  - otherwise $O(h \log n)$ time plus that of the same predicate on
+    [`convexHull()`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a7c540e764f83f92e7a4c16770bc3b41d "Returns the hull as a Convex.").
+
+- [`bbox()`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a331680607c75256c2ca744993ee578ce "Returns the bounding box of the stored points.") takes $O(\log n)$ time on a nonempty set.
+
+- [`vertices()`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a6ae6971872784e8c12303a912db14331 "Returns the hull vertices, counterclockwise from the lexicographically smallest."), [`lowerHull()`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#af873177374ec2dec5d8786010557234a "Returns the lower hull, from the lexicographically smallest point to the largest; see Convex::lowerHull."), [`upperHull()`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#aeee0ee1f34be9c402b488d22d2f91d05 "Returns the upper hull, from the lexicographically smallest point to the largest; see Convex::upperHull.") and [`convexHull()`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#a7c540e764f83f92e7a4c16770bc3b41d "Returns the hull as a Convex.") return the hull
+  as a list, as [`MonotoneChain`](https://gfonsecabr.github.io/pgl/structpgl_1_1MonotoneChain.html "Weakly x-monotone polyline stored by lexicographically sorted vertices.")s or as a [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices."), in $O(h \log n)$ time.
+
+Peeling the convex layers of a point set is a loop of erases, $O(n \log^2 n)$ in
+total — see [`example_convexlayers.py`](../examples/example_convexlayers.py):
+
+```python
+hull = pgl.DynamicConvexHull(points)
+layers = []
+while not hull.empty():
+    layers.append(hull.convexHull())
+    for p in hull.vertices():
+        hull.erase(p)
+```
+
+A set also behaves like a Python container: `len(hull)` is the number of stored
+points, `for p in hull` yields them in lexicographic order, and `p in hull` asks
+whether `p` is *stored* — the question [`has`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ad16497dc93309c06fd087c9920ae600c "Returns whether a point equal to point is stored.") answers, not whether `p` lies in
+the hull, which is [`contains`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ae28b5c5a4d5e52fd514d742cd3024b2c "Returns whether the closed hull contains point."). Iteration walks a snapshot, so the set may be
+modified inside the loop. `canvas.draw(hull)` draws the hull and then every
+stored point. A set is mutable and therefore unhashable.
+
+- Other methods: [`empty`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#afd6b24aeb13c9682d8d6f2658d356966 "Returns whether no point is stored."), [`size`](https://gfonsecabr.github.io/pgl/classpgl_1_1DynamicConvexHull.html#ab1205a4e627b2441da22f20ffc87b883 "Returns the number of stored points.").
+
+
 ### Arrangement
 
 [`Arrangement`](https://gfonsecabr.github.io/pgl/classpgl_1_1Arrangement.html "The planar subdivision induced by a set of one-dimensional shapes.") is the subdivision of the plane induced by segments, rays and

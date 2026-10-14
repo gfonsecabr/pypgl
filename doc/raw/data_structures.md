@@ -152,6 +152,70 @@ sugar `len(tree)`, `for shape in tree`, `shape in tree`.
 - Other methods:
 
 
+### Dynamic Convex Hull
+
+`DynamicConvexHull` is a **mutable** set of points that keeps its convex hull as
+points are inserted and erased. A point equal to a stored one is not stored
+twice. The hull is strictly convex — a point in the interior of a hull edge is
+not a vertex, and collinear points give a hull of their two extremes — and its
+vertices are numbered as those of a [`Convex`](shapes.md#convex):
+counterclockwise from the lexicographically smallest. In the bounds below, $n$
+is the number of stored points and $h$ the number of hull vertices.
+
+- `DynamicConvexHull(points)` stores any iterable of points in $O(n \log n)$
+  time, and `DynamicConvexHull()` starts empty. `insert(p)` and `erase(p)` take
+  $O(\log^2 n)$ time and return whether the set changed. `has(p)` takes
+  $O(\log n)$ time, and `clear()` empties the set.
+
+- `hullSize()` returns $h$ in $O(1)$ time. `vertex(i)` returns a hull vertex in
+  $O(\log n)$ time, cyclically like `Convex.get`, and raises `IndexError` on an
+  empty set. `index(p)` returns the index of the vertex equal to `p`, or `None`,
+  and `verticesContain(p)` whether there is one, both in $O(\log n)$ time.
+
+- `extremeVertex(d)` returns, in $O(\log n)$ time, the hull vertex maximizing
+  the dot product with `d`, the lexicographically smallest among ties. The set
+  must not be empty and `d` must not be zero.
+
+- `contains`, `boundaryContains`, `interiorContains`, `intersects`,
+  `interiorsIntersect`, `separates` and `crosses` accept every shape and answer
+  as the same predicate on `convexHull()`. With $k$ the number of vertices of
+  the other shape (of its outer boundaries, for a region), they take:
+  - $O(\log n)$ time against a point, a segment, a line or a ray (oriented or
+    not), a half-plane, a rectangle or a triangle, and `boundaryContains`
+    against a disk, a `Convex` or a `Polygon`;
+  - $O(k \log n)$ time against a `Convex`, `contains` and `interiorContains`
+    against a polygon, a polyline, a monotone chain, a polygon with holes or a
+    polygon set, and `boundaryContains` against a polyline or a monotone chain;
+  - otherwise $O(h \log n)$ time plus that of the same predicate on
+    `convexHull()`.
+
+- `bbox()` takes $O(\log n)$ time on a nonempty set.
+
+- `vertices()`, `lowerHull()`, `upperHull()` and `convexHull()` return the hull
+  as a list, as `MonotoneChain`s or as a `Convex`, in $O(h \log n)$ time.
+
+Peeling the convex layers of a point set is a loop of erases, $O(n \log^2 n)$ in
+total — see [`example_convexlayers.py`](../examples/example_convexlayers.py):
+
+```python
+hull = pgl.DynamicConvexHull(points)
+layers = []
+while not hull.empty():
+    layers.append(hull.convexHull())
+    for p in hull.vertices():
+        hull.erase(p)
+```
+
+A set also behaves like a Python container: `len(hull)` is the number of stored
+points, `for p in hull` yields them in lexicographic order, and `p in hull` asks
+whether `p` is *stored* — the question `has` answers, not whether `p` lies in
+the hull, which is `contains`. Iteration walks a snapshot, so the set may be
+modified inside the loop. `canvas.draw(hull)` draws the hull and then every
+stored point. A set is mutable and therefore unhashable.
+
+- Other methods:
+
+
 ### Arrangement
 
 `Arrangement` is the subdivision of the plane induced by segments, rays and
