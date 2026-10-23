@@ -161,6 +161,34 @@ void bind_algorithms(nb::module_ &m) {
           },
           nb::arg("points"), nb::arg("p"),
           "Reorder a list of points counterclockwise around p.");
+    // pgl takes a Point read as a vector, or the source-to-target direction of an
+    // oriented shape. A zero direction is a PGL_ASSERT precondition, which
+    // reaches Python as PreconditionError.
+    m.def("sortAlong",
+          [](nb::list points, const Point &d) {
+              auto sorted = nb::cast<std::vector<Point>>(points);
+              pgl::sortAlong(sorted, d);
+              replace_points(points, sorted);
+          },
+          nb::arg("points"), nb::arg("d"),
+          "Reorder a list of points by increasing projection onto the vector d, ties "
+          "broken along d turned a quarter counterclockwise, so d = (1, 0) gives the "
+          "lexicographic order. d must not be zero.");
+#define PGL_BIND_SORT_ALONG(T)                                                                \
+    m.def("sortAlong",                                                                        \
+          [](nb::list points, const T &d) {                                                   \
+              auto sorted = nb::cast<std::vector<Point>>(points);                             \
+              pgl::sortAlong(sorted, d);                                                      \
+              replace_points(points, sorted);                                                 \
+          },                                                                                  \
+          nb::arg("points"), nb::arg("d"),                                                    \
+          "Reorder a list of points along the direction of d, source to target, as "          \
+          "sortAlong(points, d.target() - d.source()). Where d lies does not matter; its "    \
+          "source and target must differ.")
+    PGL_BIND_SORT_ALONG(OrientedSegment);
+    PGL_BIND_SORT_ALONG(OrientedLine);
+    PGL_BIND_SORT_ALONG(Ray);
+#undef PGL_BIND_SORT_ALONG
     m.def("hilbertSort",
           [](nb::list points) {
               auto sorted = nb::cast<std::vector<Point>>(points);

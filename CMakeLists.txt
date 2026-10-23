@@ -34,7 +34,7 @@ if(NOT PGL_INCLUDE_DIR)
     # checked out at, and a tag can be moved where a SHA cannot.
     FetchContent_Declare(pgl
       GIT_REPOSITORY https://github.com/gfonsecabr/pgl
-      GIT_TAG        11484328a5bd83ec3a27c46540575fe17a1a00af)
+      GIT_TAG        5622f684b98014f9995a2384d8c8aadab537ca70)
     FetchContent_MakeAvailable(pgl)
     set(PGL_INCLUDE_DIR "${pgl_SOURCE_DIR}/include")
   endif()

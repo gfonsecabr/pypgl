@@ -204,6 +204,24 @@ print(len(pgl.findEmptyQuadrilaterals(points)),
 The interior point blocks the square itself, which leaves three non-convex
 quadrilaterals and one convex one.
 
+The largest empty convex polygon is a single answer rather than a list:
+
+- [`maximumAreaEmptyConvex(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#aad8c8678d5edf650eb7b2e80d107b265 "Returns an empty convex polygon of points with the largest area."): Returns an empty convex polygon of `points`
+  with the largest area, as a [`Convex`](shapes.md#convex). When no three points
+  are non-collinear it returns the longest empty segment instead — two
+  consecutive points along their line, as a two-vertex [`Convex`](https://gfonsecabr.github.io/pgl/structpgl_1_1Convex.html "Closed convex polygon stored by its vertices.") (one vertex for a
+  single point, none for none). Complexity $O(n^3)$ time and $O(n^2)$ space.
+
+- [`maximumVerticesEmptyConvex(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a5e655d3e8e00297b0edbaf83e04ecf59 "Returns an empty convex polygon of points with the most vertices."): The same for the most vertices.
+  Complexity $O(n^3)$ time and $O(n^2)$ space.
+
+```python
+points = [pgl.Point(1,1), pgl.Point(1,5), pgl.Point(2,4), pgl.Point(2,5), pgl.Point(5,2)]
+print(pgl.maximumAreaEmptyConvex(points).area(),
+      len(pgl.maximumVerticesEmptyConvex(points)))
+# Output: 11/2 4
+```
+
 ### Closest pair of points
 
 - [`closestPair(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a9d03d057595b9229d8cc245045ce4df4 "Computes a closest pair of points by divide and conquer."): Returns a [`Segment`](shapes.md#segment) joining two of
@@ -315,7 +333,7 @@ here:
 
 ### Sorting points
 
-All four of these reorder the Python list you pass **in place** and return
+All five of these reorder the Python list you pass **in place** and return
 `None`, like `list.sort` does.
 
 - [`sortPoints(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a337d89a430f1eaa7dcdb19286ca4b896 "Sorts points in place, lexicographically by (x, y)."): Reorders `points` lexicographically by $(x, y)$. Points
@@ -324,7 +342,7 @@ All four of these reorder the Python list you pass **in place** and return
 
 - [`sortDistinctPoints(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a02c08dacc7b95a0081f1fb7484ebee8d "Sorts points in place lexicographically and drops the duplicates."): [`sortPoints(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a337d89a430f1eaa7dcdb19286ca4b896 "Sorts points in place, lexicographically by (x, y).") followed by dropping every
   point whose coordinates repeat the one before it, so the survivors are
-  distinct. This is the one of the four that **shortens** the list.
+  distinct. This is the one of the five that **shortens** the list.
   Complexity $O(n \log n)$.
 
 - [`sortAround(points, p)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#aab7826153f78fb8c4468ad851564fd8f "Sorts points counterclockwise around a center point."): Reorders `points` counterclockwise around the center
@@ -336,6 +354,17 @@ All four of these reorder the Python list you pass **in place** and return
   order at all can satisfy the conclusion, a polygon lying inside the hull of
   its own vertices. Relies only on exact orientation and squared-distance
   comparisons. Complexity $O(n \log n)$.
+
+- [`sortAlong(points, d)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#af96458ee5c7d73cbc80a22f70af8c0a6 "Sorts points in place along a direction vector."): Reorders `points` by increasing projection onto the
+  direction `d` — a [`Point`](https://gfonsecabr.github.io/pgl/structpgl_1_1Point.html "Two-dimensional point with optional label payload.") read as a vector, or an
+  [`OrientedSegment`](shapes.md#oriented-segment),
+  [`OrientedLine`](shapes.md#oriented-line) or [`Ray`](shapes.md#ray), whose
+  direction runs from source to target wherever the shape lies. Points tied on a
+  line perpendicular to `d` come in increasing order along `d` turned a quarter
+  counterclockwise, so `d = Point(1, 0)` gives the order of [`sortPoints`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a337d89a430f1eaa7dcdb19286ca4b896 "Sorts points in place, lexicographically by (x, y)."). Points
+  sharing both coordinates tie, and which comes first is unspecified. A zero `d`,
+  or a shape whose source and target coincide, raises `PreconditionError`.
+  Relies only on exact dot and cross product signs. Complexity $O(n \log n)$.
 
 - [`hilbertSort(points)`](https://gfonsecabr.github.io/pgl/namespacepgl.html#a57def78cd131e9c518e478cafe93e137 "Sorts points along a Hilbert space-filling curve."): Reorders `points` along a Hilbert space-filling curve,
   so points close in the plane stay close in the sequence — a useful

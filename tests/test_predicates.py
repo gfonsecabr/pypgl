@@ -120,6 +120,23 @@ def test_a_set_asks_about_one_component_at_a_time():
         pypgl.Segment(pypgl.Point(1, 1), pypgl.Point(5, 1)))
 
 
+def test_a_vertex_that_is_the_larger_end_of_both_its_edges_is_tested():
+    # pgl checked only each edge's smaller end against the open segment, so a
+    # notch tip or a hole corner lexicographically larger than both its
+    # neighbours was never tested and a chord through it was accepted. pypgl
+    # shipped that from 1.0.0 through 1.10.0, on all three receivers.
+    through_tip = pypgl.Segment(5, 1, 5, 9)
+    beside_tip = pypgl.Segment(6, 1, 6, 9)
+    notched = pypgl.Polygon([0, 0, 10, 0, 10, 10, 0, 10, 0, 6, 5, 5, 0, 4])
+    pointed = pypgl.PolygonWithHoles(pypgl.Polygon([0, 0, 10, 0, 10, 10, 0, 10]),
+                                     [pypgl.Polygon([2, 4, 5, 5, 2, 6])])
+    for region in (notched, notched.asPolygonWithHoles(), notched.asPolygonSet(),
+                   pointed, pointed.asPolygonSet()):
+        assert region.contains(through_tip)
+        assert not region.interiorContainsInterior(through_tip)
+        assert region.interiorContainsInterior(beside_tip)
+
+
 def test_a_degenerate_shape_separates_like_the_segment_it_spans():
     # A flattened Convex/Triangle/Polygon stands for the segment it spans, so
     # `separates` (and `crosses`, its conjunction) must answer as that segment

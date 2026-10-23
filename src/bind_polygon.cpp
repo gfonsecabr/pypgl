@@ -250,6 +250,33 @@ void bind_polygon(nb::module_ &m) {
             "polygon can need fewer pieces still. O(n + r^2 n log n) beyond the "
             "triangulation, for n vertices of which r are reflex. The polygon must be "
             "simple and non-degenerate.");
+    // The default weight is the Euclidean length in double, which pgl computes
+    // itself; the callable form wraps the Python weight in PyWeight, so the
+    // weight's own type (int, Fraction, float) decides whether the minimum is
+    // exact -- the Graph.spanningTree/shortestPath convention.
+    cls.def("minimumWeightTriangulation",
+            [](const Polygon &p) { return p.minimumWeightTriangulation(); },
+            "Triangulate the polygon by its own vertices with the least total Euclidean "
+            "length of diagonals (Gilbert-Klincsek dynamic program over the clear "
+            "diagonals). The lengths are floats, so of two triangulations whose weights "
+            "nearly tie the heavier may come back; pass a weight for an exact minimum. "
+            "No edge of the result is constrained and the polygon is its whole domain. "
+            "The polygon must be simple; fewer than three vertices or no area gives an "
+            "empty triangulation. O(n^2 + sum of d(v)^2) beyond the triangulation, for "
+            "d(v) the clear diagonals at v -- O(n^3) for a convex polygon.");
+    cls.def("minimumWeightTriangulation",
+            [](const Polygon &p, nb::callable weight) {
+                return p.minimumWeightTriangulation([&](const Point &u, const Point &v) {
+                    return PyWeight{weight(u, v)};
+                });
+            },
+            nb::arg("weight"),
+            "Triangulate the polygon by its own vertices minimizing the sum of weight(p, q) "
+            "over the diagonals pq. weight must be symmetric and its results must add "
+            "with + (starting from 0) and compare with <; it need not be a metric, nor "
+            "positive. With an exact weight (int, Fraction) the result is exactly "
+            "minimum, and of equal ones any may come back. weight is called once per "
+            "clear diagonal. Otherwise as minimumWeightTriangulation().");
     cls.def("convexCovering", [](const Polygon &p) { return p.convexCovering(); },
             "Cover the polygon with Convex pieces, which may overlap. Irredundant but "
             "not necessarily minimum: it builds the full-visibility subgraph of the "

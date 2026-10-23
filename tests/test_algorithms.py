@@ -1,6 +1,7 @@
 """Free algorithms documented by Pangolin's algorithms reference."""
 
 import math
+import random
 from collections import Counter
 from fractions import Fraction
 
@@ -15,10 +16,11 @@ def test_algorithms_are_public():
         "findIntersections", "findCrossings", "findInteriorIntersections",
         "detectIntersections", "detectCrossings", "detectInteriorIntersections",
         "convexHull", "convexHullExtended", "convexLayers",
-        "sortPoints", "sortDistinctPoints", "sortAround", "hilbertSort",
+        "sortPoints", "sortDistinctPoints", "sortAround", "sortAlong", "hilbertSort",
         "polyominoes", "polyominoesUpTo",
         "smallestEnclosingDisk", "closestPair", "regularizedUnionOf",
         "findEmptyTriangles", "findEmptyQuadrilaterals", "findEmptyConvexQuadrilaterals",
+        "maximumAreaEmptyConvex", "maximumVerticesEmptyConvex",
     }
     assert names <= set(pypgl.__all__)
     assert all(callable(getattr(pypgl, name)) for name in names)
@@ -198,11 +200,53 @@ def test_sorting_algorithms_reorder_the_input_list():
     assert sorted(points) == [Point(0, 0), Point(0, 2), Point(2, 0), Point(2, 2)]
 
 
+def _sort_along_key(d):
+    # Projection onto d, then onto d turned a quarter counterclockwise.
+    dx, dy = d
+    return lambda p: (p.x() * dx + p.y() * dy, -p.x() * dy + p.y() * dx)
+
+
+def test_sort_along_a_vector_matches_a_key_sort():
+    rng = random.Random(5)
+    points = [Point(rng.randint(-4, 4), rng.randint(-4, 4)) for _ in range(60)]
+    for d in [(1, 0), (0, 1), (-1, 0), (1, 1), (2, -3), (-5, -1)]:
+        got = list(points)
+        assert pypgl.sortAlong(got, Point(*d)) is None
+        assert got == sorted(points, key=_sort_along_key(d))
+    # (1, 0) is exactly the lexicographic order.
+    got = list(points)
+    pypgl.sortAlong(got, Point(1, 0))
+    assert got == sorted(points)
+
+
+def test_sort_along_an_oriented_shape_uses_its_direction_only():
+    rng = random.Random(6)
+    points = [Point(rng.randint(-4, 4), rng.randint(-4, 4)) for _ in range(40)]
+    expected = sorted(points, key=_sort_along_key((2, -3)))
+    source, target = Point(7, 9), Point(9, 6)  # direction (2, -3), far away
+    for shape in (pypgl.OrientedSegment(source, target),
+                  pypgl.OrientedLine(source, target),
+                  pypgl.Ray(source, target)):
+        got = list(points)
+        pypgl.sortAlong(got, shape)
+        assert got == expected
+
+
+def test_sort_along_refuses_a_zero_direction():
+    points = [Point(0, 0), Point(1, 1)]
+    with pytest.raises(pypgl.PreconditionError):
+        pypgl.sortAlong(points, Point(0, 0))
+    with pytest.raises(pypgl.PreconditionError):
+        pypgl.sortAlong(points, pypgl.OrientedSegment(Point(2, 2), Point(2, 2)))
+
+
 def test_sorting_algorithms_require_a_mutable_list():
     with pytest.raises(TypeError):
         pypgl.sortAround((Point(0, 0), Point(1, 1)), Point(0, 0))
     with pytest.raises(TypeError):
         pypgl.hilbertSort((Point(0, 0), Point(1, 1)))
+    with pytest.raises(TypeError):
+        pypgl.sortAlong((Point(0, 0), Point(1, 1)), Point(1, 0))
     with pytest.raises(TypeError):
         pypgl.sortPoints((Point(0, 0), Point(1, 1)))
     with pytest.raises(TypeError):

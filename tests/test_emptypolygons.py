@@ -239,3 +239,76 @@ def test_the_functions_are_public():
     ):
         assert name in pypgl.__all__
         assert hasattr(pypgl, name)
+
+
+# --- Largest empty convex polygon -------------------------------------------
+#
+# Against every subset of the distinct points: a subset counts when its hull
+# keeps all of it as strict vertices, has positive area, and holds no other
+# point, boundary included. Small grids again, so collinear runs and points on
+# hull edges are the common case.
+
+
+def brute_largest_empty_convex(points):
+    points = sorted(set(points))
+    best_area, best_count = 0, 0
+    for size in range(3, len(points) + 1):
+        for subset in combinations(points, size):
+            hull = Convex(list(subset))
+            if len(hull) != size or hull.twiceArea() == 0:
+                continue
+            if any(hull.contains(p) for p in points if p not in subset):
+                continue
+            best_area = max(best_area, hull.twiceArea())
+            best_count = max(best_count, size)
+    return best_area, best_count
+
+
+def assert_empty_convex_of(polygon, points):
+    vertices = list(polygon.vertices())
+    assert set(vertices) <= set(points)
+    assert not any(polygon.contains(p) for p in set(points) if p not in vertices)
+
+
+def test_largest_empty_convex_matches_brute_force():
+    rng = random.Random(77)
+    nontrivial = 0
+    for _ in range(120):
+        points = [Point(rng.randint(0, 5), rng.randint(0, 5))
+                  for _ in range(rng.randint(3, 11))]
+        area, count = brute_largest_empty_convex(points)
+        if count == 0:
+            continue  # collinear: the segment answer, tested below
+        by_area = pypgl.maximumAreaEmptyConvex(points)
+        by_count = pypgl.maximumVerticesEmptyConvex(points)
+        assert_empty_convex_of(by_area, points)
+        assert_empty_convex_of(by_count, points)
+        assert by_area.twiceArea() == area
+        assert len(by_count) == count
+        nontrivial += count > 3
+    assert nontrivial > 20  # the quadrilateral-and-up cases were reached
+
+
+def test_the_two_objectives_can_disagree():
+    # A thin empty quadrilateral beside a fatter empty triangle, found by a
+    # random search; the brute force on the last line confirms both.
+    points = [Point(1, 1), Point(1, 5), Point(2, 4), Point(2, 5), Point(5, 2)]
+    by_area = pypgl.maximumAreaEmptyConvex(points)
+    by_count = pypgl.maximumVerticesEmptyConvex(points)
+    assert_empty_convex_of(by_area, points)
+    assert_empty_convex_of(by_count, points)
+    assert len(by_count) > len(by_area)
+    assert by_area.twiceArea() > by_count.twiceArea()
+    assert (by_area.twiceArea(), len(by_count)) == brute_largest_empty_convex(points)
+
+
+@pytest.mark.parametrize("fn", [pypgl.maximumAreaEmptyConvex,
+                                pypgl.maximumVerticesEmptyConvex])
+def test_without_three_non_collinear_points_the_answer_is_a_segment(fn):
+    assert fn([]) == Convex()
+    assert fn([Point(3, 4)]) == Convex([Point(3, 4)])
+    assert fn([Point(3, 4)] * 3) == Convex([Point(3, 4)])
+    # The longest gap between consecutive points along the line, in any input
+    # order and with repeats.
+    line = [Point(4, 2), Point(0, 0), Point(10, 5), Point(2, 1), Point(4, 2)]
+    assert fn(line) == Convex([Point(4, 2), Point(10, 5)])

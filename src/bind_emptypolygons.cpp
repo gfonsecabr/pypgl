@@ -2,7 +2,8 @@
 
 using namespace pypgl;
 
-// Empty triangles and quadrilaterals of a point set (algorithm/emptypolygons.hpp).
+// Empty triangles and quadrilaterals of a point set, and its largest empty
+// convex polygon (algorithm/emptypolygons.hpp).
 //
 // A polygon is *empty* with respect to a point set when its vertices belong to
 // the set and no other point of the set lies in the closed polygon -- a point
@@ -103,6 +104,25 @@ void bind_emptypolygons(nb::module_ &m) {
                         "a diagonal, in O(n log n + k) time. The endpoints of e need not be "
                         "points of the set; they are treated as such. A point of the set "
                         "inside e blocks every quadrilateral, and a zero-length e has none.");
+
+    // --- Largest empty convex polygon ---
+    // Dobkin-Edelsbrunner-Overmars from each anchor, pruned. With no three
+    // non-collinear points the answer is the longest empty segment, which a
+    // Convex holds as two vertices (one for a single point, none for none).
+    m.def("maximumAreaEmptyConvex",
+          [](const std::vector<Point> &points) { return pgl::maximumAreaEmptyConvex(points); },
+          nb::arg("points"),
+          "Return an empty convex polygon of a point set with the largest area. If no "
+          "three points are non-collinear, return the longest empty segment instead -- "
+          "two consecutive points along their line -- as a two-vertex Convex (one "
+          "vertex for a single point, none for none). O(n^3) time and O(n^2) space.");
+    m.def("maximumVerticesEmptyConvex",
+          [](const std::vector<Point> &points) {
+              return pgl::maximumVerticesEmptyConvex(points);
+          },
+          nb::arg("points"),
+          "Return an empty convex polygon of a point set with the most vertices. Same "
+          "degenerate answers as maximumAreaEmptyConvex. O(n^3) time and O(n^2) space.");
 }
 
 #undef PGL_BIND_EMPTY_EDGE

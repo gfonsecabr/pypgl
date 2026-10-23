@@ -202,6 +202,24 @@ print(len(pgl.findEmptyQuadrilaterals(points)),
 The interior point blocks the square itself, which leaves three non-convex
 quadrilaterals and one convex one.
 
+The largest empty convex polygon is a single answer rather than a list:
+
+- `maximumAreaEmptyConvex(points)`: Returns an empty convex polygon of `points`
+  with the largest area, as a [`Convex`](shapes.md#convex). When no three points
+  are non-collinear it returns the longest empty segment instead — two
+  consecutive points along their line, as a two-vertex `Convex` (one vertex for a
+  single point, none for none). Complexity $O(n^3)$ time and $O(n^2)$ space.
+
+- `maximumVerticesEmptyConvex(points)`: The same for the most vertices.
+  Complexity $O(n^3)$ time and $O(n^2)$ space.
+
+```python
+points = [pgl.Point(1,1), pgl.Point(1,5), pgl.Point(2,4), pgl.Point(2,5), pgl.Point(5,2)]
+print(pgl.maximumAreaEmptyConvex(points).area(),
+      len(pgl.maximumVerticesEmptyConvex(points)))
+# Output: 11/2 4
+```
+
 ### Closest pair of points
 
 - `closestPair(points)`: Returns a [`Segment`](shapes.md#segment) joining two of
@@ -313,7 +331,7 @@ here:
 
 ### Sorting points
 
-All four of these reorder the Python list you pass **in place** and return
+All five of these reorder the Python list you pass **in place** and return
 `None`, like `list.sort` does.
 
 - `sortPoints(points)`: Reorders `points` lexicographically by $(x, y)$. Points
@@ -322,7 +340,7 @@ All four of these reorder the Python list you pass **in place** and return
 
 - `sortDistinctPoints(points)`: `sortPoints(points)` followed by dropping every
   point whose coordinates repeat the one before it, so the survivors are
-  distinct. This is the one of the four that **shortens** the list.
+  distinct. This is the one of the five that **shortens** the list.
   Complexity $O(n \log n)$.
 
 - `sortAround(points, p)`: Reorders `points` counterclockwise around the center
@@ -334,6 +352,17 @@ All four of these reorder the Python list you pass **in place** and return
   order at all can satisfy the conclusion, a polygon lying inside the hull of
   its own vertices. Relies only on exact orientation and squared-distance
   comparisons. Complexity $O(n \log n)$.
+
+- `sortAlong(points, d)`: Reorders `points` by increasing projection onto the
+  direction `d` — a `Point` read as a vector, or an
+  [`OrientedSegment`](shapes.md#oriented-segment),
+  [`OrientedLine`](shapes.md#oriented-line) or [`Ray`](shapes.md#ray), whose
+  direction runs from source to target wherever the shape lies. Points tied on a
+  line perpendicular to `d` come in increasing order along `d` turned a quarter
+  counterclockwise, so `d = Point(1, 0)` gives the order of `sortPoints`. Points
+  sharing both coordinates tie, and which comes first is unspecified. A zero `d`,
+  or a shape whose source and target coincide, raises `PreconditionError`.
+  Relies only on exact dot and cross product signs. Complexity $O(n \log n)$.
 
 - `hilbertSort(points)`: Reorders `points` along a Hilbert space-filling curve,
   so points close in the plane stay close in the sequence — a useful

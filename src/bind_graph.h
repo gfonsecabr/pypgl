@@ -19,34 +19,6 @@
 
 namespace pypgl {
 
-// An edge weight computed by a Python callable.
-//
-// pgl's spanningTree/shortestPath take the weight type from whatever the
-// callable returns, requiring only `<` (and `+` for the path), which is exactly
-// what a Python number already offers -- int, float and Fraction alike. So
-// rather than fixing one C++ number type here (and forcing every exact weight
-// through a float, or every float through a Fraction), the weight *is* the
-// Python object, compared and added through the Python protocols. An exact
-// weight therefore stays exact, and a caller who wants floating-point Euclidean
-// lengths gets those.
-struct PyWeight {
-    nb::object value;
-
-    bool operator<(const PyWeight &other) const {
-        int result = PyObject_RichCompareBool(value.ptr(), other.value.ptr(), Py_LT);
-        if (result < 0)
-            throw nb::python_error();
-        return result == 1;
-    }
-
-    PyWeight operator+(const PyWeight &other) const {
-        PyObject *sum = PyNumber_Add(value.ptr(), other.value.ptr());
-        if (!sum)
-            throw nb::python_error();
-        return PyWeight{nb::steal(sum)};
-    }
-};
-
 // Bind pgl::Graph<Vertex> as `name`. `noun` names a vertex in the docstrings
 // ("point", "vertex handle").
 template <class Vertex>
